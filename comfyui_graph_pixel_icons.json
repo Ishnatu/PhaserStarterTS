@@ -1,0 +1,132 @@
+{
+  "last_node_id": 7,
+  "last_link_id": 7,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        60,
+        60
+      ],
+      "widgets_values": [
+        "SDXL/SDXL_base_1.0.safetensors"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "CLIPTextEncode",
+      "pos": [
+        60,
+        200
+      ],
+      "widgets_values": [
+        "pixel art icon, 32x32, fantasy RPG item, clean outline, limited palette, high readability, centered, no background"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "CLIPTextEncode",
+      "pos": [
+        60,
+        320
+      ],
+      "widgets_values": [
+        "blurry, low quality, text, watermark, background"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "KSampler",
+      "pos": [
+        360,
+        160
+      ],
+      "widgets_values": [
+        30,
+        7.0,
+        0,
+        0,
+        "euler",
+        "normal",
+        1
+      ]
+    },
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "pos": [
+        360,
+        60
+      ],
+      "widgets_values": [
+        256,
+        256,
+        1
+      ]
+    },
+    {
+      "id": 6,
+      "type": "VAEDecode",
+      "pos": [
+        640,
+        160
+      ]
+    },
+    {
+      "id": 7,
+      "type": "SaveImage",
+      "pos": [
+        860,
+        160
+      ],
+      "widgets_values": [
+        "pixel_icons"
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      4,
+      0
+    ],
+    [
+      1,
+      0,
+      6,
+      1
+    ],
+    [
+      2,
+      0,
+      4,
+      1
+    ],
+    [
+      3,
+      0,
+      4,
+      2
+    ],
+    [
+      5,
+      0,
+      4,
+      3
+    ],
+    [
+      4,
+      0,
+      6,
+      0
+    ],
+    [
+      6,
+      0,
+      7,
+      0
+    ]
+  ]
+}
