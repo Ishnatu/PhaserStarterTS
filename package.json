@@ -1,5 +1,5 @@
 {
-  "name": "project-web3-phaser-ts-starter",
+  "name": "phaser-starter-ts",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/node": "^24.9.1",
     "phaser": "^3.70.0"
   },
   "devDependencies": {
