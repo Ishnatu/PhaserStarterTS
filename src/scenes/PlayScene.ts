@@ -23,7 +23,7 @@ export class PlayScene extends Phaser.Scene {
     this.player.setScale(3); // scale 32x48 sprite
     this.player.setCollideWorldBounds(true);
 
-    this.cursors = this.input.keyboard.createCursorKeys();
+    this.cursors = this.input.keyboard!.createCursorKeys();
   }
 
   update() {
