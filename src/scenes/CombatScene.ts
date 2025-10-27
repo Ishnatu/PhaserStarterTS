@@ -12,6 +12,7 @@ export class CombatScene extends Phaser.Scene {
   private logText!: Phaser.GameObjects.Text;
   private playerHealthText!: Phaser.GameObjects.Text;
   private enemyContainers: Phaser.GameObjects.Container[] = [];
+  private enemyHealthTexts: Phaser.GameObjects.Text[] = [];
 
   constructor() {
     super('CombatScene');
@@ -108,6 +109,8 @@ export class CombatScene extends Phaser.Scene {
     const startY = height - 300;
     const spacing = 100;
 
+    this.enemyHealthTexts = [];
+
     enemies.forEach((enemy, index) => {
       const x = startX;
       const y = startY + (index * spacing);
@@ -124,9 +127,10 @@ export class CombatScene extends Phaser.Scene {
         color: '#ff8888',
       }).setOrigin(0.5);
 
+      this.enemyHealthTexts.push(healthText);
+
       const container = this.add.container(0, 0, [enemyBox, nameText, healthText]);
       container.setData('index', index);
-      container.setData('healthText', healthText);
       this.enemyContainers.push(container);
 
       enemyBox.setInteractive({ useHandCursor: true })
@@ -184,14 +188,15 @@ export class CombatScene extends Phaser.Scene {
     this.playerHealthText.setText(`HP: ${state.player.health}/${state.player.maxHealth}`);
 
     state.enemies.forEach((enemy, index) => {
+      const healthText = this.enemyHealthTexts[index];
       const container = this.enemyContainers[index];
-      if (container) {
-        const healthText = container.getData('healthText') as Phaser.GameObjects.Text;
+      
+      if (healthText) {
         healthText.setText(`HP: ${enemy.health}/${enemy.maxHealth}`);
-        
-        if (enemy.health <= 0) {
-          container.setAlpha(0.3);
-        }
+      }
+      
+      if (container && enemy.health <= 0) {
+        container.setAlpha(0.3);
       }
     });
 
