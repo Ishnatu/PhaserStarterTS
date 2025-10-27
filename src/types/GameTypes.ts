@@ -57,6 +57,7 @@ export interface Delve {
   currentRoomId: string;
   entranceRoomId: string;
   bossRoomId: string;
+  location?: { x: number; y: number };
 }
 
 export interface Enemy {
@@ -81,6 +82,15 @@ export interface CombatState {
 }
 
 export type GameScene = 'town' | 'explore' | 'delve' | 'combat';
+
+export type EncounterType = 'combat' | 'treasure' | 'event' | 'nothing';
+
+export interface Encounter {
+  type: EncounterType;
+  description: string;
+  enemies?: Enemy[];
+  loot?: { aa: number; ca: number };
+}
 
 export interface GameState {
   currentScene: GameScene;

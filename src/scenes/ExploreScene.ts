@@ -10,9 +10,18 @@ export class ExploreScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private delveMarkers: Phaser.GameObjects.Container[] = [];
   private infoText!: Phaser.GameObjects.Text;
+  private staminaDrainTimer?: Phaser.Time.TimerEvent;
+  private movementStepCounter: number = 0;
+  private encounterCooldown: boolean = false;
 
   constructor() {
     super('ExploreScene');
+  }
+
+  init(data?: { returnToLocation?: { x: number; y: number } }) {
+    if (data?.returnToLocation) {
+      this.registry.set('returnToLocation', data.returnToLocation);
+    }
   }
 
   create() {
@@ -28,8 +37,15 @@ export class ExploreScene extends Phaser.Scene {
       color: '#90ee90',
     }).setOrigin(0.5);
 
+    const returnLocation = this.registry.get('returnToLocation') as { x: number; y: number } | undefined;
     const playerData = this.gameState.getPlayer();
-    this.player = this.add.rectangle(width / 2, height / 2, 32, 32, 0x4488ff);
+    
+    if (returnLocation) {
+      this.player = this.add.rectangle(returnLocation.x, returnLocation.y, 32, 32, 0x4488ff);
+      this.registry.remove('returnToLocation');
+    } else {
+      this.player = this.add.rectangle(width / 2, height / 2, 32, 32, 0x4488ff);
+    }
 
     this.generateDelves();
 
@@ -37,6 +53,10 @@ export class ExploreScene extends Phaser.Scene {
 
     const returnBtn = this.createButton(width - 120, 20, 'Return to Town', () => {
       SceneManager.getInstance().transitionTo('town');
+    });
+
+    const restBtn = this.createButton(width - 120, 60, 'Short Rest', () => {
+      this.takeShortRest();
     });
 
     this.infoText = this.add.text(20, 60, '', {
@@ -50,32 +70,55 @@ export class ExploreScene extends Phaser.Scene {
       fontSize: '12px',
       color: '#cccccc',
     });
+
+    this.staminaDrainTimer = this.time.addEvent({
+      delay: GameConfig.STAMINA.MOVEMENT_DRAIN_INTERVAL,
+      callback: this.drainStamina,
+      callbackScope: this,
+      loop: true,
+    });
+  }
+
+  private drainStamina(): void {
+    const player = this.gameState.getPlayer();
+    if (player.stamina > 0) {
+      player.stamina = Math.max(0, player.stamina - GameConfig.STAMINA.MOVEMENT_DRAIN_RATE);
+      this.gameState.updatePlayer(player);
+    }
   }
 
   update() {
+    const playerData = this.gameState.getPlayer();
     const speed = 3;
     let moved = false;
 
-    if (this.cursors.left.isDown) {
-      this.player.x -= speed;
-      moved = true;
-    }
-    if (this.cursors.right.isDown) {
-      this.player.x += speed;
-      moved = true;
-    }
-    if (this.cursors.up.isDown) {
-      this.player.y -= speed;
-      moved = true;
-    }
-    if (this.cursors.down.isDown) {
-      this.player.y += speed;
-      moved = true;
-    }
+    const canMove = playerData.stamina > 0;
 
-    if (moved) {
-      this.checkRandomEncounter();
-      this.checkDelveProximity();
+    if (canMove) {
+      if (this.cursors.left.isDown) {
+        this.player.x -= speed;
+        moved = true;
+      }
+      if (this.cursors.right.isDown) {
+        this.player.x += speed;
+        moved = true;
+      }
+      if (this.cursors.up.isDown) {
+        this.player.y -= speed;
+        moved = true;
+      }
+      if (this.cursors.down.isDown) {
+        this.player.y += speed;
+        moved = true;
+      }
+
+      if (moved) {
+        this.movementStepCounter++;
+        if (this.movementStepCounter > 30 && !this.encounterCooldown) {
+          this.checkRandomEncounter();
+        }
+        this.checkDelveProximity();
+      }
     }
 
     this.updateInfo();
@@ -127,27 +170,238 @@ export class ExploreScene extends Phaser.Scene {
       );
 
       if (distance < 40) {
-        this.enterDelve(marker.getData('tier'));
+        this.enterDelve(marker.getData('tier'), marker.x, marker.y);
       }
     }
   }
 
-  private enterDelve(tier: number): void {
+  private enterDelve(tier: number, x: number, y: number): void {
     const generator = new DelveGenerator();
     const delve = generator.generateDelve(tier);
+    delve.location = { x, y };
     
     SceneManager.getInstance().transitionTo('delve', { delve });
   }
 
   private checkRandomEncounter(): void {
-    if (Math.random() < GameConfig.WORLD.RANDOM_ENCOUNTER_CHANCE / 100) {
+    if (Math.random() < GameConfig.WORLD.RANDOM_ENCOUNTER_CHANCE) {
+      this.movementStepCounter = 0;
+      this.encounterCooldown = true;
+      this.triggerEncounter();
     }
+  }
+
+  private triggerEncounter(): void {
+    const encounterType = this.generateRandomEncounter();
+    
+    const overlay = this.add.rectangle(
+      this.cameras.main.width / 2,
+      this.cameras.main.height / 2,
+      500,
+      300,
+      0x000000,
+      0.9
+    ).setOrigin(0.5);
+
+    const titleText = this.add.text(
+      this.cameras.main.width / 2,
+      this.cameras.main.height / 2 - 100,
+      'Random Encounter!',
+      {
+        fontSize: '24px',
+        color: '#ff8844',
+      }
+    ).setOrigin(0.5);
+
+    const descText = this.add.text(
+      this.cameras.main.width / 2,
+      this.cameras.main.height / 2 - 30,
+      encounterType.description,
+      {
+        fontSize: '16px',
+        color: '#ffffff',
+        align: 'center',
+        wordWrap: { width: 400 },
+      }
+    ).setOrigin(0.5);
+
+    if (encounterType.type === 'combat' && encounterType.enemies) {
+      this.createButton(
+        this.cameras.main.width / 2,
+        this.cameras.main.height / 2 + 80,
+        'Fight!',
+        () => {
+          overlay.destroy();
+          titleText.destroy();
+          descText.destroy();
+          this.startWildCombat(encounterType.enemies!);
+        }
+      );
+    } else if (encounterType.type === 'treasure' && encounterType.loot) {
+      const loot = encounterType.loot;
+      this.gameState.addArcaneAsh(loot.aa);
+      this.gameState.addCrystallineAnimus(loot.ca);
+      
+      const lootText = this.add.text(
+        this.cameras.main.width / 2,
+        this.cameras.main.height / 2 + 40,
+        `+${loot.aa} AA, +${loot.ca.toFixed(1)} CA`,
+        {
+          fontSize: '18px',
+          color: '#ffcc00',
+        }
+      ).setOrigin(0.5);
+
+      this.time.delayedCall(3000, () => {
+        overlay.destroy();
+        titleText.destroy();
+        descText.destroy();
+        lootText.destroy();
+        this.encounterCooldown = false;
+      });
+    } else {
+      this.time.delayedCall(2500, () => {
+        overlay.destroy();
+        titleText.destroy();
+        descText.destroy();
+        this.encounterCooldown = false;
+      });
+    }
+  }
+
+  private generateRandomEncounter(): any {
+    const roll = Math.random();
+    
+    if (roll < 0.5) {
+      const numEnemies = Math.floor(Math.random() * 2) + 1;
+      const enemies = [];
+      for (let i = 0; i < numEnemies; i++) {
+        enemies.push({
+          id: `wild_enemy_${i}`,
+          name: 'Wild Void Spawn',
+          health: 40,
+          maxHealth: 40,
+          attack: 8,
+          defense: 4,
+          speed: 8,
+          lootTable: [],
+        });
+      }
+      
+      return {
+        type: 'combat',
+        description: `You've been ambushed by ${numEnemies} Wild Void Spawn${numEnemies > 1 ? 's' : ''}!`,
+        enemies,
+      };
+    } else if (roll < 0.75) {
+      const aa = Math.floor(Math.random() * 30) + 10;
+      const ca = (Math.random() * 2).toFixed(1);
+      
+      return {
+        type: 'treasure',
+        description: 'You stumble upon a hidden cache of resources!',
+        loot: { aa, ca: parseFloat(ca) },
+      };
+    } else {
+      const events = [
+        'You notice strange markings on a nearby tree...',
+        'A mysterious fog rolls through, but passes harmlessly.',
+        'You hear distant howling, but see nothing.',
+        'Ancient ruins peek through the undergrowth.',
+      ];
+      
+      return {
+        type: 'event',
+        description: events[Math.floor(Math.random() * events.length)],
+      };
+    }
+  }
+
+  private startWildCombat(enemies: any[]): void {
+    const generator = new DelveGenerator();
+    const mockDelve = generator.generateDelve(1);
+    const mockRoom = mockDelve.rooms.get(mockDelve.entranceRoomId)!;
+    mockRoom.type = 'combat';
+    
+    SceneManager.getInstance().transitionTo('combat', {
+      delve: mockDelve,
+      room: mockRoom,
+      wildEncounter: true,
+      wildEnemies: enemies,
+    });
+  }
+
+  private takeShortRest(): void {
+    const player = this.gameState.getPlayer();
+    
+    const restOverlay = this.add.rectangle(
+      this.cameras.main.width / 2,
+      this.cameras.main.height / 2,
+      400,
+      200,
+      0x000000,
+      0.8
+    ).setOrigin(0.5);
+
+    const restingText = this.add.text(
+      this.cameras.main.width / 2,
+      this.cameras.main.height / 2 - 40,
+      'Resting...',
+      {
+        fontSize: '24px',
+        color: '#ffffff',
+      }
+    ).setOrigin(0.5);
+
+    this.time.delayedCall(GameConfig.STAMINA.REST_DURATION, () => {
+      const encounterChance = GameConfig.STAMINA.WILDERNESS_ENCOUNTER_CHANCE_WHILE_RESTING;
+      
+      if (Math.random() < encounterChance) {
+        restingText.setText('Ambushed during rest!');
+        this.time.delayedCall(1500, () => {
+          restOverlay.destroy();
+          restingText.destroy();
+          this.encounterCooldown = false;
+          
+          const numEnemies = Math.floor(Math.random() * 2) + 1;
+          const enemies = [];
+          for (let i = 0; i < numEnemies; i++) {
+            enemies.push({
+              id: `rest_ambush_${i}`,
+              name: 'Ambusher Void Spawn',
+              health: 50,
+              maxHealth: 50,
+              attack: 10,
+              defense: 5,
+              speed: 8,
+              lootTable: [],
+            });
+          }
+          this.startWildCombat(enemies);
+        });
+      } else {
+        const healthRecovered = Math.floor(player.maxHealth * GameConfig.STAMINA.REST_RECOVERY_PERCENT);
+        const staminaRecovered = Math.floor(player.maxStamina * GameConfig.STAMINA.REST_RECOVERY_PERCENT);
+        
+        player.health = Math.min(player.maxHealth, player.health + healthRecovered);
+        player.stamina = Math.min(player.maxStamina, player.stamina + staminaRecovered);
+        this.gameState.updatePlayer(player);
+        
+        restingText.setText(`Rested!\n+${healthRecovered} HP, +${staminaRecovered} Stamina`);
+        
+        this.time.delayedCall(2000, () => {
+          restOverlay.destroy();
+          restingText.destroy();
+        });
+      }
+    });
   }
 
   private updateInfo(): void {
     const player = this.gameState.getPlayer();
     this.infoText.setText([
       `HP: ${player.health}/${player.maxHealth}`,
+      `Stamina: ${player.stamina}/${player.maxStamina}`,
       `AA: ${player.arcaneAsh} | CA: ${player.crystallineAnimus.toFixed(1)}`,
     ].join('\n'));
   }

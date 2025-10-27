@@ -11,16 +11,21 @@ export class CombatScene extends Phaser.Scene {
   private currentRoom!: DelveRoom;
   private logText!: Phaser.GameObjects.Text;
   private playerHealthText!: Phaser.GameObjects.Text;
+  private playerStaminaText!: Phaser.GameObjects.Text;
   private enemyContainers: Phaser.GameObjects.Container[] = [];
   private enemyHealthTexts: Phaser.GameObjects.Text[] = [];
+  private isWildEncounter: boolean = false;
+  private wildEnemies?: Enemy[];
 
   constructor() {
     super('CombatScene');
   }
 
-  init(data: { delve: Delve; room: DelveRoom }) {
+  init(data: { delve: Delve; room: DelveRoom; wildEncounter?: boolean; wildEnemies?: Enemy[] }) {
     this.currentDelve = data.delve;
     this.currentRoom = data.room;
+    this.isWildEncounter = data.wildEncounter || false;
+    this.wildEnemies = data.wildEnemies;
   }
 
   create() {
@@ -49,6 +54,10 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private generateEnemies(): Enemy[] {
+    if (this.isWildEncounter && this.wildEnemies) {
+      return this.wildEnemies;
+    }
+
     const tier = this.currentDelve.tier;
     const isBoss = this.currentRoom.type === 'boss';
     
@@ -100,6 +109,12 @@ export class CombatScene extends Phaser.Scene {
       `HP: ${player.health}/${player.maxHealth}`, {
       fontSize: '12px',
       color: '#00ff00',
+    }).setOrigin(0.5);
+
+    this.playerStaminaText = this.add.text(playerX, playerY + 75, 
+      `Stamina: ${player.stamina}/${player.maxStamina}`, {
+      fontSize: '12px',
+      color: '#ffcc00',
     }).setOrigin(0.5);
   }
 
@@ -186,6 +201,7 @@ export class CombatScene extends Phaser.Scene {
     if (!state) return;
 
     this.playerHealthText.setText(`HP: ${state.player.health}/${state.player.maxHealth}`);
+    this.playerStaminaText.setText(`Stamina: ${state.player.stamina}/${state.player.maxStamina}`);
 
     state.enemies.forEach((enemy, index) => {
       const healthText = this.enemyHealthTexts[index];
@@ -245,7 +261,11 @@ export class CombatScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.createButton(width / 2, height / 2 + 80, 'Continue', () => {
-      SceneManager.getInstance().transitionTo('delve', { delve: this.currentDelve });
+      if (this.isWildEncounter) {
+        SceneManager.getInstance().transitionTo('explore');
+      } else {
+        SceneManager.getInstance().transitionTo('delve', { delve: this.currentDelve });
+      }
     });
   }
 

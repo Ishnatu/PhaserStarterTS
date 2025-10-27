@@ -1,4 +1,5 @@
 import { CombatState, Enemy, PlayerData } from '../types/GameTypes';
+import { GameConfig } from '../config/GameConfig';
 
 export class CombatSystem {
   private combatState: CombatState | null = null;
@@ -27,6 +28,15 @@ export class CombatSystem {
       return 'Invalid target!';
     }
 
+    const staminaCost = GameConfig.COMBAT.STAMINA_COST_PER_ATTACK;
+    if (this.combatState.player.stamina < staminaCost) {
+      const logMessage = 'Not enough stamina to attack!';
+      this.combatState.combatLog.push(logMessage);
+      return logMessage;
+    }
+
+    this.combatState.player.stamina = Math.max(0, this.combatState.player.stamina - staminaCost);
+
     const damage = Math.max(1, this.calculateDamage(
       this.combatState.player,
       target
@@ -34,7 +44,7 @@ export class CombatSystem {
 
     target.health = Math.max(0, target.health - damage);
     
-    const logMessage = `You dealt ${damage} damage to ${target.name}!`;
+    const logMessage = `You dealt ${damage} damage to ${target.name}! (-${staminaCost} stamina)`;
     this.combatState.combatLog.push(logMessage);
 
     if (target.health <= 0) {

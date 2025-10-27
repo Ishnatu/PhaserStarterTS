@@ -32,8 +32,10 @@ export class DelveScene extends Phaser.Scene {
     this.renderDelveMap();
     this.renderCurrentRoom();
 
-    const exitBtn = this.createButton(width - 100, 20, 'Exit Delve', () => {
-      SceneManager.getInstance().transitionTo('explore');
+    const exitBtn = this.createButton(width - 100, 20, 'Abandon Delve', () => {
+      SceneManager.getInstance().transitionTo('explore', { 
+        returnToLocation: this.currentDelve.location 
+      });
     });
   }
 
