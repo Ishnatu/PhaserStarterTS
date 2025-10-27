@@ -3,7 +3,7 @@
 ## Overview
 Gemforge Chronicles is an ambitious web3 RPG game inspired by classic turn-based games like Pokemon, Final Fantasy, and Heroes of Might and Magic, with tabletop RPG mechanics and a rich economy system. This project is built on Phaser 3 with TypeScript for the game engine, designed to eventually integrate with blockchain (Ronin network) for NFT support.
 
-## Current Status: Foundation Complete ✓
+## Current Status: Phase 1 Complete + Enhanced Systems ✓
 
 ### Phase 1 Milestone - Core Gameplay Loop (COMPLETE)
 The foundational architecture and gameplay loop is fully implemented:
@@ -14,6 +14,13 @@ The foundational architecture and gameplay loop is fully implemented:
 - ✅ Economy tracking - Arcane Ash (AA) and Crystalline Animus (CA)
 - ✅ Save/Load system - LocalStorage (ready for cloud migration)
 - ✅ Death/Respawn mechanic - Soul returns to Roboka
+
+### Enhanced Systems (NEW)
+- ✅ **Stamina System**: Drains during combat (10 per attack) and exploration (1 per 2s)
+- ✅ **Short Rest**: Restore 50% health/stamina, 30% wilderness encounter chance
+- ✅ **Abandon Delve**: Exit dungeons safely, return to delve location on map
+- ✅ **Random Encounters**: Pokemon-style encounters (combat, treasure, events) while exploring
+- ✅ **Wild Combat**: Separate encounter system for wilderness battles
 
 ## Project Structure
 
@@ -81,13 +88,40 @@ Back to Town
 - Room types: Combat, Boss, Treasure, Puzzle, Trap
 - Linear progression (no branching yet)
 - Tier-based difficulty scaling (1-5)
+- **Abandon Mechanic**: Exit button returns player to delve entrance location
+- **Risk/Reward**: Must walk back to town, facing potential wilderness encounters
 
 ### Combat System
 - Turn-based: Player → Enemies → Repeat
 - Click enemies to attack
 - Damage formula: (Attack - Defense * 0.5) * variance(0.8-1.2)
+- **Stamina Cost**: 10 stamina per attack (configurable)
+- **Low Stamina**: Cannot attack if insufficient stamina
 - Victory awards AA/CA, Defeat respawns player
 - Health/stamina persist between battles
+
+### Stamina Management
+- **Exploration Drain**: 1 stamina per 2 seconds (configurable)
+- **Combat Drain**: 10 stamina per attack
+- **Movement Lock**: Cannot move when stamina reaches 0
+- **Recovery**: Short rest restores 50% of max stamina
+- **Strategic Resource**: Must manage stamina between combat and exploration
+
+### Rest System
+- **Short Rest**: Available anytime (button in explore scene)
+- **Duration**: 3 seconds
+- **Recovery**: Restores 50% health and stamina
+- **Wilderness Risk**: 30% chance of ambush encounter while resting in wilds
+- **Safe Zones**: Future - no encounter risk in town/safe areas
+
+### Random Encounters (Wilderness)
+- **Trigger**: Random chance after 30 movement steps
+- **Encounter Types**:
+  - **Combat (50%)**: Fight 1-2 wild Void Spawns
+  - **Treasure (25%)**: Find 10-40 AA and 0-2 CA
+  - **Events (25%)**: Flavor text, world-building moments
+- **Cooldown**: Prevents rapid consecutive encounters
+- **Wild Combat**: Returns to explore scene after battle (not delve)
 
 ### Progression
 - Player level, health, stamina tracking
@@ -100,15 +134,19 @@ Back to Town
 ### Implemented ✓
 - Core gameplay loop (Hunt phase)
 - Delve system with procedural generation
-- Turn-based combat
+- Turn-based combat with stamina system
 - AA/CA economy tracking
 - Death/respawn mechanic
 - Save/load system
+- **Stamina management** (combat and exploration drain)
+- **Short rest mechanic** with wilderness encounter risk
+- **Abandon delve** mechanic with location return
+- **Random encounters** (combat, treasure, events)
+- **Wild combat** separate from delve combat
 
 ### In Progress
 - Visual assets (currently using placeholder rectangles)
 - Sound effects and music
-- Stamina consumption mechanics
 - Inventory UI
 - Equipment system effects
 
@@ -120,7 +158,6 @@ Back to Town
 - **Shiny System**: Rare variants with special properties
 - **Blockchain Integration**: NFT gems, wallet connection, on-chain marketplace
 - **Cloud Saves**: Migration from localStorage to backend
-- **Random Encounters**: Pokemon-style encounters while exploring
 
 ## Art Direction & Vision
 
@@ -154,11 +191,11 @@ Back to Town
 - [ ] Sound design
 
 ### Phase 3: Advanced Systems
-- [ ] Stamina and short rest mechanics
+- [x] Stamina and short rest mechanics
+- [x] Random encounters
 - [ ] Inventory and equipment UI
 - [ ] Crafting and forging
 - [ ] Spirit Towers
-- [ ] Random encounters
 
 ### Phase 4: Multiplayer
 - [ ] Roboka multiplayer hub
@@ -200,7 +237,6 @@ The Vite dev server is configured with WSS protocol and `REPLIT_DEV_DOMAIN` for 
 
 ### Current
 - Assets are placeholder rectangles (awaiting art)
-- No stamina consumption yet
 - Inventory not displayed in UI
 - Equipment doesn't affect combat stats
 - Limited enemy variety
@@ -221,7 +257,17 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 5. Focus on strong architecture to support future features
 
 ## Recent Changes
-- **October 27, 2025**: Phase 1 Foundation Complete
+- **October 27, 2025** (PM): Enhanced Systems Implementation
+  - ✅ Implemented full stamina system (combat: 10/attack, exploration: 1/2s)
+  - ✅ Added short rest mechanic with 50% health/stamina recovery
+  - ✅ Added wilderness encounter chance (30%) during rest
+  - ✅ Implemented abandon delve with location tracking
+  - ✅ Built random encounter system (combat, treasure, events)
+  - ✅ Created wild combat separate from delve combat
+  - ✅ Fixed multiple enemy combat click bug
+  - ✅ All features reviewed and approved by architect
+
+- **October 27, 2025** (AM): Phase 1 Foundation Complete
   - Built complete gameplay loop (Town → Explore → Delve → Combat)
   - Implemented GameStateManager with AA/CA economy
   - Created DelveGenerator for procedural dungeons (3-5 rooms)
@@ -231,17 +277,19 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 
 ## Next Steps
 
-1. **Immediate**: Begin Phase 2 - Asset Integration
+1. **Immediate**: Phase 2 - Asset Integration
    - Discuss art asset requirements with user
    - Create walk cycle sprite specifications
    - Define attack animation needs
    - Plan enemy sprite designs
+   - Design UI mockups for inventory/stats
 
-2. **Short-term**: Enhance Core Systems
-   - Add stamina mechanics
-   - Implement inventory UI
-   - Connect equipment to combat stats
-   - Add more enemy types
+2. **Short-term**: Advanced Features
+   - Implement inventory UI and management
+   - Connect equipment to combat stats (modifiers)
+   - Add more enemy types and variety
+   - Add consumable items (health/stamina potions)
+   - Implement encounter variety (more event types)
 
 3. **Medium-term**: Prepare for Web3
    - Research Ronin integration options
