@@ -1,19 +1,28 @@
 import Phaser from 'phaser';
-import { BootScene } from './scenes/BootScene';
-import { PlayScene } from './scenes/PlayScene';
+import { TownScene } from './scenes/TownScene';
+import { ExploreScene } from './scenes/ExploreScene';
+import { DelveScene } from './scenes/DelveScene';
+import { CombatScene } from './scenes/CombatScene';
+import { SceneManager } from './systems/SceneManager';
+import { GameStateManager } from './systems/GameStateManager';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game',
   width: 800,
-  height: 450,
-  pixelArt: true,
-  backgroundColor: '#1b1f24',
-  physics: {
-    default: 'arcade',
-    arcade: { gravity: { x: 0, y: 0 }, debug: false }
+  height: 600,
+  backgroundColor: '#0f0f13',
+  scene: [TownScene, ExploreScene, DelveScene, CombatScene],
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, PlayScene]
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+SceneManager.initialize(game);
+GameStateManager.getInstance();
+
+console.log('Gemforge Chronicles - Phase One: The Hunt');
+console.log('Game initialized successfully!');

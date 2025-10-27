@@ -1,0 +1,108 @@
+import { GameState, PlayerData, GameScene } from '../types/GameTypes';
+import { GameConfig } from '../config/GameConfig';
+
+export class GameStateManager {
+  private static instance: GameStateManager;
+  private gameState: GameState;
+
+  private constructor() {
+    this.gameState = this.createInitialState();
+  }
+
+  static getInstance(): GameStateManager {
+    if (!GameStateManager.instance) {
+      GameStateManager.instance = new GameStateManager();
+    }
+    return GameStateManager.instance;
+  }
+
+  private createInitialState(): GameState {
+    const player: PlayerData = {
+      health: GameConfig.PLAYER.STARTING_HEALTH,
+      maxHealth: GameConfig.PLAYER.STARTING_HEALTH,
+      stamina: GameConfig.PLAYER.STARTING_STAMINA,
+      maxStamina: GameConfig.PLAYER.STARTING_STAMINA,
+      position: { x: 0, y: 0 },
+      inventory: [],
+      equipment: {},
+      arcaneAsh: GameConfig.PLAYER.STARTING_AA,
+      crystallineAnimus: GameConfig.PLAYER.STARTING_CA,
+      level: GameConfig.PLAYER.STARTING_LEVEL,
+      experience: 0,
+    };
+
+    return {
+      currentScene: 'town',
+      player,
+      explorePosition: { x: 50, y: 50 },
+      discoveredDelves: [],
+    };
+  }
+
+  getState(): GameState {
+    return this.gameState;
+  }
+
+  getPlayer(): PlayerData {
+    return this.gameState.player;
+  }
+
+  setScene(scene: GameScene): void {
+    this.gameState.currentScene = scene;
+  }
+
+  getCurrentScene(): GameScene {
+    return this.gameState.currentScene;
+  }
+
+  updatePlayer(updates: Partial<PlayerData>): void {
+    this.gameState.player = { ...this.gameState.player, ...updates };
+  }
+
+  addArcaneAsh(amount: number): void {
+    this.gameState.player.arcaneAsh += amount;
+  }
+
+  addCrystallineAnimus(amount: number): void {
+    this.gameState.player.crystallineAnimus += amount;
+  }
+
+  spendArcaneAsh(amount: number): boolean {
+    if (this.gameState.player.arcaneAsh >= amount) {
+      this.gameState.player.arcaneAsh -= amount;
+      return true;
+    }
+    return false;
+  }
+
+  spendCrystallineAnimus(amount: number): boolean {
+    if (this.gameState.player.crystallineAnimus >= amount) {
+      this.gameState.player.crystallineAnimus -= amount;
+      return true;
+    }
+    return false;
+  }
+
+  saveToLocalStorage(): void {
+    localStorage.setItem('gemforge_save', JSON.stringify(this.gameState));
+  }
+
+  loadFromLocalStorage(): boolean {
+    const saved = localStorage.getItem('gemforge_save');
+    if (saved) {
+      try {
+        this.gameState = JSON.parse(saved);
+        return true;
+      } catch (e) {
+        console.error('Failed to load save data:', e);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  resetGame(): void {
+    this.gameState = this.createInitialState();
+    localStorage.removeItem('gemforge_save');
+  }
+}

@@ -1,0 +1,42 @@
+export const GameConfig = {
+  PLAYER: {
+    STARTING_HEALTH: 100,
+    STARTING_STAMINA: 100,
+    STARTING_AA: 500,
+    STARTING_CA: 10,
+    STARTING_LEVEL: 1,
+  },
+
+  DELVE: {
+    MIN_ROOMS: 3,
+    MAX_ROOMS: 5,
+    ROOM_TYPES: ['combat', 'puzzle', 'trap', 'boss', 'treasure'] as const,
+    TIER_MULTIPLIERS: {
+      1: 1.0,
+      2: 1.5,
+      3: 2.0,
+      4: 3.0,
+      5: 4.0,
+    },
+  },
+
+  COMBAT: {
+    TURN_DELAY: 500,
+    MAX_ENEMIES_PER_ENCOUNTER: 5,
+  },
+
+  ECONOMY: {
+    AA_DROP_BASE: 10,
+    CA_DROP_BASE: 0.5,
+    REPAIR_COST_PER_DURABILITY: 5,
+    SOULBIND_COST_AA: 100,
+    SOULBIND_COST_CA: 1,
+  },
+
+  WORLD: {
+    TILE_SIZE: 32,
+    MAP_WIDTH: 100,
+    MAP_HEIGHT: 100,
+    RANDOM_ENCOUNTER_CHANCE: 0.05,
+  },
+};
