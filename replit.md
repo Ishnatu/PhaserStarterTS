@@ -7,7 +7,8 @@ Gemforge Chronicles is an ambitious web3 RPG game inspired by classic turn-based
 
 ### Phase 1 Milestone - Core Gameplay Loop (COMPLETE)
 The foundational architecture and gameplay loop is fully implemented:
-- ✅ Town (Roboka) - Player hub with stats and economy tracking
+- ✅ Main Menu - Title screen with Start/Exit game
+- ✅ Town (Roboka) - Player hub with 6 placeholder NPCs and stats display
 - ✅ Exploration - Procedurally placed delves to discover
 - ✅ Delves - Procedurally generated 3-5 room dungeons
 - ✅ Turn-based combat - Pokemon-style battle system
@@ -27,7 +28,8 @@ The foundational architecture and gameplay loop is fully implemented:
 ```
 src/
 ├── scenes/           # Phaser scenes for each game state
-│   ├── TownScene.ts        # Roboka - City of Steel (player hub)
+│   ├── MainMenuScene.ts    # Title screen with Start/Exit buttons
+│   ├── TownScene.ts        # Roboka - City of Steel (player hub with NPCs)
 │   ├── ExploreScene.ts     # Wilderness exploration
 │   ├── DelveScene.ts       # Dungeon navigation
 │   └── CombatScene.ts      # Turn-based battles
@@ -64,8 +66,10 @@ src/
 ## Gameplay Loop
 
 ```
-Town (Roboka) 
-  ↓ Venture into Wilds
+Main Menu
+  ↓ Start Game
+Town (Roboka)
+  ↓ Interact with NPCs or Venture into Wilds
 Explore Map
   ↓ Discover Delve
 Delve (3-5 Rooms)
@@ -257,6 +261,15 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 5. Focus on strong architecture to support future features
 
 ## Recent Changes
+- **October 28, 2025**: Main Menu & Roboka NPCs
+  - ✅ Created MainMenuScene with Start Game and Exit Game buttons
+  - ✅ Game now starts at main menu, transitions to Roboka on Start
+  - ✅ Updated Roboka title hierarchy (Gemforge Chronicles / ROBOKA - City of Steel)
+  - ✅ Added 6 placeholder NPCs: Blacksmith, Merchant, Innkeeper, Quest Giver, Gem Expert, Marketplace
+  - ✅ NPCs are clickable with hover effects and "Coming Soon" placeholder dialogs
+  - ✅ Removed Save Progress button (will auto-save in future)
+  - ✅ All features reviewed and approved by architect
+
 - **October 27, 2025** (PM): Enhanced Systems Implementation
   - ✅ Implemented full stamina system (combat: 10/attack, exploration: 1/2s)
   - ✅ Added short rest mechanic with 50% health/stamina recovery
