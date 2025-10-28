@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { MainMenuScene } from './scenes/MainMenuScene';
 import { TownScene } from './scenes/TownScene';
 import { ExploreScene } from './scenes/ExploreScene';
 import { DelveScene } from './scenes/DelveScene';
@@ -12,7 +13,7 @@ const config: Phaser.Types.Core.GameConfig = {
   width: 800,
   height: 600,
   backgroundColor: '#0f0f13',
-  scene: [TownScene, ExploreScene, DelveScene, CombatScene],
+  scene: [MainMenuScene, TownScene, ExploreScene, DelveScene, CombatScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
