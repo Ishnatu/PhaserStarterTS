@@ -1,3 +1,74 @@
+export type WeaponSlot = 'mainHand' | 'offHand';
+export type ArmorSlot = 'helmet' | 'chest' | 'legs' | 'boots' | 'shoulders' | 'cape';
+export type EquipmentSlot = WeaponSlot | ArmorSlot;
+
+export type WeaponType = 'dagger' | 'shortsword' | 'longsword' | 'battleaxe' | 'mace' | 'warhammer' | 
+                         'greatsword' | 'greataxe' | 'staff' | 'spear' | 'rapier';
+export type ArmorType = 'light' | 'heavy' | 'shield';
+export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+
+export interface DiceRoll {
+  numDice: number;
+  dieSize: number;
+  modifier: number;
+}
+
+export interface WeaponData {
+  id: string;
+  name: string;
+  type: WeaponType;
+  damage: DiceRoll;
+  twoHanded: boolean;
+  rarity: ItemRarity;
+  description: string;
+}
+
+export interface ArmorData {
+  id: string;
+  name: string;
+  slot: ArmorSlot | 'shield';
+  armorType: ArmorType;
+  evasionModifier: number;
+  damageReduction: number;
+  rarity: ItemRarity;
+  description: string;
+}
+
+export interface PotionData {
+  id: string;
+  name: string;
+  type: 'health' | 'stamina';
+  restoration: DiceRoll;
+  rarity: ItemRarity;
+  description: string;
+}
+
+export type ItemData = WeaponData | ArmorData | PotionData;
+
+export interface InventoryItem {
+  itemId: string;
+  quantity: number;
+}
+
+export interface PlayerEquipment {
+  mainHand?: string;
+  offHand?: string;
+  helmet?: string;
+  chest?: string;
+  legs?: string;
+  boots?: string;
+  shoulders?: string;
+  cape?: string;
+}
+
+export interface PlayerStats {
+  baseEvasion: number;
+  calculatedEvasion: number;
+  damageReduction: number;
+  attackBonus: number;
+  damageBonus: number;
+}
+
 export interface PlayerData {
   health: number;
   maxHealth: number;
@@ -5,40 +76,15 @@ export interface PlayerData {
   maxStamina: number;
   position: { x: number; y: number };
   inventory: InventoryItem[];
-  equipment: Equipment;
+  footlocker: InventoryItem[];
+  equipment: PlayerEquipment;
+  stats: PlayerStats;
   arcaneAsh: number;
   crystallineAnimus: number;
   level: number;
   experience: number;
-}
-
-export interface InventoryItem {
-  id: string;
-  name: string;
-  type: 'consumable' | 'material' | 'gem' | 'equipment';
-  quantity: number;
-  description: string;
-  soulbound: boolean;
-}
-
-export interface Equipment {
-  weapon?: EquipmentItem;
-  armor?: EquipmentItem;
-  accessory?: EquipmentItem;
-}
-
-export interface EquipmentItem {
-  id: string;
-  name: string;
-  type: 'weapon' | 'armor' | 'accessory';
-  tier: number;
-  shiny: boolean;
-  stats: {
-    attack?: number;
-    defense?: number;
-    speed?: number;
-  };
-  soulbound: boolean;
+  inventorySlots: number;
+  footlockerSlots: number;
 }
 
 export interface DelveRoom {
@@ -65,10 +111,19 @@ export interface Enemy {
   name: string;
   health: number;
   maxHealth: number;
-  attack: number;
-  defense: number;
-  speed: number;
+  evasion: number;
+  damageReduction: number;
+  weaponDamage: DiceRoll;
   lootTable: { itemId: string; dropChance: number }[];
+}
+
+export interface AttackResult {
+  hit: boolean;
+  critical: boolean;
+  attackRoll: number;
+  damage: number;
+  damageBeforeReduction: number;
+  message: string;
 }
 
 export interface CombatState {
@@ -79,6 +134,7 @@ export interface CombatState {
   combatLog: string[];
   isComplete: boolean;
   playerVictory: boolean;
+  isWildEncounter: boolean;
 }
 
 export type GameScene = 'town' | 'explore' | 'delve' | 'combat';
@@ -89,7 +145,7 @@ export interface Encounter {
   type: EncounterType;
   description: string;
   enemies?: Enemy[];
-  loot?: { aa: number; ca: number };
+  loot?: { aa: number; ca: number; items?: InventoryItem[] };
 }
 
 export interface GameState {

@@ -1,5 +1,6 @@
 import { GameState, PlayerData, GameScene } from '../types/GameTypes';
 import { GameConfig } from '../config/GameConfig';
+import { EquipmentManager } from './EquipmentManager';
 
 export class GameStateManager {
   private static instance: GameStateManager;
@@ -23,13 +24,30 @@ export class GameStateManager {
       stamina: GameConfig.PLAYER.STARTING_STAMINA,
       maxStamina: GameConfig.PLAYER.STARTING_STAMINA,
       position: { x: 0, y: 0 },
-      inventory: [],
+      inventory: [
+        { itemId: 'shortsword_basic', quantity: 1 },
+        { itemId: 'chest_leather', quantity: 1 },
+        { itemId: 'potion_health', quantity: 3 },
+        { itemId: 'potion_stamina', quantity: 3 },
+      ],
+      footlocker: [],
       equipment: {},
+      stats: {
+        baseEvasion: 10,
+        calculatedEvasion: 10,
+        damageReduction: 0,
+        attackBonus: 3,
+        damageBonus: 3,
+      },
       arcaneAsh: GameConfig.PLAYER.STARTING_AA,
       crystallineAnimus: GameConfig.PLAYER.STARTING_CA,
       level: GameConfig.PLAYER.STARTING_LEVEL,
       experience: 0,
+      inventorySlots: 15,
+      footlockerSlots: 80,
     };
+
+    player.stats = EquipmentManager.calculatePlayerStats(player);
 
     return {
       currentScene: 'town',
@@ -57,6 +75,7 @@ export class GameStateManager {
 
   updatePlayer(updates: Partial<PlayerData>): void {
     this.gameState.player = { ...this.gameState.player, ...updates };
+    this.gameState.player.stats = EquipmentManager.calculatePlayerStats(this.gameState.player);
   }
 
   addArcaneAsh(amount: number): void {
@@ -104,5 +123,79 @@ export class GameStateManager {
   resetGame(): void {
     this.gameState = this.createInitialState();
     localStorage.removeItem('gemforge_save');
+  }
+
+  addItemToInventory(itemId: string, quantity: number = 1): boolean {
+    const totalItems = this.gameState.player.inventory.reduce((sum, item) => sum + item.quantity, 0);
+    if (totalItems + quantity > this.gameState.player.inventorySlots) {
+      return false;
+    }
+
+    const existing = this.gameState.player.inventory.find(item => item.itemId === itemId);
+    if (existing) {
+      existing.quantity += quantity;
+    } else {
+      this.gameState.player.inventory.push({ itemId, quantity });
+    }
+    return true;
+  }
+
+  removeItemFromInventory(itemId: string, quantity: number = 1): boolean {
+    const existing = this.gameState.player.inventory.find(item => item.itemId === itemId);
+    if (!existing || existing.quantity < quantity) {
+      return false;
+    }
+
+    existing.quantity -= quantity;
+    if (existing.quantity === 0) {
+      this.gameState.player.inventory = this.gameState.player.inventory.filter(item => item.itemId !== itemId);
+    }
+    return true;
+  }
+
+  moveToFootlocker(itemId: string, quantity: number = 1): boolean {
+    if (!this.removeItemFromInventory(itemId, quantity)) {
+      return false;
+    }
+
+    const totalItems = this.gameState.player.footlocker.reduce((sum, item) => sum + item.quantity, 0);
+    if (totalItems + quantity > this.gameState.player.footlockerSlots) {
+      this.addItemToInventory(itemId, quantity);
+      return false;
+    }
+
+    const existing = this.gameState.player.footlocker.find(item => item.itemId === itemId);
+    if (existing) {
+      existing.quantity += quantity;
+    } else {
+      this.gameState.player.footlocker.push({ itemId, quantity });
+    }
+    return true;
+  }
+
+  moveFromFootlocker(itemId: string, quantity: number = 1): boolean {
+    const existing = this.gameState.player.footlocker.find(item => item.itemId === itemId);
+    if (!existing || existing.quantity < quantity) {
+      return false;
+    }
+
+    if (!this.addItemToInventory(itemId, quantity)) {
+      return false;
+    }
+
+    existing.quantity -= quantity;
+    if (existing.quantity === 0) {
+      this.gameState.player.footlocker = this.gameState.player.footlocker.filter(item => item.itemId !== itemId);
+    }
+    return true;
+  }
+
+  expandFootlocker(slots: number = 10): boolean {
+    const cost = GameConfig.ECONOMY.FOOTLOCKER_EXPANSION_COST_PER_10;
+    if (this.spendArcaneAsh(cost)) {
+      this.gameState.player.footlockerSlots += slots;
+      return true;
+    }
+    return false;
   }
 }

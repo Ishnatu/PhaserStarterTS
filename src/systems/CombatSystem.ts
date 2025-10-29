@@ -1,10 +1,12 @@
-import { CombatState, Enemy, PlayerData } from '../types/GameTypes';
+import { CombatState, Enemy, PlayerData, AttackResult } from '../types/GameTypes';
 import { GameConfig } from '../config/GameConfig';
+import { DiceRoller } from '../utils/DiceRoller';
+import { EquipmentManager } from './EquipmentManager';
 
 export class CombatSystem {
   private combatState: CombatState | null = null;
 
-  initiateCombat(player: PlayerData, enemies: Enemy[]): CombatState {
+  initiateCombat(player: PlayerData, enemies: Enemy[], isWildEncounter: boolean = false): CombatState {
     this.combatState = {
       player: { ...player },
       enemies: enemies.map(e => ({ ...e })),
@@ -13,38 +15,106 @@ export class CombatSystem {
       combatLog: ['Combat has begun!'],
       isComplete: false,
       playerVictory: false,
+      isWildEncounter,
     };
 
     return this.combatState;
   }
 
-  playerAttack(targetIndex: number): string {
+  playerAttack(targetIndex: number): AttackResult {
     if (!this.combatState || this.combatState.currentTurn !== 'player') {
-      return 'Not player turn!';
+      return {
+        hit: false,
+        critical: false,
+        attackRoll: 0,
+        damage: 0,
+        damageBeforeReduction: 0,
+        message: 'Not player turn!',
+      };
     }
 
     const target = this.combatState.enemies[targetIndex];
     if (!target || target.health <= 0) {
-      return 'Invalid target!';
+      return {
+        hit: false,
+        critical: false,
+        attackRoll: 0,
+        damage: 0,
+        damageBeforeReduction: 0,
+        message: 'Invalid target!',
+      };
     }
 
     const staminaCost = GameConfig.COMBAT.STAMINA_COST_PER_ATTACK;
     if (this.combatState.player.stamina < staminaCost) {
-      const logMessage = 'Not enough stamina to attack!';
-      this.combatState.combatLog.push(logMessage);
-      return logMessage;
+      const exhaustionMessage = 'You are exhausted! You must flee combat!';
+      this.combatState.combatLog.push(exhaustionMessage);
+      this.combatState.isComplete = true;
+      this.combatState.playerVictory = false;
+      return {
+        hit: false,
+        critical: false,
+        attackRoll: 0,
+        damage: 0,
+        damageBeforeReduction: 0,
+        message: exhaustionMessage,
+      };
     }
 
     this.combatState.player.stamina = Math.max(0, this.combatState.player.stamina - staminaCost);
 
-    const damage = Math.max(1, this.calculateDamage(
-      this.combatState.player,
-      target
-    ));
+    const attackResult = DiceRoller.rollAttack(this.combatState.player.stats.attackBonus);
+    const hit = attackResult.total >= target.evasion;
+
+    if (!hit) {
+      const missMessage = `You swing and miss! (Rolled ${attackResult.d20}+${this.combatState.player.stats.attackBonus}=${attackResult.total} vs Evasion ${target.evasion}) (-${staminaCost} stamina)`;
+      this.combatState.combatLog.push(missMessage);
+      
+      this.checkCombatEnd();
+      if (!this.combatState.isComplete) {
+        this.combatState.currentTurn = 'enemy';
+      }
+      
+      return {
+        hit: false,
+        critical: false,
+        attackRoll: attackResult.d20,
+        damage: 0,
+        damageBeforeReduction: 0,
+        message: missMessage,
+      };
+    }
+
+    const weapon = EquipmentManager.getEquippedWeapon(this.combatState.player);
+    const weaponDamage = weapon ? weapon.damage : { numDice: 1, dieSize: 4, modifier: this.combatState.player.stats.damageBonus };
+
+    let damageBeforeReduction: number;
+    let damageRollInfo: string;
+
+    if (attackResult.critical) {
+      const critResult = DiceRoller.rollCriticalDamage(weaponDamage);
+      damageBeforeReduction = critResult.total;
+      damageRollInfo = `CRITICAL HIT! (${critResult.maxDie} max + ${critResult.extraRoll} roll + ${critResult.modifier} = ${critResult.total})`;
+    } else {
+      const damageResult = DiceRoller.rollDiceTotal(weaponDamage);
+      damageBeforeReduction = damageResult.total;
+      const rollsStr = damageResult.rolls.join('+');
+      damageRollInfo = `(${rollsStr}+${damageResult.modifier} = ${damageResult.total})`;
+    }
+
+    const damageReduction = target.damageReduction;
+    const damage = Math.max(1, Math.floor(damageBeforeReduction * (1 - damageReduction)));
 
     target.health = Math.max(0, target.health - damage);
     
-    const logMessage = `You dealt ${damage} damage to ${target.name}! (-${staminaCost} stamina)`;
+    let logMessage = `You hit ${target.name}! ${damageRollInfo}`;
+    if (damageReduction > 0) {
+      logMessage += ` -> ${damage} damage after ${Math.floor(damageReduction * 100)}% reduction`;
+    } else {
+      logMessage += ` -> ${damage} damage`;
+    }
+    logMessage += ` (-${staminaCost} stamina)`;
+    
     this.combatState.combatLog.push(logMessage);
 
     if (target.health <= 0) {
@@ -57,7 +127,14 @@ export class CombatSystem {
       this.combatState.currentTurn = 'enemy';
     }
 
-    return logMessage;
+    return {
+      hit: true,
+      critical: attackResult.critical,
+      attackRoll: attackResult.d20,
+      damage,
+      damageBeforeReduction,
+      message: logMessage,
+    };
   }
 
   enemyTurn(): string[] {
@@ -69,17 +146,45 @@ export class CombatSystem {
     const aliveEnemies = this.combatState.enemies.filter(e => e.health > 0);
 
     for (const enemy of aliveEnemies) {
-      const damage = Math.max(1, this.calculateDamage(
-        enemy,
-        this.combatState.player
-      ));
+      const attackResult = DiceRoller.rollAttack(3);
+      const hit = attackResult.total >= this.combatState.player.stats.calculatedEvasion;
+
+      if (!hit) {
+        const missMessage = `${enemy.name} swings and misses! (Rolled ${attackResult.d20}+3=${attackResult.total} vs Evasion ${this.combatState.player.stats.calculatedEvasion})`;
+        this.combatState.combatLog.push(missMessage);
+        logs.push(missMessage);
+        continue;
+      }
+
+      let damageBeforeReduction: number;
+      let damageRollInfo: string;
+
+      if (attackResult.critical) {
+        const critResult = DiceRoller.rollCriticalDamage(enemy.weaponDamage);
+        damageBeforeReduction = critResult.total;
+        damageRollInfo = `CRITICAL HIT! (${critResult.maxDie} max + ${critResult.extraRoll} roll + ${critResult.modifier} = ${critResult.total})`;
+      } else {
+        const damageResult = DiceRoller.rollDiceTotal(enemy.weaponDamage);
+        damageBeforeReduction = damageResult.total;
+        const rollsStr = damageResult.rolls.join('+');
+        damageRollInfo = `(${rollsStr}+${damageResult.modifier} = ${damageResult.total})`;
+      }
+
+      const damageReduction = this.combatState.player.stats.damageReduction;
+      const damage = Math.max(1, Math.floor(damageBeforeReduction * (1 - damageReduction)));
 
       this.combatState.player.health = Math.max(
         0,
         this.combatState.player.health - damage
       );
 
-      const logMessage = `${enemy.name} dealt ${damage} damage to you!`;
+      let logMessage = `${enemy.name} hits you! ${damageRollInfo}`;
+      if (damageReduction > 0) {
+        logMessage += ` -> ${damage} damage after ${Math.floor(damageReduction * 100)}% reduction`;
+      } else {
+        logMessage += ` -> ${damage} damage`;
+      }
+      
       this.combatState.combatLog.push(logMessage);
       logs.push(logMessage);
     }
@@ -93,21 +198,12 @@ export class CombatSystem {
     return logs;
   }
 
-  private calculateDamage(attacker: any, defender: any): number {
-    const baseAttack = attacker.attack || 10;
-    const defense = defender.defense || 5;
-    
-    const variance = 0.8 + Math.random() * 0.4;
-    const damage = Math.floor((baseAttack - defense * 0.5) * variance);
-    
-    return Math.max(1, damage);
-  }
-
   private checkCombatEnd(): void {
     if (!this.combatState) return;
 
     const allEnemiesDead = this.combatState.enemies.every(e => e.health <= 0);
     const playerDead = this.combatState.player.health <= 0;
+    const playerExhausted = this.combatState.player.stamina <= 0;
 
     if (allEnemiesDead) {
       this.combatState.isComplete = true;
@@ -117,6 +213,10 @@ export class CombatSystem {
       this.combatState.isComplete = true;
       this.combatState.playerVictory = false;
       this.combatState.combatLog.push('You have been defeated...');
+    } else if (playerExhausted) {
+      this.combatState.isComplete = true;
+      this.combatState.playerVictory = false;
+      this.combatState.combatLog.push('You are too exhausted to continue fighting and must flee!');
     }
   }
 
@@ -124,11 +224,7 @@ export class CombatSystem {
     return this.combatState;
   }
 
-  isPlayerTurn(): boolean {
-    return this.combatState?.currentTurn === 'player' || false;
-  }
-
-  isCombatComplete(): boolean {
-    return this.combatState?.isComplete || false;
+  endCombat(): void {
+    this.combatState = null;
   }
 }
