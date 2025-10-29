@@ -24,6 +24,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **State Management**: LocalStorage (temporary, with plans for cloud migration)
 - **Core Gameplay Loop**: Main Menu -> Town (Roboka) -> Explore Map -> Delve (3-5 Rooms) -> Combat -> Back to Town.
 - **D20 Combat System**: Turn-based combat featuring d20 attack rolls against evasion, critical hits (natural 20 = brutal critical), weapon damage dice (1d4 to 2d6), and damage reduction from armor. Stamina is a key resource, with exhaustion leading to combat defeat. Combat transitions feature a 2-second fade-out "Combat Begins!" banner.
+- **Combat UI**: Pokemon-style layout with enemy positioned at top right with info panel, player at bottom left with info panel, combat log in bottom left area, and action menu in bottom right corner. Menu includes Attack, Inventory (for mid-combat potion usage), and Run (50% success chance) options. Using a potion or running consumes the player's turn.
 - **Stamina Management**: Drains per tile moved (0.3333 per tile) and per attack (5 per attack). Short rests restore 50% health/stamina but carry a 30% wilderness encounter risk.
 - **Delve Generation**: Procedurally generated 3-5 room dungeons with varied room types (Combat, Boss, Treasure, Puzzle, Trap) and tier-based difficulty. Players can abandon delves and return to their entrance location.
 - **Economy**: Uses Arcane Ash (AA) for common transactions and Crystalline Animus (CA) for rare items and enchantments.
@@ -31,7 +32,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Loot System**: Enemies drop tier-based items, including weapons, armor, and potions.
 - **Random Encounters**: Triggered in the wilderness, featuring combat, treasure, or event outcomes. Combat encounters display a 2-second announcement before automatically transitioning to battle.
 - **Expanded Wilderness**: 3000x3000 world with camera-follow system (0.1 lerp) that smoothly tracks player movement. Eight procedurally placed delve entrances scattered across the map. Town portal marker provides instant return to Roboka (50px proximity trigger).
-- **UI System**: All overlays use viewport-locking (setScrollFactor(0)) and interactive blocking to freeze gameplay. Menu system in wilderness (Short Rest, Inventory, Equipment, Return to Menu) and delves (Inventory, Abandon Delve, Return to Menu). Potion usage available in both wilderness and between delve stages.
+- **UI System**: All overlays use viewport-locking (setScrollFactor(0)) and interactive blocking to freeze gameplay. Menu system in wilderness (Short Rest, Inventory, Equipment, Return to Menu) and delves (Inventory, Abandon Delve, Return to Menu). Potion usage available in wilderness, between delve stages, and during combat.
 - **Overlay Mechanics**: Uses isOverlayActive flag to disable player movement when menus/overlays are open, while keeping overlay buttons interactive. All UI elements tracked in arrays for proper cleanup.
 - **ESC Key Navigation**: Hierarchical menu navigation using ESC key. From submenus (Inventory, Equipment) → ESC returns to main menu. From main menu → ESC closes menu. From gameplay → ESC opens quit confirmation menu.
 - **Save/Load System**: Implemented using LocalStorage.

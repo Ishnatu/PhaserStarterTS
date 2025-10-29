@@ -222,7 +222,8 @@ export class DelveScene extends Phaser.Scene {
     x: number,
     y: number,
     text: string,
-    callback: () => void
+    callback: () => void,
+    scrollLocked: boolean = false
   ): Phaser.GameObjects.Container {
     const bg = this.add.rectangle(0, 0, 200, 40, 0x444466)
       .setInteractive({ useHandCursor: true })
@@ -235,7 +236,13 @@ export class DelveScene extends Phaser.Scene {
       color: '#ffffff',
     }).setOrigin(0.5);
 
-    return this.add.container(x, y, [bg, label]);
+    const container = this.add.container(x, y, [bg, label]);
+    
+    if (scrollLocked) {
+      container.setScrollFactor(0);
+    }
+    
+    return container;
   }
 
   private showMessage(message: string): void {
@@ -283,12 +290,12 @@ export class DelveScene extends Phaser.Scene {
     const quitBtn = this.createButton(width / 2, height / 2 - 20, 'Return to Main Menu', () => {
       destroyAll();
       this.scene.start('MainMenuScene');
-    }).setScrollFactor(0);
+    }, true);
     uiElements.push(quitBtn);
 
     const cancelBtn = this.createButton(width / 2, height / 2 + 40, 'Cancel', () => {
       destroyAll();
-    }).setScrollFactor(0);
+    }, true);
     uiElements.push(cancelBtn);
 
     this.isOverlayActive = true;
@@ -321,7 +328,7 @@ export class DelveScene extends Phaser.Scene {
     const inventoryBtn = this.createButton(width / 2, height / 2 - 70, 'Inventory', () => {
       uiElements.forEach(el => el.destroy());
       this.openInventory();
-    }).setScrollFactor(0);
+    }, true);
     uiElements.push(inventoryBtn);
 
     const abandonBtn = this.createButton(width / 2, height / 2 - 10, 'Abandon Delve', () => {
@@ -329,18 +336,18 @@ export class DelveScene extends Phaser.Scene {
       SceneManager.getInstance().transitionTo('explore', { 
         returnToLocation: this.currentDelve.location 
       });
-    }).setScrollFactor(0);
+    }, true);
     uiElements.push(abandonBtn);
 
     const mainMenuBtn = this.createButton(width / 2, height / 2 + 50, 'Return to Main Menu', () => {
       destroyAll();
       this.scene.start('MainMenuScene');
-    }).setScrollFactor(0);
+    }, true);
     uiElements.push(mainMenuBtn);
 
     const closeBtn = this.createButton(width / 2, height / 2 + 130, 'Close', () => {
       destroyAll();
-    }).setScrollFactor(0);
+    }, true);
     uiElements.push(closeBtn);
 
     this.isOverlayActive = true;
@@ -410,7 +417,7 @@ export class DelveScene extends Phaser.Scene {
 
     const closeBtn = this.createButton(width / 2, height / 2 + 220, 'Close', () => {
       destroyAll();
-    }).setScrollFactor(0);
+    }, true);
     uiElements.push(closeBtn);
 
     this.isOverlayActive = true;

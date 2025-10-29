@@ -4,6 +4,7 @@ import { SceneManager } from '../systems/SceneManager';
 import { CombatSystem } from '../systems/CombatSystem';
 import { EnemyFactory } from '../systems/EnemyFactory';
 import { ItemDatabase } from '../config/ItemDatabase';
+import { DiceRoller } from '../utils/DiceRoller';
 import { Delve, DelveRoom, Enemy } from '../types/GameTypes';
 
 export class CombatScene extends Phaser.Scene {
@@ -18,6 +19,8 @@ export class CombatScene extends Phaser.Scene {
   private enemyHealthTexts: Phaser.GameObjects.Text[] = [];
   private isWildEncounter: boolean = false;
   private wildEnemies?: Enemy[];
+  private isOverlayActive: boolean = false;
+  private actionButtons: Phaser.GameObjects.Container[] = [];
 
   constructor() {
     super('CombatScene');
@@ -34,6 +37,11 @@ export class CombatScene extends Phaser.Scene {
     this.gameState = GameStateManager.getInstance();
     this.gameState.setScene('combat');
     this.combatSystem = new CombatSystem();
+
+    this.enemyContainers = [];
+    this.enemyHealthTexts = [];
+    this.actionButtons = [];
+    this.isOverlayActive = false;
 
     const { width, height } = this.cameras.main;
 
@@ -90,105 +98,261 @@ export class CombatScene extends Phaser.Scene {
 
   private renderPlayer(): void {
     const { width, height } = this.cameras.main;
-    const playerX = 150;
-    const playerY = height - 200;
+    const playerX = 180;
+    const playerY = height - 150;
 
-    const playerBox = this.add.rectangle(playerX, playerY, 80, 80, 0x4488ff);
-    this.add.text(playerX, playerY - 100, 'YOU', {
-      fontSize: '14px',
-      color: '#ffffff',
-    }).setOrigin(0.5);
-
+    const playerBox = this.add.rectangle(playerX, playerY, 100, 100, 0x4488ff);
+    
     const player = this.gameState.getPlayer();
-    this.playerHealthText = this.add.text(playerX, playerY + 60, 
-      `HP: ${player.health}/${player.maxHealth}`, {
-      fontSize: '12px',
-      color: '#00ff00',
-    }).setOrigin(0.5);
+    
+    const playerInfoBg = this.add.rectangle(playerX - 200, playerY - 80, 200, 90, 0x2a2a3e, 0.9).setOrigin(0);
+    
+    this.add.text(playerX - 190, playerY - 75, 'YOU', {
+      fontSize: '16px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    });
 
-    this.playerStaminaText = this.add.text(playerX, playerY + 75, 
-      `Stamina: ${player.stamina}/${player.maxStamina}`, {
-      fontSize: '12px',
+    this.add.text(playerX - 190, playerY - 50, `Lv ${player.level}`, {
+      fontSize: '14px',
       color: '#ffcc00',
-    }).setOrigin(0.5);
+    });
 
-    this.add.text(playerX, playerY + 90, 
-      `Evasion: ${player.stats.calculatedEvasion}`, {
-      fontSize: '11px',
-      color: '#88ccff',
-    }).setOrigin(0.5);
+    this.playerHealthText = this.add.text(playerX - 190, playerY - 30, 
+      `HP: ${player.health}/${player.maxHealth}`, {
+      fontSize: '13px',
+      color: '#00ff00',
+    });
 
-    this.add.text(playerX, playerY + 103, 
-      `DR: ${Math.floor(player.stats.damageReduction * 100)}%`, {
-      fontSize: '11px',
-      color: '#ff88cc',
-    }).setOrigin(0.5);
+    this.playerStaminaText = this.add.text(playerX - 190, playerY - 10, 
+      `SP: ${player.stamina}/${player.maxStamina}`, {
+      fontSize: '13px',
+      color: '#ffcc00',
+    });
   }
 
   private renderEnemies(enemies: Enemy[]): void {
     const { width, height } = this.cameras.main;
-    const startX = width - 200;
-    const startY = height - 300;
-    const spacing = 120;
-
-    this.enemyHealthTexts = [];
+    const spacing = 140;
+    const totalWidth = (enemies.length - 1) * spacing;
+    const startX = width - 250 - totalWidth / 2;
+    const startY = 180;
 
     enemies.forEach((enemy, index) => {
-      const x = startX;
-      const y = startY + (index * spacing);
+      const x = startX + (index * spacing);
+      const y = startY;
 
-      const enemyBox = this.add.rectangle(x, y, 60, 60, 0xff4444);
-      const nameText = this.add.text(x, y - 50, enemy.name, {
-        fontSize: '12px',
+      const enemyBox = this.add.rectangle(x, y, 80, 80, 0xff4444);
+      
+      const enemyInfoBg = this.add.rectangle(x + 100, y - 50, 180, 70, 0x2a2a3e, 0.9).setOrigin(0);
+      
+      const nameText = this.add.text(x + 110, y - 45, enemy.name, {
+        fontSize: '14px',
         color: '#ffffff',
-      }).setOrigin(0.5);
+        fontStyle: 'bold',
+      });
 
-      const healthText = this.add.text(x, y + 40, 
+      const healthText = this.add.text(x + 110, y - 25, 
         `HP: ${enemy.health}/${enemy.maxHealth}`, {
-        fontSize: '11px',
+        fontSize: '12px',
         color: '#ff8888',
-      }).setOrigin(0.5);
-
-      const evasionText = this.add.text(x, y + 53, 
-        `Evasion: ${enemy.evasion}`, {
-        fontSize: '10px',
-        color: '#88ccff',
-      }).setOrigin(0.5);
-
-      const drText = this.add.text(x, y + 65, 
-        `DR: ${Math.floor(enemy.damageReduction * 100)}%`, {
-        fontSize: '10px',
-        color: '#ff88cc',
-      }).setOrigin(0.5);
+      });
 
       this.enemyHealthTexts.push(healthText);
 
-      const container = this.add.container(0, 0, [enemyBox, nameText, healthText, evasionText, drText]);
+      const container = this.add.container(0, 0, [enemyBox, enemyInfoBg, nameText, healthText]);
       container.setData('index', index);
       this.enemyContainers.push(container);
 
       enemyBox.setInteractive({ useHandCursor: true })
-        .on('pointerover', () => enemyBox.setFillStyle(0xff6666))
+        .on('pointerover', () => {
+          if (!this.isOverlayActive && this.combatSystem.isPlayerTurn()) {
+            enemyBox.setFillStyle(0xff6666);
+          }
+        })
         .on('pointerout', () => enemyBox.setFillStyle(0xff4444))
-        .on('pointerdown', () => this.attackEnemy(index));
+        .on('pointerdown', () => {
+          if (!this.isOverlayActive) {
+            this.attackEnemy(index);
+          }
+        });
     });
   }
 
   private renderCombatLog(): void {
     const { width, height } = this.cameras.main;
+    const logX = 20;
+    const logY = height - 250;
 
-    this.add.rectangle(width / 2, height / 2, 500, 150, 0x1a1a2e, 0.8).setOrigin(0.5);
+    this.add.rectangle(logX, logY, 400, 100, 0x1a1a2e, 0.8).setOrigin(0);
     
-    this.logText = this.add.text(width / 2, height / 2, 'Combat begins!', {
-      fontSize: '13px',
+    this.logText = this.add.text(logX + 10, logY + 10, 'Combat begins!', {
+      fontSize: '12px',
       color: '#ffffff',
-      align: 'center',
-      wordWrap: { width: 450 },
-    }).setOrigin(0.5);
+      align: 'left',
+      wordWrap: { width: 380 },
+    });
   }
 
   private renderActionButtons(): void {
     const { width, height } = this.cameras.main;
+    const menuX = width - 250;
+    const menuY = height - 180;
+
+    const menuBg = this.add.rectangle(menuX, menuY, 230, 160, 0x2a2a3e, 0.95).setOrigin(0);
+
+    const attackBtn = this.createActionButton(menuX + 20, menuY + 20, 'Attack', () => {
+      this.showMessage('Select an enemy to attack');
+    });
+    this.actionButtons.push(attackBtn);
+
+    const inventoryBtn = this.createActionButton(menuX + 20, menuY + 70, 'Inventory', () => {
+      this.openInventory();
+    });
+    this.actionButtons.push(inventoryBtn);
+
+    const runBtn = this.createActionButton(menuX + 20, menuY + 120, 'Run', () => {
+      this.attemptRun();
+    });
+    this.actionButtons.push(runBtn);
+  }
+
+  private createActionButton(
+    x: number,
+    y: number,
+    text: string,
+    callback: () => void
+  ): Phaser.GameObjects.Container {
+    const bg = this.add.rectangle(0, 0, 190, 35, 0x444466)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => bg.setFillStyle(0x555577))
+      .on('pointerout', () => bg.setFillStyle(0x444466))
+      .on('pointerdown', () => {
+        if (!this.isOverlayActive && this.combatSystem.isPlayerTurn()) {
+          callback();
+        }
+      });
+
+    const label = this.add.text(0, 0, text, {
+      fontSize: '16px',
+      color: '#ffffff',
+    }).setOrigin(0.5);
+
+    return this.add.container(x + 95, y + 17.5, [bg, label]);
+  }
+
+  private openInventory(): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setInteractive();
+    const panel = this.add.rectangle(width / 2, height / 2, 700, 500, 0x2a2a3e).setOrigin(0.5);
+    uiElements.push(overlay, panel);
+
+    const title = this.add.text(width / 2, height / 2 - 220, `Inventory (${player.inventory.reduce((sum, item) => sum + item.quantity, 0)}/${player.inventorySlots})`, {
+      fontSize: '24px',
+      color: '#f0a020',
+    }).setOrigin(0.5);
+    uiElements.push(title);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.isOverlayActive = false;
+    };
+
+    this.isOverlayActive = true;
+
+    const itemsStartY = height / 2 - 180;
+    const itemHeight = 30;
+    const maxDisplay = 12;
+
+    let displayedItems = 0;
+    player.inventory.forEach((invItem, index) => {
+      if (displayedItems >= maxDisplay) return;
+
+      const item = ItemDatabase.getItem(invItem.itemId);
+      if (!item) return;
+
+      const y = itemsStartY + displayedItems * itemHeight;
+      
+      const itemLabel = this.add.text(width / 2 - 320, y, `${item.name} x${invItem.quantity}`, {
+        fontSize: '14px',
+        color: '#ffffff',
+      });
+      uiElements.push(itemLabel);
+
+      const isPotion = ItemDatabase.getPotion(invItem.itemId);
+
+      if (isPotion) {
+        const useBtn = this.add.text(width / 2 + 120, y, '[Use]', {
+          fontSize: '13px',
+          color: '#8888ff',
+        }).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            this.usePotion(invItem.itemId);
+            destroyAll();
+          });
+        uiElements.push(useBtn);
+      }
+
+      displayedItems++;
+    });
+
+    const closeBtn = this.createMenuButton(width / 2, height / 2 + 220, 'Close', () => {
+      destroyAll();
+    });
+    uiElements.push(closeBtn);
+  }
+
+  private usePotion(itemId: string): void {
+    const player = this.gameState.getPlayer();
+    const potion = ItemDatabase.getPotion(itemId);
+    
+    if (!potion) return;
+
+    const restorationRoll = DiceRoller.rollDiceTotal(potion.restoration);
+    const amount = restorationRoll.total;
+
+    if (potion.type === 'health') {
+      player.health = Math.min(player.maxHealth, player.health + amount);
+      this.showMessage(`Used ${potion.name}! Restored ${amount} HP`);
+    } else if (potion.type === 'stamina') {
+      player.stamina = Math.min(player.maxStamina, player.stamina + amount);
+      this.showMessage(`Used ${potion.name}! Restored ${amount} Stamina`);
+    }
+
+    this.gameState.removeItemFromInventory(itemId, 1);
+    this.gameState.updatePlayer(player);
+    this.updateCombatDisplay();
+
+    this.time.delayedCall(1000, () => {
+      if (!this.combatSystem.isCombatComplete()) {
+        this.enemyTurn();
+      } else {
+        this.endCombat();
+      }
+    });
+  }
+
+  private attemptRun(): void {
+    const runChance = Math.random();
+    
+    if (runChance > 0.5) {
+      this.showMessage('Successfully escaped!');
+      this.time.delayedCall(1500, () => {
+        if (this.isWildEncounter) {
+          SceneManager.getInstance().transitionTo('explore');
+        } else {
+          SceneManager.getInstance().transitionTo('delve', { delve: this.currentDelve });
+        }
+      });
+    } else {
+      this.showMessage('Failed to escape!');
+      this.time.delayedCall(1500, () => {
+        this.enemyTurn();
+      });
+    }
   }
 
   private attackEnemy(targetIndex: number): void {
@@ -220,7 +384,7 @@ export class CombatScene extends Phaser.Scene {
     if (!state) return;
 
     this.playerHealthText.setText(`HP: ${state.player.health}/${state.player.maxHealth}`);
-    this.playerStaminaText.setText(`Stamina: ${state.player.stamina}/${state.player.maxStamina}`);
+    this.playerStaminaText.setText(`SP: ${state.player.stamina}/${state.player.maxStamina}`);
 
     state.enemies.forEach((enemy, index) => {
       const healthText = this.enemyHealthTexts[index];
@@ -235,7 +399,7 @@ export class CombatScene extends Phaser.Scene {
       }
     });
 
-    const recentLogs = state.combatLog.slice(-3).join('\n');
+    const recentLogs = state.combatLog.slice(-4).join('\n');
     this.logText.setText(recentLogs);
   }
 
@@ -309,7 +473,7 @@ export class CombatScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5);
 
-    this.createButton(width / 2, height / 2 + 120, 'Continue', () => {
+    this.createMenuButton(width / 2, height / 2 + 120, 'Continue', () => {
       if (this.isWildEncounter) {
         SceneManager.getInstance().transitionTo('explore');
       } else {
@@ -333,7 +497,7 @@ export class CombatScene extends Phaser.Scene {
       color: '#cccccc',
     }).setOrigin(0.5);
 
-    this.createButton(width / 2, height / 2 + 80, 'Return to Town', () => {
+    this.createMenuButton(width / 2, height / 2 + 80, 'Return to Town', () => {
       const player = this.gameState.getPlayer();
       this.gameState.updatePlayer({ 
         health: player.maxHealth,
@@ -343,7 +507,7 @@ export class CombatScene extends Phaser.Scene {
     });
   }
 
-  private createButton(
+  private createMenuButton(
     x: number,
     y: number,
     text: string,
@@ -361,5 +525,23 @@ export class CombatScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     return this.add.container(x, y, [bg, label]);
+  }
+
+  private showMessage(message: string): void {
+    const msg = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY - 100, message, {
+      fontSize: '18px',
+      color: '#ffcc00',
+      backgroundColor: '#000000',
+      padding: { x: 20, y: 10 },
+    }).setOrigin(0.5).setAlpha(0);
+
+    this.tweens.add({
+      targets: msg,
+      alpha: 1,
+      duration: 200,
+      yoyo: true,
+      hold: 1000,
+      onComplete: () => msg.destroy(),
+    });
   }
 }
