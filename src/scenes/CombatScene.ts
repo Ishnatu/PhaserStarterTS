@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { GameStateManager } from '../systems/GameStateManager';
 import { SceneManager } from '../systems/SceneManager';
 import { CombatSystem } from '../systems/CombatSystem';
+import { EnemyFactory } from '../systems/EnemyFactory';
+import { ItemDatabase } from '../config/ItemDatabase';
 import { Delve, DelveRoom, Enemy } from '../types/GameTypes';
 
 export class CombatScene extends Phaser.Scene {
@@ -62,32 +64,14 @@ export class CombatScene extends Phaser.Scene {
     const isBoss = this.currentRoom.type === 'boss';
     
     if (isBoss) {
-      return [{
-        id: 'boss_1',
-        name: `Void Beast Tier ${tier}`,
-        health: 100 * tier,
-        maxHealth: 100 * tier,
-        attack: 15 * tier,
-        defense: 10 * tier,
-        speed: 5,
-        lootTable: [],
-      }];
+      return [EnemyFactory.createEnemy(tier, true)];
     }
 
     const numEnemies = Math.floor(Math.random() * 2) + 1;
     const enemies: Enemy[] = [];
 
     for (let i = 0; i < numEnemies; i++) {
-      enemies.push({
-        id: `enemy_${i}`,
-        name: `Void Spawn Tier ${tier}`,
-        health: 50 * tier,
-        maxHealth: 50 * tier,
-        attack: 10 * tier,
-        defense: 5 * tier,
-        speed: 8,
-        lootTable: [],
-      });
+      enemies.push(EnemyFactory.createEnemy(tier, false));
     }
 
     return enemies;
@@ -116,13 +100,25 @@ export class CombatScene extends Phaser.Scene {
       fontSize: '12px',
       color: '#ffcc00',
     }).setOrigin(0.5);
+
+    this.add.text(playerX, playerY + 90, 
+      `Evasion: ${player.stats.calculatedEvasion}`, {
+      fontSize: '11px',
+      color: '#88ccff',
+    }).setOrigin(0.5);
+
+    this.add.text(playerX, playerY + 103, 
+      `DR: ${Math.floor(player.stats.damageReduction * 100)}%`, {
+      fontSize: '11px',
+      color: '#ff88cc',
+    }).setOrigin(0.5);
   }
 
   private renderEnemies(enemies: Enemy[]): void {
     const { width, height } = this.cameras.main;
     const startX = width - 200;
     const startY = height - 300;
-    const spacing = 100;
+    const spacing = 120;
 
     this.enemyHealthTexts = [];
 
@@ -142,9 +138,21 @@ export class CombatScene extends Phaser.Scene {
         color: '#ff8888',
       }).setOrigin(0.5);
 
+      const evasionText = this.add.text(x, y + 53, 
+        `Evasion: ${enemy.evasion}`, {
+        fontSize: '10px',
+        color: '#88ccff',
+      }).setOrigin(0.5);
+
+      const drText = this.add.text(x, y + 65, 
+        `DR: ${Math.floor(enemy.damageReduction * 100)}%`, {
+        fontSize: '10px',
+        color: '#ff88cc',
+      }).setOrigin(0.5);
+
       this.enemyHealthTexts.push(healthText);
 
-      const container = this.add.container(0, 0, [enemyBox, nameText, healthText]);
+      const container = this.add.container(0, 0, [enemyBox, nameText, healthText, evasionText, drText]);
       container.setData('index', index);
       this.enemyContainers.push(container);
 
@@ -238,29 +246,59 @@ export class CombatScene extends Phaser.Scene {
       this.gameState.addArcaneAsh(aaReward);
       this.gameState.addCrystallineAnimus(caReward);
       
-      this.showVictoryScreen(aaReward, caReward);
+      const allLoot: string[] = [];
+      state.enemies.forEach(enemy => {
+        const loot = EnemyFactory.rollLoot(enemy);
+        allLoot.push(...loot);
+      });
+      
+      this.showVictoryScreen(aaReward, caReward, allLoot);
     } else {
       this.showDefeatScreen();
     }
   }
 
-  private showVictoryScreen(aa: number, ca: number): void {
+  private showVictoryScreen(aa: number, ca: number, loot: string[]): void {
     const { width, height } = this.cameras.main;
     
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
     
-    this.add.text(width / 2, height / 2 - 60, 'VICTORY!', {
+    this.add.text(width / 2, height / 2 - 100, 'VICTORY!', {
       fontSize: '36px',
       color: '#00ff00',
     }).setOrigin(0.5);
 
-    this.add.text(width / 2, height / 2, `Rewards:\n+${aa} AA\n+${ca.toFixed(1)} CA`, {
-      fontSize: '18px',
+    let rewardText = `Rewards:\n+${aa} AA\n+${ca.toFixed(1)} CA`;
+    
+    const itemsAdded: string[] = [];
+    const itemsFailed: string[] = [];
+    
+    for (const itemId of loot) {
+      const item = ItemDatabase.getItem(itemId);
+      if (item) {
+        if (this.gameState.addItemToInventory(itemId, 1)) {
+          itemsAdded.push(item.name);
+        } else {
+          itemsFailed.push(item.name);
+        }
+      }
+    }
+    
+    if (itemsAdded.length > 0) {
+      rewardText += '\n\nLoot:\n' + itemsAdded.map(name => `• ${name}`).join('\n');
+    }
+    
+    if (itemsFailed.length > 0) {
+      rewardText += '\n\nInventory Full:\n' + itemsFailed.map(name => `• ${name}`).join('\n');
+    }
+
+    this.add.text(width / 2, height / 2 - 20, rewardText, {
+      fontSize: '16px',
       color: '#ffffff',
       align: 'center',
     }).setOrigin(0.5);
 
-    this.createButton(width / 2, height / 2 + 80, 'Continue', () => {
+    this.createButton(width / 2, height / 2 + 120, 'Continue', () => {
       if (this.isWildEncounter) {
         SceneManager.getInstance().transitionTo('explore');
       } else {

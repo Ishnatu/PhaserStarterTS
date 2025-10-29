@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GameStateManager } from '../systems/GameStateManager';
 import { SceneManager } from '../systems/SceneManager';
 import { DelveGenerator } from '../systems/DelveGenerator';
+import { EnemyFactory } from '../systems/EnemyFactory';
 import { GameConfig } from '../config/GameConfig';
 
 export class ExploreScene extends Phaser.Scene {
@@ -10,9 +11,10 @@ export class ExploreScene extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private delveMarkers: Phaser.GameObjects.Container[] = [];
   private infoText!: Phaser.GameObjects.Text;
-  private staminaDrainTimer?: Phaser.Time.TimerEvent;
   private movementStepCounter: number = 0;
   private encounterCooldown: boolean = false;
+  private staminaDebt: number = 0;
+  private readonly TILE_SIZE: number = 32;
 
   constructor() {
     super('ExploreScene');
@@ -70,19 +72,18 @@ export class ExploreScene extends Phaser.Scene {
       fontSize: '12px',
       color: '#cccccc',
     });
-
-    this.staminaDrainTimer = this.time.addEvent({
-      delay: GameConfig.STAMINA.MOVEMENT_DRAIN_INTERVAL,
-      callback: this.drainStamina,
-      callbackScope: this,
-      loop: true,
-    });
   }
 
-  private drainStamina(): void {
-    const player = this.gameState.getPlayer();
-    if (player.stamina > 0) {
-      player.stamina = Math.max(0, player.stamina - GameConfig.STAMINA.MOVEMENT_DRAIN_RATE);
+  private drainStaminaForMovement(pixelsMoved: number): void {
+    const tilesMoved = pixelsMoved / this.TILE_SIZE;
+    this.staminaDebt += tilesMoved * GameConfig.STAMINA.MOVEMENT_DRAIN_RATE;
+
+    if (this.staminaDebt >= 1) {
+      const staminaToDrain = Math.floor(this.staminaDebt);
+      this.staminaDebt -= staminaToDrain;
+
+      const player = this.gameState.getPlayer();
+      player.stamina = Math.max(0, player.stamina - staminaToDrain);
       this.gameState.updatePlayer(player);
     }
   }
@@ -90,29 +91,31 @@ export class ExploreScene extends Phaser.Scene {
   update() {
     const playerData = this.gameState.getPlayer();
     const speed = 3;
-    let moved = false;
+    let pixelsMoved = 0;
 
     const canMove = playerData.stamina > 0;
 
     if (canMove) {
       if (this.cursors.left.isDown) {
         this.player.x -= speed;
-        moved = true;
+        pixelsMoved += speed;
       }
       if (this.cursors.right.isDown) {
         this.player.x += speed;
-        moved = true;
+        pixelsMoved += speed;
       }
       if (this.cursors.up.isDown) {
         this.player.y -= speed;
-        moved = true;
+        pixelsMoved += speed;
       }
       if (this.cursors.down.isDown) {
         this.player.y += speed;
-        moved = true;
+        pixelsMoved += speed;
       }
 
-      if (moved) {
+      if (pixelsMoved > 0) {
+        this.drainStaminaForMovement(pixelsMoved);
+        
         this.movementStepCounter++;
         if (this.movementStepCounter > 30 && !this.encounterCooldown) {
           this.checkRandomEncounter();
@@ -276,21 +279,12 @@ export class ExploreScene extends Phaser.Scene {
       const numEnemies = Math.floor(Math.random() * 2) + 1;
       const enemies = [];
       for (let i = 0; i < numEnemies; i++) {
-        enemies.push({
-          id: `wild_enemy_${i}`,
-          name: 'Wild Void Spawn',
-          health: 40,
-          maxHealth: 40,
-          attack: 8,
-          defense: 4,
-          speed: 8,
-          lootTable: [],
-        });
+        enemies.push(EnemyFactory.createWildEnemy());
       }
       
       return {
         type: 'combat',
-        description: `You've been ambushed by ${numEnemies} Wild Void Spawn${numEnemies > 1 ? 's' : ''}!`,
+        description: `You've been ambushed by ${numEnemies} ${enemies[0].name}${numEnemies > 1 ? 's' : ''}!`,
         enemies,
       };
     } else if (roll < 0.75) {
@@ -366,16 +360,7 @@ export class ExploreScene extends Phaser.Scene {
           const numEnemies = Math.floor(Math.random() * 2) + 1;
           const enemies = [];
           for (let i = 0; i < numEnemies; i++) {
-            enemies.push({
-              id: `rest_ambush_${i}`,
-              name: 'Ambusher Void Spawn',
-              health: 50,
-              maxHealth: 50,
-              attack: 10,
-              defense: 5,
-              speed: 8,
-              lootTable: [],
-            });
+            enemies.push(EnemyFactory.createWildEnemy());
           }
           this.startWildCombat(enemies);
         });

@@ -1,6 +1,10 @@
 import Phaser from 'phaser';
 import { GameStateManager } from '../systems/GameStateManager';
 import { SceneManager } from '../systems/SceneManager';
+import { ItemDatabase } from '../config/ItemDatabase';
+import { EquipmentManager } from '../systems/EquipmentManager';
+import { DiceRoller } from '../utils/DiceRoller';
+import { PlayerEquipment } from '../types/GameTypes';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -41,6 +45,14 @@ export class TownScene extends Phaser.Scene {
 
     const exploreBtn = this.createButton(width / 2, height - 100, 'Venture Into the Wilds', () => {
       SceneManager.getInstance().transitionTo('explore');
+    });
+
+    this.createButton(width - 120, height - 100, 'Inventory', () => {
+      this.openInventory();
+    });
+
+    this.createButton(width - 120, height - 150, 'Equipment', () => {
+      this.openEquipment();
     });
 
   }
@@ -112,6 +124,9 @@ export class TownScene extends Phaser.Scene {
       `Stamina: ${player.stamina} / ${player.maxStamina}`,
       `Level: ${player.level}`,
       ``,
+      `Evasion: ${player.stats.calculatedEvasion}`,
+      `Damage Reduction: ${Math.floor(player.stats.damageReduction * 100)}%`,
+      ``,
       `Arcane Ash (AA): ${player.arcaneAsh}`,
       `Crystalline Animus (CA): ${player.crystallineAnimus.toFixed(1)}`,
     ].join('\n');
@@ -153,6 +168,250 @@ export class TownScene extends Phaser.Scene {
       yoyo: true,
       hold: 1500,
       onComplete: () => msg.destroy(),
+    });
+  }
+
+  private openInventory(): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
+    const panel = this.add.rectangle(width / 2, height / 2, 700, 500, 0x2a2a3e).setOrigin(0.5);
+
+    const title = this.add.text(width / 2, height / 2 - 220, `Inventory (${player.inventory.reduce((sum, item) => sum + item.quantity, 0)}/${player.inventorySlots})`, {
+      fontSize: '24px',
+      color: '#f0a020',
+    }).setOrigin(0.5);
+
+    const itemsStartY = height / 2 - 180;
+    const itemHeight = 30;
+    const maxDisplay = 12;
+
+    let displayedItems = 0;
+    player.inventory.forEach((invItem, index) => {
+      if (displayedItems >= maxDisplay) return;
+
+      const item = ItemDatabase.getItem(invItem.itemId);
+      if (!item) return;
+
+      const y = itemsStartY + displayedItems * itemHeight;
+      
+      this.add.text(width / 2 - 320, y, `${item.name} x${invItem.quantity}`, {
+        fontSize: '14px',
+        color: '#ffffff',
+      });
+
+      const isEquipment = ItemDatabase.getWeapon(invItem.itemId) || ItemDatabase.getArmor(invItem.itemId);
+      const isPotion = ItemDatabase.getPotion(invItem.itemId);
+
+      if (isEquipment) {
+        const equipBtn = this.add.text(width / 2 + 120, y, '[Equip]', {
+          fontSize: '13px',
+          color: '#88ff88',
+        }).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            this.equipItemFromInventory(invItem.itemId);
+            overlay.destroy();
+            panel.destroy();
+            title.destroy();
+            this.openInventory();
+          });
+      }
+
+      if (isPotion) {
+        const useBtn = this.add.text(width / 2 + 120, y, '[Use]', {
+          fontSize: '13px',
+          color: '#8888ff',
+        }).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            this.usePotion(invItem.itemId);
+            overlay.destroy();
+            panel.destroy();
+            title.destroy();
+            this.openInventory();
+          });
+      }
+
+      const storeBtn = this.add.text(width / 2 + 200, y, '[Store]', {
+        fontSize: '13px',
+        color: '#ffaa88',
+      }).setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          this.storeItem(invItem.itemId);
+          overlay.destroy();
+          panel.destroy();
+          title.destroy();
+          this.openInventory();
+        });
+
+      displayedItems++;
+    });
+
+    const closeBtn = this.createButton(width / 2, height / 2 + 220, 'Close', () => {
+      overlay.destroy();
+      panel.destroy();
+      title.destroy();
+      this.infoText.setText(this.getPlayerInfo());
+    });
+  }
+
+  private equipItemFromInventory(itemId: string): void {
+    const player = this.gameState.getPlayer();
+    
+    const weapon = ItemDatabase.getWeapon(itemId);
+    const armor = ItemDatabase.getArmor(itemId);
+
+    if (weapon) {
+      const result = EquipmentManager.equipItem(player, itemId, 'mainHand');
+      this.showMessage(result.message);
+      if (result.success) {
+        this.gameState.updatePlayer(player);
+      }
+    } else if (armor) {
+      let slot: keyof PlayerEquipment = 'chest';
+      if (armor.slot === 'shield') {
+        slot = 'offHand';
+      } else {
+        slot = armor.slot as keyof PlayerEquipment;
+      }
+      
+      const result = EquipmentManager.equipItem(player, itemId, slot);
+      this.showMessage(result.message);
+      if (result.success) {
+        this.gameState.updatePlayer(player);
+      }
+    }
+  }
+
+  private usePotion(itemId: string): void {
+    const player = this.gameState.getPlayer();
+    const potion = ItemDatabase.getPotion(itemId);
+    
+    if (!potion) return;
+
+    const restorationRoll = DiceRoller.rollDiceTotal(potion.restoration);
+    const amount = restorationRoll.total;
+
+    if (potion.type === 'health') {
+      player.health = Math.min(player.maxHealth, player.health + amount);
+      this.showMessage(`Used ${potion.name}! Restored ${amount} HP`);
+    } else if (potion.type === 'stamina') {
+      player.stamina = Math.min(player.maxStamina, player.stamina + amount);
+      this.showMessage(`Used ${potion.name}! Restored ${amount} Stamina`);
+    }
+
+    this.gameState.removeItemFromInventory(itemId, 1);
+    this.gameState.updatePlayer(player);
+    this.infoText.setText(this.getPlayerInfo());
+  }
+
+  private storeItem(itemId: string): void {
+    const player = this.gameState.getPlayer();
+    const totalFootlocker = player.footlocker.reduce((sum, item) => sum + item.quantity, 0);
+    
+    if (totalFootlocker >= player.footlockerSlots) {
+      this.showMessage('Footlocker is full!');
+      return;
+    }
+
+    if (this.gameState.removeItemFromInventory(itemId, 1)) {
+      const existing = player.footlocker.find(item => item.itemId === itemId);
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        player.footlocker.push({ itemId, quantity: 1 });
+      }
+      
+      this.gameState.updatePlayer(player);
+      const item = ItemDatabase.getItem(itemId);
+      this.showMessage(`Stored ${item?.name || 'item'} in footlocker`);
+    }
+  }
+
+  private openEquipment(): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
+    const panel = this.add.rectangle(width / 2, height / 2, 700, 550, 0x2a2a3e).setOrigin(0.5);
+
+    this.add.text(width / 2, height / 2 - 250, 'Equipment', {
+      fontSize: '24px',
+      color: '#f0a020',
+    }).setOrigin(0.5);
+
+    const slots: Array<{ key: keyof PlayerEquipment; label: string }> = [
+      { key: 'mainHand', label: 'Main Hand' },
+      { key: 'offHand', label: 'Off Hand' },
+      { key: 'helmet', label: 'Helmet' },
+      { key: 'chest', label: 'Chest' },
+      { key: 'legs', label: 'Legs' },
+      { key: 'boots', label: 'Boots' },
+      { key: 'shoulders', label: 'Shoulders' },
+      { key: 'cape', label: 'Cape' },
+    ];
+
+    const startY = height / 2 - 200;
+    const slotHeight = 35;
+
+    slots.forEach((slot, index) => {
+      const y = startY + index * slotHeight;
+      
+      this.add.text(width / 2 - 320, y, `${slot.label}:`, {
+        fontSize: '14px',
+        color: '#aaaaaa',
+      });
+
+      const itemId = player.equipment[slot.key];
+      const item = itemId ? ItemDatabase.getItem(itemId) : null;
+      const itemName = item ? item.name : 'Empty';
+
+      this.add.text(width / 2 - 200, y, itemName, {
+        fontSize: '14px',
+        color: item ? '#ffffff' : '#666666',
+      });
+
+      if (itemId) {
+        const unequipBtn = this.add.text(width / 2 + 180, y, '[Unequip]', {
+          fontSize: '13px',
+          color: '#ff8888',
+        }).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            const result = EquipmentManager.unequipItem(player, slot.key);
+            this.showMessage(result.message);
+            if (result.success) {
+              this.gameState.updatePlayer(player);
+            }
+            overlay.destroy();
+            panel.destroy();
+            this.openEquipment();
+          });
+      }
+    });
+
+    const statsY = height / 2 + 100;
+    this.add.text(width / 2 - 320, statsY, 'Combat Stats:', {
+      fontSize: '16px',
+      color: '#f0a020',
+    });
+
+    const statsText = [
+      `Evasion: ${player.stats.calculatedEvasion}`,
+      `Damage Reduction: ${Math.floor(player.stats.damageReduction * 100)}%`,
+      `Attack Bonus: +${player.stats.attackBonus}`,
+      `Damage Bonus: +${player.stats.damageBonus}`,
+    ].join('\n');
+
+    this.add.text(width / 2 - 320, statsY + 25, statsText, {
+      fontSize: '14px',
+      color: '#ffffff',
+      lineSpacing: 5,
+    });
+
+    const closeBtn = this.createButton(width / 2, height / 2 + 240, 'Close', () => {
+      overlay.destroy();
+      panel.destroy();
+      this.infoText.setText(this.getPlayerInfo());
     });
   }
 }

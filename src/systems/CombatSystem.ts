@@ -224,6 +224,14 @@ export class CombatSystem {
     return this.combatState;
   }
 
+  isPlayerTurn(): boolean {
+    return this.combatState?.currentTurn === 'player' && !this.combatState.isComplete;
+  }
+
+  isCombatComplete(): boolean {
+    return this.combatState?.isComplete || false;
+  }
+
   endCombat(): void {
     this.combatState = null;
   }

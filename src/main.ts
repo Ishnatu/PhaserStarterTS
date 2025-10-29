@@ -6,6 +6,7 @@ import { DelveScene } from './scenes/DelveScene';
 import { CombatScene } from './scenes/CombatScene';
 import { SceneManager } from './systems/SceneManager';
 import { GameStateManager } from './systems/GameStateManager';
+import { ItemDatabase } from './config/ItemDatabase';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -19,6 +20,8 @@ const config: Phaser.Types.Core.GameConfig = {
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
 };
+
+ItemDatabase.initialize();
 
 const game = new Phaser.Game(config);
 
