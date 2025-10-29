@@ -1,12 +1,15 @@
 import Phaser from 'phaser';
 import { GameStateManager } from '../systems/GameStateManager';
 import { SceneManager } from '../systems/SceneManager';
+import { ItemDatabase } from '../config/ItemDatabase';
+import { DiceRoller } from '../utils/DiceRoller';
 import { Delve, DelveRoom } from '../types/GameTypes';
 
 export class DelveScene extends Phaser.Scene {
   private gameState!: GameStateManager;
   private currentDelve!: Delve;
   private roomDisplay!: Phaser.GameObjects.Container;
+  private isOverlayActive: boolean = false;
 
   constructor() {
     super('DelveScene');
@@ -32,10 +35,8 @@ export class DelveScene extends Phaser.Scene {
     this.renderDelveMap();
     this.renderCurrentRoom();
 
-    const exitBtn = this.createButton(width - 100, 20, 'Abandon Delve', () => {
-      SceneManager.getInstance().transitionTo('explore', { 
-        returnToLocation: this.currentDelve.location 
-      });
+    const menuBtn = this.createButton(width - 100, 20, 'Menu', () => {
+      this.openMenu();
     });
   }
 
@@ -225,5 +226,138 @@ export class DelveScene extends Phaser.Scene {
       hold: 1500,
       onComplete: () => msg.destroy(),
     });
+  }
+
+  private openMenu(): void {
+    const { width, height } = this.cameras.main;
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setInteractive();
+    const panel = this.add.rectangle(width / 2, height / 2, 400, 350, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0);
+    uiElements.push(overlay, panel);
+
+    const title = this.add.text(width / 2, height / 2 - 150, 'Menu', {
+      fontSize: '28px',
+      color: '#f0a020',
+    }).setOrigin(0.5).setScrollFactor(0);
+    uiElements.push(title);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.isOverlayActive = false;
+    };
+
+    const inventoryBtn = this.createButton(width / 2, height / 2 - 70, 'Inventory', () => {
+      uiElements.forEach(el => el.destroy());
+      this.openInventory();
+    }).setScrollFactor(0);
+    uiElements.push(inventoryBtn);
+
+    const abandonBtn = this.createButton(width / 2, height / 2 - 10, 'Abandon Delve', () => {
+      destroyAll();
+      SceneManager.getInstance().transitionTo('explore', { 
+        returnToLocation: this.currentDelve.location 
+      });
+    }).setScrollFactor(0);
+    uiElements.push(abandonBtn);
+
+    const mainMenuBtn = this.createButton(width / 2, height / 2 + 50, 'Return to Main Menu', () => {
+      destroyAll();
+      this.scene.start('MainMenuScene');
+    }).setScrollFactor(0);
+    uiElements.push(mainMenuBtn);
+
+    const closeBtn = this.createButton(width / 2, height / 2 + 130, 'Close', () => {
+      destroyAll();
+    }).setScrollFactor(0);
+    uiElements.push(closeBtn);
+
+    this.isOverlayActive = true;
+  }
+
+  private openInventory(): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setInteractive();
+    const panel = this.add.rectangle(width / 2, height / 2, 700, 500, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0);
+    uiElements.push(overlay, panel);
+
+    const title = this.add.text(width / 2, height / 2 - 220, `Inventory (${player.inventory.reduce((sum, item) => sum + item.quantity, 0)}/${player.inventorySlots})`, {
+      fontSize: '24px',
+      color: '#f0a020',
+    }).setOrigin(0.5).setScrollFactor(0);
+    uiElements.push(title);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.isOverlayActive = false;
+    };
+
+    const itemsStartY = height / 2 - 180;
+    const itemHeight = 30;
+    const maxDisplay = 12;
+
+    let displayedItems = 0;
+    player.inventory.forEach((invItem, index) => {
+      if (displayedItems >= maxDisplay) return;
+
+      const item = ItemDatabase.getItem(invItem.itemId);
+      if (!item) return;
+
+      const y = itemsStartY + displayedItems * itemHeight;
+      
+      const itemLabel = this.add.text(width / 2 - 320, y, `${item.name} x${invItem.quantity}`, {
+        fontSize: '14px',
+        color: '#ffffff',
+      }).setScrollFactor(0);
+      uiElements.push(itemLabel);
+
+      const isPotion = ItemDatabase.getPotion(invItem.itemId);
+
+      if (isPotion) {
+        const useBtn = this.add.text(width / 2 + 120, y, '[Use]', {
+          fontSize: '13px',
+          color: '#8888ff',
+        }).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            this.usePotion(invItem.itemId);
+            destroyAll();
+            this.openInventory();
+          }).setScrollFactor(0);
+        uiElements.push(useBtn);
+      }
+
+      displayedItems++;
+    });
+
+    const closeBtn = this.createButton(width / 2, height / 2 + 220, 'Close', () => {
+      destroyAll();
+    }).setScrollFactor(0);
+    uiElements.push(closeBtn);
+
+    this.isOverlayActive = true;
+  }
+
+  private usePotion(itemId: string): void {
+    const player = this.gameState.getPlayer();
+    const potion = ItemDatabase.getPotion(itemId);
+    
+    if (!potion) return;
+
+    const restorationRoll = DiceRoller.rollDiceTotal(potion.restoration);
+    const amount = restorationRoll.total;
+
+    if (potion.type === 'health') {
+      player.health = Math.min(player.maxHealth, player.health + amount);
+      this.showMessage(`Used ${potion.name}! Restored ${amount} HP`);
+    } else if (potion.type === 'stamina') {
+      player.stamina = Math.min(player.maxStamina, player.stamina + amount);
+      this.showMessage(`Used ${potion.name}! Restored ${amount} Stamina`);
+    }
+
+    this.gameState.removeItemFromInventory(itemId, 1);
+    this.gameState.updatePlayer(player);
   }
 }

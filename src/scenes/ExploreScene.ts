@@ -3,18 +3,26 @@ import { GameStateManager } from '../systems/GameStateManager';
 import { SceneManager } from '../systems/SceneManager';
 import { DelveGenerator } from '../systems/DelveGenerator';
 import { EnemyFactory } from '../systems/EnemyFactory';
+import { EquipmentManager } from '../systems/EquipmentManager';
 import { GameConfig } from '../config/GameConfig';
+import { ItemDatabase } from '../config/ItemDatabase';
+import { DiceRoller } from '../utils/DiceRoller';
+import { PlayerEquipment } from '../types/GameTypes';
 
 export class ExploreScene extends Phaser.Scene {
   private gameState!: GameStateManager;
   private player!: Phaser.GameObjects.Rectangle;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private delveMarkers: Phaser.GameObjects.Container[] = [];
+  private townPortal!: Phaser.GameObjects.Container;
   private infoText!: Phaser.GameObjects.Text;
   private movementStepCounter: number = 0;
   private encounterCooldown: boolean = false;
   private staminaDebt: number = 0;
+  private isOverlayActive: boolean = false;
   private readonly TILE_SIZE: number = 32;
+  private readonly WORLD_SIZE: number = 3000;
+  private readonly CHUNK_SIZE: number = 800;
 
   constructor() {
     super('ExploreScene');
@@ -32,12 +40,12 @@ export class ExploreScene extends Phaser.Scene {
 
     const { width, height } = this.cameras.main;
 
-    this.add.rectangle(0, 0, width, height, 0x1a4a2a).setOrigin(0);
+    this.add.rectangle(0, 0, this.WORLD_SIZE, this.WORLD_SIZE, 0x1a4a2a).setOrigin(0);
 
-    this.add.text(width / 2, 20, 'The Wilds of Grawgonia', {
+    const titleText = this.add.text(width / 2, 20, 'The Wilds of Grawgonia', {
       fontSize: '24px',
       color: '#90ee90',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setScrollFactor(0);
 
     const returnLocation = this.registry.get('returnToLocation') as { x: number; y: number } | undefined;
     const playerData = this.gameState.getPlayer();
@@ -46,32 +54,31 @@ export class ExploreScene extends Phaser.Scene {
       this.player = this.add.rectangle(returnLocation.x, returnLocation.y, 32, 32, 0x4488ff);
       this.registry.remove('returnToLocation');
     } else {
-      this.player = this.add.rectangle(width / 2, height / 2, 32, 32, 0x4488ff);
+      this.player = this.add.rectangle(this.WORLD_SIZE / 2, this.WORLD_SIZE / 2, 32, 32, 0x4488ff);
     }
 
-    this.generateDelves();
+    this.cameras.main.setBounds(0, 0, this.WORLD_SIZE, this.WORLD_SIZE);
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+
+    this.generateInitialWorld();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
 
-    const returnBtn = this.createButton(width - 120, 20, 'Return to Town', () => {
-      SceneManager.getInstance().transitionTo('town');
-    });
-
-    const restBtn = this.createButton(width - 120, 60, 'Short Rest', () => {
-      this.takeShortRest();
-    });
+    const menuBtn = this.createButton(width - 120, 20, 'Menu', () => {
+      this.openMenu();
+    }).setScrollFactor(0);
 
     this.infoText = this.add.text(20, 60, '', {
       fontSize: '14px',
       color: '#ffffff',
       backgroundColor: '#00000088',
       padding: { x: 10, y: 5 },
-    });
+    }).setScrollFactor(0);
 
-    this.add.text(20, height - 40, 'Arrow keys to move • Approach delves to enter', {
+    this.add.text(20, height - 40, 'Arrow keys to move • Approach markers to interact', {
       fontSize: '12px',
       color: '#cccccc',
-    });
+    }).setScrollFactor(0);
   }
 
   private drainStaminaForMovement(pixelsMoved: number): void {
@@ -93,7 +100,7 @@ export class ExploreScene extends Phaser.Scene {
     const speed = 3;
     let pixelsMoved = 0;
 
-    const canMove = playerData.stamina > 0;
+    const canMove = playerData.stamina > 0 && !this.isOverlayActive;
 
     if (canMove) {
       if (this.cursors.left.isDown) {
@@ -121,23 +128,50 @@ export class ExploreScene extends Phaser.Scene {
           this.checkRandomEncounter();
         }
         this.checkDelveProximity();
+        this.checkTownPortalProximity();
       }
     }
 
     this.updateInfo();
   }
 
+  private generateInitialWorld(): void {
+    this.generateDelves();
+    this.createTownPortal();
+  }
+
   private generateDelves(): void {
-    const { width, height } = this.cameras.main;
-    
-    for (let i = 0; i < 3; i++) {
-      const x = 100 + Math.random() * (width - 200);
-      const y = 100 + Math.random() * (height - 200);
-      const tier = 1;
+    for (let i = 0; i < 8; i++) {
+      const x = 200 + Math.random() * (this.WORLD_SIZE - 400);
+      const y = 200 + Math.random() * (this.WORLD_SIZE - 400);
+      const tier = Math.floor(Math.random() * 3) + 1;
 
       const marker = this.createDelveMarker(x, y, tier);
       this.delveMarkers.push(marker);
     }
+  }
+
+  private createTownPortal(): void {
+    const x = this.WORLD_SIZE / 2 + 150;
+    const y = this.WORLD_SIZE / 2;
+
+    const portal = this.add.circle(0, 0, 20, 0x4488ff, 0.7);
+    const glow = this.add.circle(0, 0, 24, 0x88ccff, 0.3);
+    const label = this.add.text(0, -40, 'Town Portal', {
+      fontSize: '12px',
+      color: '#88ccff',
+    }).setOrigin(0.5);
+
+    this.tweens.add({
+      targets: glow,
+      scale: 1.4,
+      alpha: 0.1,
+      duration: 1500,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    this.townPortal = this.add.container(x, y, [glow, portal, label]);
   }
 
   private createDelveMarker(x: number, y: number, tier: number): Phaser.GameObjects.Container {
@@ -204,7 +238,7 @@ export class ExploreScene extends Phaser.Scene {
       300,
       0x000000,
       0.9
-    ).setOrigin(0.5);
+    ).setOrigin(0.5).setScrollFactor(0).setInteractive();
 
     const titleText = this.add.text(
       this.cameras.main.width / 2,
@@ -214,7 +248,7 @@ export class ExploreScene extends Phaser.Scene {
         fontSize: '24px',
         color: '#ff8844',
       }
-    ).setOrigin(0.5);
+    ).setOrigin(0.5).setScrollFactor(0);
 
     const descText = this.add.text(
       this.cameras.main.width / 2,
@@ -226,10 +260,12 @@ export class ExploreScene extends Phaser.Scene {
         align: 'center',
         wordWrap: { width: 400 },
       }
-    ).setOrigin(0.5);
+    ).setOrigin(0.5).setScrollFactor(0);
+
+    this.isOverlayActive = true;
 
     if (encounterType.type === 'combat' && encounterType.enemies) {
-      this.createButton(
+      const fightBtn = this.createButton(
         this.cameras.main.width / 2,
         this.cameras.main.height / 2 + 80,
         'Fight!',
@@ -237,9 +273,11 @@ export class ExploreScene extends Phaser.Scene {
           overlay.destroy();
           titleText.destroy();
           descText.destroy();
+          fightBtn.destroy();
+          this.isOverlayActive = false;
           this.startWildCombat(encounterType.enemies!);
         }
-      );
+      ).setScrollFactor(0);
     } else if (encounterType.type === 'treasure' && encounterType.loot) {
       const loot = encounterType.loot;
       this.gameState.addArcaneAsh(loot.aa);
@@ -253,7 +291,7 @@ export class ExploreScene extends Phaser.Scene {
           fontSize: '18px',
           color: '#ffcc00',
         }
-      ).setOrigin(0.5);
+      ).setOrigin(0.5).setScrollFactor(0);
 
       this.time.delayedCall(3000, () => {
         overlay.destroy();
@@ -261,6 +299,7 @@ export class ExploreScene extends Phaser.Scene {
         descText.destroy();
         lootText.destroy();
         this.encounterCooldown = false;
+        this.isOverlayActive = false;
       });
     } else {
       this.time.delayedCall(2500, () => {
@@ -268,6 +307,7 @@ export class ExploreScene extends Phaser.Scene {
         titleText.destroy();
         descText.destroy();
         this.encounterCooldown = false;
+        this.isOverlayActive = false;
       });
     }
   }
@@ -335,7 +375,7 @@ export class ExploreScene extends Phaser.Scene {
       200,
       0x000000,
       0.8
-    ).setOrigin(0.5);
+    ).setOrigin(0.5).setScrollFactor(0).setInteractive();
 
     const restingText = this.add.text(
       this.cameras.main.width / 2,
@@ -345,7 +385,9 @@ export class ExploreScene extends Phaser.Scene {
         fontSize: '24px',
         color: '#ffffff',
       }
-    ).setOrigin(0.5);
+    ).setOrigin(0.5).setScrollFactor(0);
+
+    this.isOverlayActive = true;
 
     this.time.delayedCall(GameConfig.STAMINA.REST_DURATION, () => {
       const encounterChance = GameConfig.STAMINA.WILDERNESS_ENCOUNTER_CHANCE_WHILE_RESTING;
@@ -356,6 +398,7 @@ export class ExploreScene extends Phaser.Scene {
           restOverlay.destroy();
           restingText.destroy();
           this.encounterCooldown = false;
+          this.isOverlayActive = false;
           
           const numEnemies = Math.floor(Math.random() * 2) + 1;
           const enemies = [];
@@ -377,6 +420,7 @@ export class ExploreScene extends Phaser.Scene {
         this.time.delayedCall(2000, () => {
           restOverlay.destroy();
           restingText.destroy();
+          this.isOverlayActive = false;
         });
       }
     });
@@ -389,6 +433,254 @@ export class ExploreScene extends Phaser.Scene {
       `Stamina: ${player.stamina}/${player.maxStamina}`,
       `AA: ${player.arcaneAsh} | CA: ${player.crystallineAnimus.toFixed(1)}`,
     ].join('\n'));
+  }
+
+  private checkTownPortalProximity(): void {
+    const distance = Phaser.Math.Distance.Between(
+      this.player.x,
+      this.player.y,
+      this.townPortal.x,
+      this.townPortal.y
+    );
+
+    if (distance < 50) {
+      SceneManager.getInstance().transitionTo('town');
+    }
+  }
+
+  private openMenu(): void {
+    const { width, height } = this.cameras.main;
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setInteractive();
+    const panel = this.add.rectangle(width / 2, height / 2, 400, 350, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0);
+    uiElements.push(overlay, panel);
+
+    const title = this.add.text(width / 2, height / 2 - 150, 'Menu', {
+      fontSize: '28px',
+      color: '#f0a020',
+    }).setOrigin(0.5).setScrollFactor(0);
+    uiElements.push(title);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.isOverlayActive = false;
+    };
+
+    const shortRestBtn = this.createButton(width / 2, height / 2 - 80, 'Short Rest', () => {
+      destroyAll();
+      this.takeShortRest();
+    }).setScrollFactor(0);
+    uiElements.push(shortRestBtn);
+
+    const inventoryBtn = this.createButton(width / 2, height / 2 - 30, 'Inventory', () => {
+      uiElements.forEach(el => el.destroy());
+      this.openInventory();
+    }).setScrollFactor(0);
+    uiElements.push(inventoryBtn);
+
+    const equipmentBtn = this.createButton(width / 2, height / 2 + 20, 'Equipment', () => {
+      uiElements.forEach(el => el.destroy());
+      this.openEquipment();
+    }).setScrollFactor(0);
+    uiElements.push(equipmentBtn);
+
+    const mainMenuBtn = this.createButton(width / 2, height / 2 + 70, 'Return to Main Menu', () => {
+      destroyAll();
+      this.scene.start('MainMenuScene');
+    }).setScrollFactor(0);
+    uiElements.push(mainMenuBtn);
+
+    const closeBtn = this.createButton(width / 2, height / 2 + 130, 'Close', () => {
+      destroyAll();
+    }).setScrollFactor(0);
+    uiElements.push(closeBtn);
+
+    this.isOverlayActive = true;
+  }
+
+  private openInventory(): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setInteractive();
+    const panel = this.add.rectangle(width / 2, height / 2, 700, 500, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0);
+    uiElements.push(overlay, panel);
+
+    const title = this.add.text(width / 2, height / 2 - 220, `Inventory (${player.inventory.reduce((sum, item) => sum + item.quantity, 0)}/${player.inventorySlots})`, {
+      fontSize: '24px',
+      color: '#f0a020',
+    }).setOrigin(0.5).setScrollFactor(0);
+    uiElements.push(title);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.isOverlayActive = false;
+    };
+
+    const itemsStartY = height / 2 - 180;
+    const itemHeight = 30;
+    const maxDisplay = 12;
+
+    let displayedItems = 0;
+    player.inventory.forEach((invItem, index) => {
+      if (displayedItems >= maxDisplay) return;
+
+      const item = ItemDatabase.getItem(invItem.itemId);
+      if (!item) return;
+
+      const y = itemsStartY + displayedItems * itemHeight;
+      
+      const itemLabel = this.add.text(width / 2 - 320, y, `${item.name} x${invItem.quantity}`, {
+        fontSize: '14px',
+        color: '#ffffff',
+      }).setScrollFactor(0);
+      uiElements.push(itemLabel);
+
+      const isPotion = ItemDatabase.getPotion(invItem.itemId);
+
+      if (isPotion) {
+        const useBtn = this.add.text(width / 2 + 120, y, '[Use]', {
+          fontSize: '13px',
+          color: '#8888ff',
+        }).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            this.usePotion(invItem.itemId);
+            destroyAll();
+            this.openInventory();
+          }).setScrollFactor(0);
+        uiElements.push(useBtn);
+      }
+
+      displayedItems++;
+    });
+
+    const closeBtn = this.createButton(width / 2, height / 2 + 220, 'Close', () => {
+      destroyAll();
+    }).setScrollFactor(0);
+    uiElements.push(closeBtn);
+
+    this.isOverlayActive = true;
+  }
+
+  private usePotion(itemId: string): void {
+    const player = this.gameState.getPlayer();
+    const potion = ItemDatabase.getPotion(itemId);
+    
+    if (!potion) return;
+
+    const restorationRoll = DiceRoller.rollDiceTotal(potion.restoration);
+    const amount = restorationRoll.total;
+
+    if (potion.type === 'health') {
+      player.health = Math.min(player.maxHealth, player.health + amount);
+      this.showMessage(`Used ${potion.name}! Restored ${amount} HP`);
+    } else if (potion.type === 'stamina') {
+      player.stamina = Math.min(player.maxStamina, player.stamina + amount);
+      this.showMessage(`Used ${potion.name}! Restored ${amount} Stamina`);
+    }
+
+    this.gameState.removeItemFromInventory(itemId, 1);
+    this.gameState.updatePlayer(player);
+  }
+
+  private openEquipment(): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setInteractive();
+    const panel = this.add.rectangle(width / 2, height / 2, 700, 550, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0);
+    uiElements.push(overlay, panel);
+
+    const title = this.add.text(width / 2, height / 2 - 250, 'Equipment', {
+      fontSize: '24px',
+      color: '#f0a020',
+    }).setOrigin(0.5).setScrollFactor(0);
+    uiElements.push(title);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.isOverlayActive = false;
+    };
+
+    const slots: Array<{ key: keyof PlayerEquipment; label: string }> = [
+      { key: 'mainHand', label: 'Main Hand' },
+      { key: 'offHand', label: 'Off Hand' },
+      { key: 'helmet', label: 'Helmet' },
+      { key: 'chest', label: 'Chest' },
+      { key: 'legs', label: 'Legs' },
+      { key: 'boots', label: 'Boots' },
+      { key: 'shoulders', label: 'Shoulders' },
+      { key: 'cape', label: 'Cape' },
+    ];
+
+    const startY = height / 2 - 200;
+    const slotHeight = 35;
+
+    slots.forEach((slot, index) => {
+      const y = startY + index * slotHeight;
+      
+      const slotLabel = this.add.text(width / 2 - 320, y, `${slot.label}:`, {
+        fontSize: '14px',
+        color: '#aaaaaa',
+      }).setScrollFactor(0);
+      uiElements.push(slotLabel);
+
+      const itemId = player.equipment[slot.key];
+      const item = itemId ? ItemDatabase.getItem(itemId) : null;
+      const itemName = item ? item.name : 'Empty';
+
+      const itemLabel = this.add.text(width / 2 - 200, y, itemName, {
+        fontSize: '14px',
+        color: item ? '#ffffff' : '#666666',
+      }).setScrollFactor(0);
+      uiElements.push(itemLabel);
+    });
+
+    const statsTitle = this.add.text(width / 2 - 320, height / 2 + 100, 'Stats:', {
+      fontSize: '16px',
+      color: '#ffaa00',
+    }).setScrollFactor(0);
+    uiElements.push(statsTitle);
+
+    const statsText = this.add.text(width / 2 - 320, height / 2 + 130, [
+      `Evasion: ${player.stats.calculatedEvasion}`,
+      `Damage Reduction: ${Math.floor(player.stats.damageReduction * 100)}%`,
+    ].join('  |  '), {
+      fontSize: '14px',
+      color: '#88ccff',
+    }).setScrollFactor(0);
+    uiElements.push(statsText);
+
+    const closeBtn = this.createButton(width / 2, height / 2 + 240, 'Close', () => {
+      destroyAll();
+    }).setScrollFactor(0);
+    uiElements.push(closeBtn);
+
+    this.isOverlayActive = true;
+  }
+
+  private showMessage(message: string): void {
+    const { width, height } = this.cameras.main;
+    const messageText = this.add.text(width / 2, height - 100, message, {
+      fontSize: '16px',
+      color: '#ffff00',
+      backgroundColor: '#000000',
+      padding: { x: 10, y: 5 },
+    }).setOrigin(0.5).setScrollFactor(0);
+
+    this.tweens.add({
+      targets: messageText,
+      alpha: 0,
+      y: height - 150,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => {
+        messageText.destroy();
+      }
+    });
   }
 
   private createButton(

@@ -39,10 +39,21 @@ export class CombatScene extends Phaser.Scene {
 
     this.add.rectangle(0, 0, width, height, 0x0f0f1f).setOrigin(0);
 
-    this.add.text(width / 2, 30, this.currentRoom.type === 'boss' ? 'BOSS BATTLE!' : 'Combat', {
-      fontSize: '28px',
+    const titleText = this.add.text(width / 2, height / 2, this.currentRoom.type === 'boss' ? 'BOSS BATTLE!' : 'Combat Begins!', {
+      fontSize: '36px',
       color: this.currentRoom.type === 'boss' ? '#ff0000' : '#ff8844',
     }).setOrigin(0.5);
+
+    this.tweens.add({
+      targets: titleText,
+      alpha: 0,
+      duration: 2000,
+      ease: 'Power2',
+      delay: 500,
+      onComplete: () => {
+        titleText.destroy();
+      }
+    });
 
     const enemies = this.generateEnemies();
     const player = this.gameState.getPlayer();
