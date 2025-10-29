@@ -38,10 +38,10 @@ export class TownScene extends Phaser.Scene {
 
     const player = this.gameState.getPlayer();
     
-    this.infoText = this.add.text(20, 180, this.getPlayerInfo(), {
-      fontSize: '14px',
+    this.infoText = this.add.text(20, 20, this.getPlayerInfo(), {
+      fontSize: '11px',
       color: '#ffffff',
-      lineSpacing: 8,
+      lineSpacing: 4,
     });
 
     this.createNPCs();
