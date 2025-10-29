@@ -230,7 +230,18 @@ export class ExploreScene extends Phaser.Scene {
 
   private triggerEncounter(): void {
     const encounterType = this.generateRandomEncounter();
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
     
+    const blocker = this.add.rectangle(
+      0,
+      0,
+      this.cameras.main.width,
+      this.cameras.main.height,
+      0x000000,
+      0.01
+    ).setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+    uiElements.push(blocker);
+
     const overlay = this.add.rectangle(
       this.cameras.main.width / 2,
       this.cameras.main.height / 2,
@@ -239,6 +250,7 @@ export class ExploreScene extends Phaser.Scene {
       0x000000,
       0.9
     ).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+    uiElements.push(overlay);
 
     const titleText = this.add.text(
       this.cameras.main.width / 2,
@@ -249,6 +261,7 @@ export class ExploreScene extends Phaser.Scene {
         color: '#ff8844',
       }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    uiElements.push(titleText);
 
     const descText = this.add.text(
       this.cameras.main.width / 2,
@@ -261,6 +274,7 @@ export class ExploreScene extends Phaser.Scene {
         wordWrap: { width: 400 },
       }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    uiElements.push(descText);
 
     this.isOverlayActive = true;
 
@@ -270,9 +284,7 @@ export class ExploreScene extends Phaser.Scene {
         this.cameras.main.height / 2 + 80,
         'Fight!',
         () => {
-          overlay.destroy();
-          titleText.destroy();
-          descText.destroy();
+          uiElements.forEach(el => el.destroy());
           fightBtn.destroy();
           this.isOverlayActive = false;
           this.startWildCombat(encounterType.enemies!);
@@ -292,20 +304,17 @@ export class ExploreScene extends Phaser.Scene {
           color: '#ffcc00',
         }
       ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+      uiElements.push(lootText);
 
       this.time.delayedCall(3000, () => {
-        overlay.destroy();
-        titleText.destroy();
-        descText.destroy();
+        uiElements.forEach(el => el.destroy());
         lootText.destroy();
         this.encounterCooldown = false;
         this.isOverlayActive = false;
       });
     } else {
       this.time.delayedCall(2500, () => {
-        overlay.destroy();
-        titleText.destroy();
-        descText.destroy();
+        uiElements.forEach(el => el.destroy());
         this.encounterCooldown = false;
         this.isOverlayActive = false;
       });
