@@ -29,7 +29,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Economy**: Uses Arcane Ash (AA) for common transactions and Crystalline Animus (CA) for rare items and enchantments.
 - **Inventory & Equipment**: Features an 8-slot equipment system (Main Hand, Off Hand, Helmet, Chest, Legs, Boots, Shoulders, Cape) with two-handed weapon mechanics, light/heavy armor, and shields. A 15-slot active inventory bag and an 80-slot footlocker are available.
 - **Loot System**: Enemies drop tier-based items, including weapons, armor, and potions.
-- **Random Encounters**: Triggered in the wilderness, featuring combat, treasure, or event outcomes.
+- **Random Encounters**: Triggered in the wilderness, featuring combat, treasure, or event outcomes. Combat encounters display a 2-second announcement before automatically transitioning to battle.
 - **Expanded Wilderness**: 3000x3000 world with camera-follow system (0.1 lerp) that smoothly tracks player movement. Eight procedurally placed delve entrances scattered across the map. Town portal marker provides instant return to Roboka (50px proximity trigger).
 - **UI System**: All overlays use viewport-locking (setScrollFactor(0)) and interactive blocking to freeze gameplay. Menu system in wilderness (Short Rest, Inventory, Equipment, Return to Menu) and delves (Inventory, Abandon Delve, Return to Menu). Potion usage available in both wilderness and between delve stages.
 - **Overlay Mechanics**: Uses isOverlayActive flag to disable player movement when menus/overlays are open, while keeping overlay buttons interactive. All UI elements tracked in arrays for proper cleanup.

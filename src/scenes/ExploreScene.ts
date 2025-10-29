@@ -279,17 +279,11 @@ export class ExploreScene extends Phaser.Scene {
     this.isOverlayActive = true;
 
     if (encounterType.type === 'combat' && encounterType.enemies) {
-      const fightBtn = this.createButton(
-        this.cameras.main.width / 2,
-        this.cameras.main.height / 2 + 80,
-        'Fight!',
-        () => {
-          uiElements.forEach(el => el.destroy());
-          fightBtn.destroy();
-          this.isOverlayActive = false;
-          this.startWildCombat(encounterType.enemies!);
-        }
-      ).setScrollFactor(0).setDepth(1002);
+      this.time.delayedCall(2000, () => {
+        uiElements.forEach(el => el.destroy());
+        this.isOverlayActive = false;
+        this.startWildCombat(encounterType.enemies!);
+      });
     } else if (encounterType.type === 'treasure' && encounterType.loot) {
       const loot = encounterType.loot;
       this.gameState.addArcaneAsh(loot.aa);
@@ -308,7 +302,6 @@ export class ExploreScene extends Phaser.Scene {
 
       this.time.delayedCall(3000, () => {
         uiElements.forEach(el => el.destroy());
-        lootText.destroy();
         this.encounterCooldown = false;
         this.isOverlayActive = false;
       });
