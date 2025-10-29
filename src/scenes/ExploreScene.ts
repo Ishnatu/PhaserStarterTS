@@ -238,7 +238,7 @@ export class ExploreScene extends Phaser.Scene {
       300,
       0x000000,
       0.9
-    ).setOrigin(0.5).setScrollFactor(0).setInteractive().setDepth(1000);
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
 
     const titleText = this.add.text(
       this.cameras.main.width / 2,
@@ -375,7 +375,7 @@ export class ExploreScene extends Phaser.Scene {
       200,
       0x000000,
       0.8
-    ).setOrigin(0.5).setScrollFactor(0).setInteractive();
+    ).setOrigin(0.5).setScrollFactor(0);
 
     const restingText = this.add.text(
       this.cameras.main.width / 2,
