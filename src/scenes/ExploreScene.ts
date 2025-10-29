@@ -23,6 +23,9 @@ export class ExploreScene extends Phaser.Scene {
   private readonly TILE_SIZE: number = 32;
   private readonly WORLD_SIZE: number = 3000;
   private readonly CHUNK_SIZE: number = 800;
+  private menuState: 'none' | 'main' | 'inventory' | 'equipment' | 'quit' = 'none';
+  private currentMenuCloseFunction: (() => void) | null = null;
+  private escKey!: Phaser.Input.Keyboard.Key;
 
   constructor() {
     super('ExploreScene');
@@ -63,6 +66,11 @@ export class ExploreScene extends Phaser.Scene {
     this.generateInitialWorld();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
+    this.escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    
+    this.escKey.on('down', () => {
+      this.handleEscapeKey();
+    });
 
     const menuBtn = this.createButton(width - 120, 20, 'Menu', () => {
       this.openMenu();
@@ -450,6 +458,25 @@ export class ExploreScene extends Phaser.Scene {
     }
   }
 
+  private handleEscapeKey(): void {
+    if (this.menuState === 'inventory' || this.menuState === 'equipment') {
+      if (this.currentMenuCloseFunction) {
+        this.currentMenuCloseFunction();
+      }
+      this.openMenu();
+    } else if (this.menuState === 'main') {
+      if (this.currentMenuCloseFunction) {
+        this.currentMenuCloseFunction();
+      }
+    } else if (this.menuState === 'quit') {
+      if (this.currentMenuCloseFunction) {
+        this.currentMenuCloseFunction();
+      }
+    } else {
+      this.openQuitMenu();
+    }
+  }
+
   private openMenu(): void {
     const { width, height } = this.cameras.main;
     const uiElements: Phaser.GameObjects.GameObject[] = [];
@@ -467,7 +494,12 @@ export class ExploreScene extends Phaser.Scene {
     const destroyAll = () => {
       uiElements.forEach(el => el.destroy());
       this.isOverlayActive = false;
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
     };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'main';
 
     const shortRestBtn = this.createButton(width / 2, height / 2 - 80, 'Short Rest', () => {
       destroyAll();
@@ -501,6 +533,44 @@ export class ExploreScene extends Phaser.Scene {
     this.isOverlayActive = true;
   }
 
+  private openQuitMenu(): void {
+    const { width, height } = this.cameras.main;
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setInteractive();
+    const panel = this.add.rectangle(width / 2, height / 2, 400, 250, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0);
+    uiElements.push(overlay, panel);
+
+    const title = this.add.text(width / 2, height / 2 - 100, 'Quit Game?', {
+      fontSize: '28px',
+      color: '#ff6666',
+    }).setOrigin(0.5).setScrollFactor(0);
+    uiElements.push(title);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.isOverlayActive = false;
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'quit';
+
+    const quitBtn = this.createButton(width / 2, height / 2 - 20, 'Return to Main Menu', () => {
+      destroyAll();
+      this.scene.start('MainMenuScene');
+    }).setScrollFactor(0);
+    uiElements.push(quitBtn);
+
+    const cancelBtn = this.createButton(width / 2, height / 2 + 40, 'Cancel', () => {
+      destroyAll();
+    }).setScrollFactor(0);
+    uiElements.push(cancelBtn);
+
+    this.isOverlayActive = true;
+  }
+
   private openInventory(): void {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
@@ -519,7 +589,12 @@ export class ExploreScene extends Phaser.Scene {
     const destroyAll = () => {
       uiElements.forEach(el => el.destroy());
       this.isOverlayActive = false;
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
     };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'inventory';
 
     const itemsStartY = height / 2 - 180;
     const itemHeight = 30;
@@ -605,7 +680,12 @@ export class ExploreScene extends Phaser.Scene {
     const destroyAll = () => {
       uiElements.forEach(el => el.destroy());
       this.isOverlayActive = false;
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
     };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'equipment';
 
     const slots: Array<{ key: keyof PlayerEquipment; label: string }> = [
       { key: 'mainHand', label: 'Main Hand' },

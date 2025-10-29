@@ -33,6 +33,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Expanded Wilderness**: 3000x3000 world with camera-follow system (0.1 lerp) that smoothly tracks player movement. Eight procedurally placed delve entrances scattered across the map. Town portal marker provides instant return to Roboka (50px proximity trigger).
 - **UI System**: All overlays use viewport-locking (setScrollFactor(0)) and interactive blocking to freeze gameplay. Menu system in wilderness (Short Rest, Inventory, Equipment, Return to Menu) and delves (Inventory, Abandon Delve, Return to Menu). Potion usage available in both wilderness and between delve stages.
 - **Overlay Mechanics**: Uses isOverlayActive flag to disable player movement when menus/overlays are open, while keeping overlay buttons interactive. All UI elements tracked in arrays for proper cleanup.
+- **ESC Key Navigation**: Hierarchical menu navigation using ESC key. From submenus (Inventory, Equipment) → ESC returns to main menu. From main menu → ESC closes menu. From gameplay → ESC opens quit confirmation menu.
 - **Save/Load System**: Implemented using LocalStorage.
 - **Modular Architecture**: Designed with separated concerns (scenes, systems, config, types, utils) using TypeScript and singleton patterns for managers (GameState, Scene) for extensibility.
 - **HMR Configuration**: Vite dev server configured for Hot Module Replacement in Replit using WSS and `REPLIT_DEV_DOMAIN`.
