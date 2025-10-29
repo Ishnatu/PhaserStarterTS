@@ -238,7 +238,7 @@ export class ExploreScene extends Phaser.Scene {
       300,
       0x000000,
       0.9
-    ).setOrigin(0.5).setScrollFactor(0).setInteractive();
+    ).setOrigin(0.5).setScrollFactor(0).setInteractive().setDepth(1000);
 
     const titleText = this.add.text(
       this.cameras.main.width / 2,
@@ -248,7 +248,7 @@ export class ExploreScene extends Phaser.Scene {
         fontSize: '24px',
         color: '#ff8844',
       }
-    ).setOrigin(0.5).setScrollFactor(0);
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     const descText = this.add.text(
       this.cameras.main.width / 2,
@@ -260,7 +260,7 @@ export class ExploreScene extends Phaser.Scene {
         align: 'center',
         wordWrap: { width: 400 },
       }
-    ).setOrigin(0.5).setScrollFactor(0);
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     this.isOverlayActive = true;
 
@@ -277,7 +277,7 @@ export class ExploreScene extends Phaser.Scene {
           this.isOverlayActive = false;
           this.startWildCombat(encounterType.enemies!);
         }
-      ).setScrollFactor(0);
+      ).setScrollFactor(0).setDepth(1002);
     } else if (encounterType.type === 'treasure' && encounterType.loot) {
       const loot = encounterType.loot;
       this.gameState.addArcaneAsh(loot.aa);
@@ -291,7 +291,7 @@ export class ExploreScene extends Phaser.Scene {
           fontSize: '18px',
           color: '#ffcc00',
         }
-      ).setOrigin(0.5).setScrollFactor(0);
+      ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
       this.time.delayedCall(3000, () => {
         overlay.destroy();
