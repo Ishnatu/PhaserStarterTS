@@ -9,6 +9,9 @@ import { PlayerEquipment } from '../types/GameTypes';
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
   private infoText!: Phaser.GameObjects.Text;
+  private menuState: 'none' | 'inventory' | 'equipment' = 'none';
+  private currentMenuCloseFunction: (() => void) | null = null;
+  private escKey!: Phaser.Input.Keyboard.Key;
 
   constructor() {
     super('TownScene');
@@ -55,6 +58,19 @@ export class TownScene extends Phaser.Scene {
       this.openEquipment();
     });
 
+    this.escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    
+    this.escKey.on('down', () => {
+      this.handleEscapeKey();
+    });
+  }
+
+  private handleEscapeKey(): void {
+    if (this.menuState === 'inventory' || this.menuState === 'equipment') {
+      if (this.currentMenuCloseFunction) {
+        this.currentMenuCloseFunction();
+      }
+    }
   }
 
   private createNPCs(): void {
@@ -174,14 +190,26 @@ export class TownScene extends Phaser.Scene {
   private openInventory(): void {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
 
-    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setInteractive();
     const panel = this.add.rectangle(width / 2, height / 2, 700, 500, 0x2a2a3e).setOrigin(0.5);
+    uiElements.push(overlay, panel);
 
     const title = this.add.text(width / 2, height / 2 - 220, `Inventory (${player.inventory.reduce((sum, item) => sum + item.quantity, 0)}/${player.inventorySlots})`, {
       fontSize: '24px',
       color: '#f0a020',
     }).setOrigin(0.5);
+    uiElements.push(title);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'inventory';
 
     const itemsStartY = height / 2 - 180;
     const itemHeight = 30;
@@ -196,10 +224,11 @@ export class TownScene extends Phaser.Scene {
 
       const y = itemsStartY + displayedItems * itemHeight;
       
-      this.add.text(width / 2 - 320, y, `${item.name} x${invItem.quantity}`, {
+      const itemLabel = this.add.text(width / 2 - 320, y, `${item.name} x${invItem.quantity}`, {
         fontSize: '14px',
         color: '#ffffff',
       });
+      uiElements.push(itemLabel);
 
       const isEquipment = ItemDatabase.getWeapon(invItem.itemId) || ItemDatabase.getArmor(invItem.itemId);
       const isPotion = ItemDatabase.getPotion(invItem.itemId);
@@ -211,11 +240,10 @@ export class TownScene extends Phaser.Scene {
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
             this.equipItemFromInventory(invItem.itemId);
-            overlay.destroy();
-            panel.destroy();
-            title.destroy();
+            destroyAll();
             this.openInventory();
           });
+        uiElements.push(equipBtn);
       }
 
       if (isPotion) {
@@ -225,11 +253,10 @@ export class TownScene extends Phaser.Scene {
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
             this.usePotion(invItem.itemId);
-            overlay.destroy();
-            panel.destroy();
-            title.destroy();
+            destroyAll();
             this.openInventory();
           });
+        uiElements.push(useBtn);
       }
 
       const storeBtn = this.add.text(width / 2 + 200, y, '[Store]', {
@@ -238,21 +265,19 @@ export class TownScene extends Phaser.Scene {
       }).setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
           this.storeItem(invItem.itemId);
-          overlay.destroy();
-          panel.destroy();
-          title.destroy();
+          destroyAll();
           this.openInventory();
         });
+      uiElements.push(storeBtn);
 
       displayedItems++;
     });
 
     const closeBtn = this.createButton(width / 2, height / 2 + 220, 'Close', () => {
-      overlay.destroy();
-      panel.destroy();
-      title.destroy();
+      destroyAll();
       this.infoText.setText(this.getPlayerInfo());
     });
+    uiElements.push(closeBtn);
   }
 
   private equipItemFromInventory(itemId: string): void {
@@ -331,14 +356,26 @@ export class TownScene extends Phaser.Scene {
   private openEquipment(): void {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
 
-    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setInteractive();
     const panel = this.add.rectangle(width / 2, height / 2, 700, 550, 0x2a2a3e).setOrigin(0.5);
+    uiElements.push(overlay, panel);
 
-    this.add.text(width / 2, height / 2 - 250, 'Equipment', {
+    const title = this.add.text(width / 2, height / 2 - 250, 'Equipment', {
       fontSize: '24px',
       color: '#f0a020',
     }).setOrigin(0.5);
+    uiElements.push(title);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'equipment';
 
     const slots: Array<{ key: keyof PlayerEquipment; label: string }> = [
       { key: 'mainHand', label: 'Main Hand' },
@@ -357,19 +394,21 @@ export class TownScene extends Phaser.Scene {
     slots.forEach((slot, index) => {
       const y = startY + index * slotHeight;
       
-      this.add.text(width / 2 - 320, y, `${slot.label}:`, {
+      const slotLabel = this.add.text(width / 2 - 320, y, `${slot.label}:`, {
         fontSize: '14px',
         color: '#aaaaaa',
       });
+      uiElements.push(slotLabel);
 
       const itemId = player.equipment[slot.key];
       const item = itemId ? ItemDatabase.getItem(itemId) : null;
       const itemName = item ? item.name : 'Empty';
 
-      this.add.text(width / 2 - 200, y, itemName, {
+      const itemLabel = this.add.text(width / 2 - 200, y, itemName, {
         fontSize: '14px',
         color: item ? '#ffffff' : '#666666',
       });
+      uiElements.push(itemLabel);
 
       if (itemId) {
         const unequipBtn = this.add.text(width / 2 + 180, y, '[Unequip]', {
@@ -382,18 +421,19 @@ export class TownScene extends Phaser.Scene {
             if (result.success) {
               this.gameState.updatePlayer(player);
             }
-            overlay.destroy();
-            panel.destroy();
+            destroyAll();
             this.openEquipment();
           });
+        uiElements.push(unequipBtn);
       }
     });
 
     const statsY = height / 2 + 100;
-    this.add.text(width / 2 - 320, statsY, 'Combat Stats:', {
+    const statsTitle = this.add.text(width / 2 - 320, statsY, 'Combat Stats:', {
       fontSize: '16px',
       color: '#f0a020',
     });
+    uiElements.push(statsTitle);
 
     const statsText = [
       `Evasion: ${player.stats.calculatedEvasion}`,
@@ -402,16 +442,17 @@ export class TownScene extends Phaser.Scene {
       `Damage Bonus: +${player.stats.damageBonus}`,
     ].join('\n');
 
-    this.add.text(width / 2 - 320, statsY + 25, statsText, {
+    const statsDisplay = this.add.text(width / 2 - 320, statsY + 25, statsText, {
       fontSize: '14px',
       color: '#ffffff',
       lineSpacing: 5,
     });
+    uiElements.push(statsDisplay);
 
     const closeBtn = this.createButton(width / 2, height / 2 + 240, 'Close', () => {
-      overlay.destroy();
-      panel.destroy();
+      destroyAll();
       this.infoText.setText(this.getPlayerInfo());
     });
+    uiElements.push(closeBtn);
   }
 }
