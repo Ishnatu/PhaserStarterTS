@@ -1,10 +1,12 @@
 import { GameState, PlayerData, GameScene } from '../types/GameTypes';
 import { GameConfig } from '../config/GameConfig';
 import { EquipmentManager } from './EquipmentManager';
+import { ApiClient } from '../utils/ApiClient';
 
 export class GameStateManager {
   private static instance: GameStateManager;
   private gameState: GameState;
+  private autoSaveInterval?: number;
 
   private constructor() {
     this.gameState = this.createInitialState();
@@ -121,9 +123,39 @@ export class GameStateManager {
     return false;
   }
 
+  loadFromObject(data: any): void {
+    this.gameState = data;
+    this.gameState.player.stats = EquipmentManager.calculatePlayerStats(this.gameState.player);
+  }
+
+  async saveToServer(): Promise<boolean> {
+    return await ApiClient.saveGame(this.gameState);
+  }
+
+  enableAutoSave(intervalSeconds: number = 30): void {
+    if (this.autoSaveInterval) {
+      clearInterval(this.autoSaveInterval);
+    }
+    
+    this.autoSaveInterval = window.setInterval(async () => {
+      const saved = await this.saveToServer();
+      if (saved) {
+        console.log('Auto-save successful');
+      }
+    }, intervalSeconds * 1000);
+  }
+
+  disableAutoSave(): void {
+    if (this.autoSaveInterval) {
+      clearInterval(this.autoSaveInterval);
+      this.autoSaveInterval = undefined;
+    }
+  }
+
   resetGame(): void {
     this.gameState = this.createInitialState();
     localStorage.removeItem('gemforge_save');
+    this.disableAutoSave();
   }
 
   addItemToInventory(itemId: string, quantity: number = 1): boolean {

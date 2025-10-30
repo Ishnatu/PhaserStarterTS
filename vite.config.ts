@@ -9,7 +9,19 @@ export default defineConfig({
       protocol: 'wss',
       host: process.env.REPLIT_DEV_DOMAIN || 'localhost',
       clientPort: 443
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      }
     }
   },
-  build: { sourcemap: true }
+  build: { sourcemap: true },
+  resolve: {
+    alias: {
+      '@shared': '/shared'
+    }
+  }
 });
