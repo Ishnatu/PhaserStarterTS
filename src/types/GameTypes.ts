@@ -69,6 +69,16 @@ export interface PlayerStats {
   damageBonus: number;
 }
 
+export type BuffType = 'enraged_spirit' | 'catriena_blessing' | 'aroma_of_void';
+
+export interface PlayerBuff {
+  type: BuffType;
+  name: string;
+  description: string;
+  expiresAt?: number;
+  expiresOnTownReturn?: boolean;
+}
+
 export interface PlayerData {
   health: number;
   maxHealth: number;
@@ -85,6 +95,7 @@ export interface PlayerData {
   experience: number;
   inventorySlots: number;
   footlockerSlots: number;
+  activeBuffs: PlayerBuff[];
 }
 
 export interface DelveRoom {

@@ -45,6 +45,7 @@ export class GameStateManager {
       experience: 0,
       inventorySlots: 15,
       footlockerSlots: 80,
+      activeBuffs: [],
     };
 
     player.stats = EquipmentManager.calculatePlayerStats(player);
