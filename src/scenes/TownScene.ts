@@ -6,6 +6,7 @@ import { EquipmentManager } from '../systems/EquipmentManager';
 import { DiceRoller } from '../utils/DiceRoller';
 import { PlayerEquipment } from '../types/GameTypes';
 import { ShopData } from '../config/ShopData';
+import { BuffManager } from '../systems/BuffManager';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -21,6 +22,10 @@ export class TownScene extends Phaser.Scene {
   create() {
     this.gameState = GameStateManager.getInstance();
     this.gameState.setScene('town');
+    
+    let player = this.gameState.getPlayer();
+    BuffManager.clearTownBuffs(player);
+    this.gameState.updatePlayer(player);
 
     const { width, height } = this.cameras.main;
 
@@ -36,8 +41,6 @@ export class TownScene extends Phaser.Scene {
       fontSize: '18px',
       color: '#cccccc',
     }).setOrigin(0.5);
-
-    const player = this.gameState.getPlayer();
     
     this.infoText = this.add.text(20, 20, this.getPlayerInfo(), {
       fontSize: '11px',

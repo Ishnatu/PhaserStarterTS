@@ -2,11 +2,14 @@ import { CombatState, Enemy, PlayerData, AttackResult } from '../types/GameTypes
 import { GameConfig } from '../config/GameConfig';
 import { DiceRoller } from '../utils/DiceRoller';
 import { EquipmentManager } from './EquipmentManager';
+import { BuffManager } from './BuffManager';
 
 export class CombatSystem {
   private combatState: CombatState | null = null;
 
   initiateCombat(player: PlayerData, enemies: Enemy[], isWildEncounter: boolean = false): CombatState {
+    BuffManager.updateBuffs(player);
+    
     this.combatState = {
       player: { ...player },
       enemies: enemies.map(e => ({ ...e })),
@@ -64,10 +67,21 @@ export class CombatSystem {
     this.combatState.player.stamina = Math.max(0, this.combatState.player.stamina - staminaCost);
 
     const attackResult = DiceRoller.rollAttack(this.combatState.player.stats.attackBonus);
-    const hit = attackResult.total >= target.evasion;
+    
+    const attackRollBonus = BuffManager.getAttackRollBonus(this.combatState.player);
+    let finalAttackTotal = attackResult.total;
+    let bonusRollText = '';
+    
+    if (attackRollBonus) {
+      const bonusRoll = DiceRoller.rollDiceTotal({ ...attackRollBonus, modifier: 0 });
+      finalAttackTotal += bonusRoll.total;
+      bonusRollText = ` +${bonusRoll.total} (Cat'riena's Blessing)`;
+    }
+    
+    const hit = finalAttackTotal >= target.evasion;
 
     if (!hit) {
-      const missMessage = `You swing and miss! (Rolled ${attackResult.d20}+${this.combatState.player.stats.attackBonus}=${attackResult.total} vs Evasion ${target.evasion}) (-${staminaCost} stamina)`;
+      const missMessage = `You swing and miss! (Rolled ${attackResult.d20}+${this.combatState.player.stats.attackBonus}${bonusRollText}=${finalAttackTotal} vs Evasion ${target.evasion}) (-${staminaCost} stamina)`;
       this.combatState.combatLog.push(missMessage);
       
       this.checkCombatEnd();
@@ -90,16 +104,20 @@ export class CombatSystem {
 
     let damageBeforeReduction: number;
     let damageRollInfo: string;
+    
+    const buffDamageBonus = BuffManager.getDamageBonus(this.combatState.player);
 
     if (attackResult.critical) {
       const critResult = DiceRoller.rollCriticalDamage(weaponDamage);
-      damageBeforeReduction = critResult.total;
-      damageRollInfo = `CRITICAL HIT! (${critResult.maxDie} max + ${critResult.extraRoll} roll + ${critResult.modifier} = ${critResult.total})`;
+      damageBeforeReduction = critResult.total + buffDamageBonus;
+      const buffText = buffDamageBonus > 0 ? ` +${buffDamageBonus} (Enraged Spirit)` : '';
+      damageRollInfo = `CRITICAL HIT! (${critResult.maxDie} max + ${critResult.extraRoll} roll + ${critResult.modifier}${buffText} = ${damageBeforeReduction})`;
     } else {
       const damageResult = DiceRoller.rollDiceTotal(weaponDamage);
-      damageBeforeReduction = damageResult.total;
+      damageBeforeReduction = damageResult.total + buffDamageBonus;
       const rollsStr = damageResult.rolls.join('+');
-      damageRollInfo = `(${rollsStr}+${damageResult.modifier} = ${damageResult.total})`;
+      const buffText = buffDamageBonus > 0 ? `+${buffDamageBonus}` : '';
+      damageRollInfo = `(${rollsStr}+${damageResult.modifier}${buffText ? '+' + buffText : ''} = ${damageBeforeReduction})`;
     }
 
     const damageReduction = target.damageReduction;
