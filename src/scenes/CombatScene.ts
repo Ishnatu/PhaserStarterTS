@@ -135,10 +135,10 @@ export class CombatScene extends Phaser.Scene {
 
   private renderEnemies(enemies: Enemy[]): void {
     const { width, height } = this.cameras.main;
-    const spacing = 140;
+    const spacing = 200;
     const totalWidth = (enemies.length - 1) * spacing;
-    const startX = width - 250 - totalWidth / 2;
-    const startY = 180;
+    const startX = width - 300 - totalWidth / 2;
+    const startY = 200;
 
     enemies.forEach((enemy, index) => {
       const x = startX + (index * spacing);
@@ -146,19 +146,21 @@ export class CombatScene extends Phaser.Scene {
 
       const enemyBox = this.add.rectangle(x, y, 80, 80, 0xff4444);
       
-      const enemyInfoBg = this.add.rectangle(x + 100, y - 50, 180, 70, 0x2a2a3e, 0.9).setOrigin(0);
+      // Nameplate positioned above sprite - centered
+      const plateY = y - 80;
+      const enemyInfoBg = this.add.rectangle(x - 90, plateY, 180, 60, 0x2a2a3e, 0.9).setOrigin(0);
       
-      const nameText = this.add.text(x + 110, y - 45, enemy.name, {
+      const nameText = this.add.text(x, plateY + 10, enemy.name, {
         fontSize: '14px',
         color: '#ffffff',
         fontStyle: 'bold',
-      });
+      }).setOrigin(0.5, 0);
 
-      const healthText = this.add.text(x + 110, y - 25, 
+      const healthText = this.add.text(x, plateY + 35, 
         `HP: ${enemy.health}/${enemy.maxHealth}`, {
         fontSize: '12px',
         color: '#ff8888',
-      });
+      }).setOrigin(0.5, 0);
 
       this.enemyHealthTexts.push(healthText);
 
@@ -184,9 +186,9 @@ export class CombatScene extends Phaser.Scene {
   private renderCombatLog(): void {
     const { width, height } = this.cameras.main;
     const logX = 20;
-    const logY = 80;
+    const logY = height - 350;
 
-    this.add.rectangle(logX, logY, 480, 320, 0x1a1a2e, 0.8).setOrigin(0);
+    this.add.rectangle(logX, logY, 480, 120, 0x1a1a2e, 0.8).setOrigin(0);
     
     this.logText = this.add.text(logX + 10, logY + 10, 'Combat begins!', {
       fontSize: '12px',
