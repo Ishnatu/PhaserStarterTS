@@ -260,17 +260,17 @@ export class ItemDatabase {
         id: 'potion_health',
         name: 'Health Potion',
         type: 'health',
-        restoration: { numDice: 2, dieSize: 4, modifier: 8 },
+        restoration: { numDice: 8, dieSize: 4, modifier: 15 },
         rarity: 'common',
-        description: 'Restores 2d4+8 health when consumed.'
+        description: 'Restores 8d4+15 health when consumed.'
       },
       {
         id: 'potion_stamina',
         name: 'Stamina Potion',
         type: 'stamina',
-        restoration: { numDice: 2, dieSize: 4, modifier: 8 },
+        restoration: { numDice: 8, dieSize: 4, modifier: 15 },
         rarity: 'common',
-        description: 'Restores 2d4+8 stamina when consumed.'
+        description: 'Restores 8d4+15 stamina when consumed.'
       },
     ];
 
