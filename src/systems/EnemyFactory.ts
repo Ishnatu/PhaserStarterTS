@@ -3,16 +3,20 @@ import { Enemy, DiceRoll } from '../types/GameTypes';
 export class EnemyFactory {
   static createEnemy(tier: number, isBoss: boolean = false): Enemy {
     const multiplier = isBoss ? 2.0 : 1.0;
-    const baseHealth = 30 + (tier * 15);
+    
+    // Tier 1 (Void Spawn) has reduced stats - halved for balance
+    const tierMultiplier = tier === 1 ? 0.5 : 1.0;
+    
+    const baseHealth = (30 + (tier * 15)) * tierMultiplier;
     const health = Math.floor(baseHealth * multiplier);
 
-    const baseEvasion = 10 + Math.floor(tier * 0.5);
+    const baseEvasion = Math.floor((10 + Math.floor(tier * 0.5)) * tierMultiplier);
     const damageReduction = tier >= 3 ? 0.1 : 0;
 
     const weaponDamage: DiceRoll = {
       numDice: 1,
       dieSize: 6 + Math.min(tier * 2, 6),
-      modifier: 2 + tier,
+      modifier: Math.floor((2 + tier) * tierMultiplier),
     };
 
     const lootTable = this.generateLootTable(tier, isBoss);
