@@ -49,6 +49,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Item Database**: Comprehensive database including weapons, armor, potions, and materials.
 - **Potion Mechanics**: Restore health/stamina (8d4+15, averaging ~35 HP/Stamina per use).
 - **Merchant System**: Comprehensive shop in Roboka featuring all base-level items (weapons 50-275 AA, armor 30-125 AA, potions 25 AA). Real-time AA/CA balance tracking with purchase validation. Wandering Merchant encounters offer rare 5% discount mobile shops in wilderness.
+- **Forging & Enhancement System**: Blacksmith in Roboka provides +1 to +9 weapon/armor enhancement system with escalating risk. Each enhancement level adds +1 damage modifier; additional damage dice granted at +5, +7, and +9. Success rates decrease from 95% (+1) to 10% (+9). Failure results in no change (tiers 1-2), downgrade (tiers 3+), or item destruction (tiers 5+, up to 50% at +9). Costs scale from 100 AA/0.1 CA to 5000 AA/5.0 CA. Enhanced items display "+X" suffix (e.g., "Steel Shortsword +5").
 
 ## External Dependencies
 

@@ -452,9 +452,9 @@ export class TownScene extends Phaser.Scene {
       });
       uiElements.push(slotLabel);
 
-      const itemId = player.equipment[slot.key];
-      const item = itemId ? ItemDatabase.getItem(itemId) : null;
-      const itemName = item ? item.name : 'Empty';
+      const equipped = player.equipment[slot.key];
+      const item = equipped ? ItemDatabase.getItem(equipped.itemId) : null;
+      const itemName = equipped ? ForgingSystem.getItemDisplayName({ itemId: equipped.itemId, quantity: 1, enhancementLevel: equipped.enhancementLevel }) : 'Empty';
 
       const itemLabel = this.add.text(width / 2 - 200, y, itemName, {
         fontSize: '14px',
@@ -462,7 +462,7 @@ export class TownScene extends Phaser.Scene {
       });
       uiElements.push(itemLabel);
 
-      if (itemId) {
+      if (equipped) {
         const unequipBtn = this.add.text(width / 2 + 180, y, '[Unequip]', {
           fontSize: '13px',
           color: '#ff8888',

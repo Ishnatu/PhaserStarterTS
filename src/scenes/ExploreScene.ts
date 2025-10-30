@@ -10,6 +10,7 @@ import { ShopData } from '../config/ShopData';
 import { BuffManager } from '../systems/BuffManager';
 import { DiceRoller } from '../utils/DiceRoller';
 import { PlayerEquipment } from '../types/GameTypes';
+import { ForgingSystem } from '../systems/ForgingSystem';
 
 export class ExploreScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -1045,9 +1046,9 @@ export class ExploreScene extends Phaser.Scene {
       }).setScrollFactor(0);
       uiElements.push(slotLabel);
 
-      const itemId = player.equipment[slot.key];
-      const item = itemId ? ItemDatabase.getItem(itemId) : null;
-      const itemName = item ? item.name : 'Empty';
+      const equipped = player.equipment[slot.key];
+      const item = equipped ? ItemDatabase.getItem(equipped.itemId) : null;
+      const itemName = equipped ? ForgingSystem.getItemDisplayName({ itemId: equipped.itemId, quantity: 1, enhancementLevel: equipped.enhancementLevel }) : 'Empty';
 
       const itemLabel = this.add.text(width / 2 - 200, y, itemName, {
         fontSize: '14px',
