@@ -10,7 +10,7 @@ import { ShopData } from '../config/ShopData';
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
   private infoText!: Phaser.GameObjects.Text;
-  private menuState: 'none' | 'inventory' | 'equipment' = 'none';
+  private menuState: 'none' | 'inventory' | 'equipment' | 'shop' = 'none';
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
 
@@ -67,7 +67,7 @@ export class TownScene extends Phaser.Scene {
   }
 
   private handleEscapeKey(): void {
-    if (this.menuState === 'inventory' || this.menuState === 'equipment') {
+    if (this.menuState === 'inventory' || this.menuState === 'equipment' || this.menuState === 'shop') {
       if (this.currentMenuCloseFunction) {
         this.currentMenuCloseFunction();
       }
@@ -464,13 +464,14 @@ export class TownScene extends Phaser.Scene {
 
   private openShop(): void {
     const { width, height } = this.cameras.main;
-    const player = this.gameState.getPlayer();
     const uiElements: Phaser.GameObjects.GameObject[] = [];
     let currentCategory: 'weapons' | 'armor' | 'potions' = 'weapons';
 
     const renderShop = () => {
       uiElements.forEach(el => el.destroy());
       uiElements.length = 0;
+
+      const player = this.gameState.getPlayer();
 
       const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setInteractive();
       const panel = this.add.rectangle(width / 2, height / 2, 750, 550, 0x2a2a3e).setOrigin(0.5);
@@ -482,8 +483,8 @@ export class TownScene extends Phaser.Scene {
       }).setOrigin(0.5);
       uiElements.push(title);
 
-      const currencyText = this.add.text(width / 2, height / 2 - 210, `Arcane Ash: ${player.arcaneAsh} AA`, {
-        fontSize: '16px',
+      const currencyText = this.add.text(width / 2, height / 2 - 210, `Arcane Ash: ${player.arcaneAsh} AA  |  Crystalline Animus: ${player.crystallineAnimus.toFixed(1)} CA`, {
+        fontSize: '14px',
         color: '#66cc66',
       }).setOrigin(0.5);
       uiElements.push(currencyText);
@@ -538,9 +539,8 @@ export class TownScene extends Phaser.Scene {
 
       const itemsStartY = height / 2 - 130;
       const itemHeight = 28;
-      const maxDisplay = 12;
 
-      shopItems.slice(0, maxDisplay).forEach((shopItem, index) => {
+      shopItems.forEach((shopItem, index) => {
         const item = ItemDatabase.getItem(shopItem.itemId);
         if (!item) return;
 
@@ -552,20 +552,22 @@ export class TownScene extends Phaser.Scene {
         });
         uiElements.push(itemLabel);
 
-        const priceLabel = this.add.text(width / 2 + 80, y, `${shopItem.price} AA`, {
+        const currencyLabel = shopItem.currency === 'AA' ? 'AA' : 'CA';
+        const priceLabel = this.add.text(width / 2 + 80, y, `${shopItem.price} ${currencyLabel}`, {
           fontSize: '13px',
-          color: '#ffcc00',
+          color: shopItem.currency === 'AA' ? '#ffcc00' : '#cc66ff',
         });
         uiElements.push(priceLabel);
 
-        const canAfford = player.arcaneAsh >= shopItem.price;
+        const playerCurrency = shopItem.currency === 'AA' ? player.arcaneAsh : player.crystallineAnimus;
+        const canAfford = playerCurrency >= shopItem.price;
         const buyBtn = this.add.text(width / 2 + 200, y, '[Buy]', {
           fontSize: '13px',
           color: canAfford ? '#88ff88' : '#666666',
         }).setInteractive({ useHandCursor: canAfford })
           .on('pointerdown', () => {
             if (canAfford) {
-              this.purchaseItem(shopItem.itemId, shopItem.price);
+              this.purchaseItem(shopItem.itemId, shopItem.price, shopItem.currency);
               renderShop();
             }
           });
@@ -581,16 +583,24 @@ export class TownScene extends Phaser.Scene {
 
     const destroyAll = () => {
       uiElements.forEach(el => el.destroy());
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
     };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'shop';
 
     renderShop();
   }
 
-  private purchaseItem(itemId: string, price: number): void {
+  private purchaseItem(itemId: string, price: number, currency: 'AA' | 'CA'): void {
     const player = this.gameState.getPlayer();
     
-    if (player.arcaneAsh < price) {
-      this.showMessage('Not enough Arcane Ash!');
+    const playerCurrency = currency === 'AA' ? player.arcaneAsh : player.crystallineAnimus;
+    const currencyName = currency === 'AA' ? 'Arcane Ash' : 'Crystalline Animus';
+    
+    if (playerCurrency < price) {
+      this.showMessage(`Not enough ${currencyName}!`);
       return;
     }
 
@@ -600,7 +610,11 @@ export class TownScene extends Phaser.Scene {
       return;
     }
 
-    player.arcaneAsh -= price;
+    if (currency === 'AA') {
+      player.arcaneAsh -= price;
+    } else {
+      player.crystallineAnimus -= price;
+    }
     
     const existing = player.inventory.find(item => item.itemId === itemId);
     if (existing) {
@@ -612,7 +626,7 @@ export class TownScene extends Phaser.Scene {
     this.gameState.updatePlayer(player);
     
     const item = ItemDatabase.getItem(itemId);
-    this.showMessage(`Purchased ${item?.name || 'item'} for ${price} AA!`);
+    this.showMessage(`Purchased ${item?.name || 'item'} for ${price} ${currency}!`);
     this.infoText.setText(this.getPlayerInfo());
   }
 }
