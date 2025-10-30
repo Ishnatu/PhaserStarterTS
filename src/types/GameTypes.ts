@@ -48,17 +48,23 @@ export type ItemData = WeaponData | ArmorData | PotionData;
 export interface InventoryItem {
   itemId: string;
   quantity: number;
+  enhancementLevel?: number;
+}
+
+export interface EquippedItem {
+  itemId: string;
+  enhancementLevel?: number;
 }
 
 export interface PlayerEquipment {
-  mainHand?: string;
-  offHand?: string;
-  helmet?: string;
-  chest?: string;
-  legs?: string;
-  boots?: string;
-  shoulders?: string;
-  cape?: string;
+  mainHand?: EquippedItem;
+  offHand?: EquippedItem;
+  helmet?: EquippedItem;
+  chest?: EquippedItem;
+  legs?: EquippedItem;
+  boots?: EquippedItem;
+  shoulders?: EquippedItem;
+  cape?: EquippedItem;
 }
 
 export interface PlayerStats {

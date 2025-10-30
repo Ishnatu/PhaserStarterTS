@@ -1,5 +1,6 @@
-import { PlayerData, PlayerEquipment, PlayerStats, WeaponData, ArmorData } from '../types/GameTypes';
+import { PlayerData, PlayerEquipment, PlayerStats, WeaponData, ArmorData, EquippedItem, InventoryItem } from '../types/GameTypes';
 import { ItemDatabase } from '../config/ItemDatabase';
+import { ForgingSystem } from './ForgingSystem';
 
 export class EquipmentManager {
   static calculatePlayerStats(player: PlayerData): PlayerStats {
@@ -10,7 +11,7 @@ export class EquipmentManager {
     
     let damageBonus = 3;
 
-    const mainHandWeapon = player.equipment.mainHand ? ItemDatabase.getWeapon(player.equipment.mainHand) : undefined;
+    const mainHandWeapon = player.equipment.mainHand ? ItemDatabase.getWeapon(player.equipment.mainHand.itemId) : undefined;
     if (mainHandWeapon?.twoHanded) {
       damageBonus = 6;
     }
@@ -18,9 +19,9 @@ export class EquipmentManager {
     const armorSlots: Array<keyof PlayerEquipment> = ['helmet', 'chest', 'legs', 'boots', 'shoulders', 'cape', 'offHand'];
     
     for (const slot of armorSlots) {
-      const itemId = player.equipment[slot];
-      if (itemId) {
-        const armor = ItemDatabase.getArmor(itemId);
+      const equipped = player.equipment[slot];
+      if (equipped) {
+        const armor = ItemDatabase.getArmor(equipped.itemId);
         if (armor) {
           calculatedEvasion += armor.evasionModifier;
           damageReduction += armor.damageReduction;
@@ -57,7 +58,7 @@ export class EquipmentManager {
       }
       
       if (slot === 'mainHand' || slot === 'offHand') {
-        const mainHandWeapon = player.equipment.mainHand ? ItemDatabase.getWeapon(player.equipment.mainHand) : undefined;
+        const mainHandWeapon = player.equipment.mainHand ? ItemDatabase.getWeapon(player.equipment.mainHand.itemId) : undefined;
         if (slot === 'offHand' && mainHandWeapon?.twoHanded) {
           return { canEquip: false, reason: 'Cannot equip off-hand while wielding two-handed weapon' };
         }
@@ -74,7 +75,7 @@ export class EquipmentManager {
           return { canEquip: false, reason: 'Shields can only be equipped in off-hand' };
         }
         
-        const mainHandWeapon = player.equipment.mainHand ? ItemDatabase.getWeapon(player.equipment.mainHand) : undefined;
+        const mainHandWeapon = player.equipment.mainHand ? ItemDatabase.getWeapon(player.equipment.mainHand.itemId) : undefined;
         if (mainHandWeapon?.twoHanded) {
           return { canEquip: false, reason: 'Cannot use shield with two-handed weapon' };
         }
@@ -98,13 +99,21 @@ export class EquipmentManager {
       return { success: false, message: checkResult.reason || 'Cannot equip item' };
     }
 
+    const invItem = player.inventory.find(item => item.itemId === itemId);
+    if (!invItem) {
+      return { success: false, message: 'Item not in inventory' };
+    }
+
     const previousItem = player.equipment[slot];
     if (previousItem) {
-      this.addToInventory(player, previousItem, 1);
+      this.addToInventory(player, previousItem.itemId, 1, previousItem.enhancementLevel);
     }
 
     this.removeFromInventory(player, itemId, 1);
-    player.equipment[slot] = itemId;
+    player.equipment[slot] = { 
+      itemId, 
+      enhancementLevel: invItem.enhancementLevel || 0 
+    };
 
     const weapon = ItemDatabase.getWeapon(itemId);
     if (weapon?.twoHanded) {
@@ -113,12 +122,13 @@ export class EquipmentManager {
 
     player.stats = this.calculatePlayerStats(player);
 
-    return { success: true, message: `Equipped ${ItemDatabase.getItem(itemId)?.name}` };
+    const displayName = ForgingSystem.getItemDisplayName(invItem);
+    return { success: true, message: `Equipped ${displayName}` };
   }
 
   static unequipItem(player: PlayerData, slot: keyof PlayerEquipment): { success: boolean; message: string } {
-    const itemId = player.equipment[slot];
-    if (!itemId) {
+    const equipped = player.equipment[slot];
+    if (!equipped) {
       return { success: false, message: 'No item equipped in that slot' };
     }
 
@@ -127,47 +137,65 @@ export class EquipmentManager {
       return { success: false, message: 'Inventory is full' };
     }
 
-    this.addToInventory(player, itemId, 1);
+    this.addToInventory(player, equipped.itemId, 1, equipped.enhancementLevel);
     player.equipment[slot] = undefined;
 
     player.stats = this.calculatePlayerStats(player);
 
-    return { success: true, message: `Unequipped ${ItemDatabase.getItem(itemId)?.name}` };
+    const displayName = ForgingSystem.getItemDisplayName({ itemId: equipped.itemId, quantity: 1, enhancementLevel: equipped.enhancementLevel });
+    return { success: true, message: `Unequipped ${displayName}` };
   }
 
   static getEquippedWeapon(player: PlayerData): WeaponData | undefined {
     if (!player.equipment.mainHand) return undefined;
-    return ItemDatabase.getWeapon(player.equipment.mainHand);
+    return ItemDatabase.getWeapon(player.equipment.mainHand.itemId);
+  }
+
+  static getEquippedWeaponWithEnhancement(player: PlayerData): { weapon: WeaponData; enhancementLevel: number } | undefined {
+    if (!player.equipment.mainHand) return undefined;
+    const weapon = ItemDatabase.getWeapon(player.equipment.mainHand.itemId);
+    if (!weapon) return undefined;
+    return { 
+      weapon, 
+      enhancementLevel: player.equipment.mainHand.enhancementLevel || 0 
+    };
   }
 
   static isDualWielding(player: PlayerData): boolean {
     if (!player.equipment.mainHand || !player.equipment.offHand) return false;
     
-    const mainWeapon = ItemDatabase.getWeapon(player.equipment.mainHand);
-    const offWeapon = ItemDatabase.getWeapon(player.equipment.offHand);
+    const mainWeapon = ItemDatabase.getWeapon(player.equipment.mainHand.itemId);
+    const offWeapon = ItemDatabase.getWeapon(player.equipment.offHand.itemId);
     
     return !!(mainWeapon && offWeapon && !mainWeapon.twoHanded && !offWeapon.twoHanded);
   }
 
-  static getDualWieldWeapons(player: PlayerData): { mainHand: WeaponData; offHand: WeaponData } | undefined {
+  static getDualWieldWeapons(player: PlayerData): { mainHand: WeaponData; mainHandLevel: number; offHand: WeaponData; offHandLevel: number } | undefined {
     if (!this.isDualWielding(player)) return undefined;
     
-    const mainWeapon = ItemDatabase.getWeapon(player.equipment.mainHand!);
-    const offWeapon = ItemDatabase.getWeapon(player.equipment.offHand!);
+    const mainWeapon = ItemDatabase.getWeapon(player.equipment.mainHand!.itemId);
+    const offWeapon = ItemDatabase.getWeapon(player.equipment.offHand!.itemId);
     
     if (mainWeapon && offWeapon) {
-      return { mainHand: mainWeapon, offHand: offWeapon };
+      return { 
+        mainHand: mainWeapon, 
+        mainHandLevel: player.equipment.mainHand!.enhancementLevel || 0,
+        offHand: offWeapon,
+        offHandLevel: player.equipment.offHand!.enhancementLevel || 0
+      };
     }
     
     return undefined;
   }
 
-  private static addToInventory(player: PlayerData, itemId: string, quantity: number): void {
-    const existing = player.inventory.find(item => item.itemId === itemId);
+  private static addToInventory(player: PlayerData, itemId: string, quantity: number, enhancementLevel?: number): void {
+    const existing = player.inventory.find(item => 
+      item.itemId === itemId && (item.enhancementLevel || 0) === (enhancementLevel || 0)
+    );
     if (existing) {
       existing.quantity += quantity;
     } else {
-      player.inventory.push({ itemId, quantity });
+      player.inventory.push({ itemId, quantity, enhancementLevel });
     }
   }
 
