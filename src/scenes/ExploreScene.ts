@@ -132,7 +132,7 @@ export class ExploreScene extends Phaser.Scene {
         this.drainStaminaForMovement(pixelsMoved);
         
         this.movementStepCounter++;
-        if (this.movementStepCounter > 30 && !this.encounterCooldown) {
+        if (this.movementStepCounter > GameConfig.WORLD.ENCOUNTER_STEP_THRESHOLD && !this.encounterCooldown) {
           this.checkRandomEncounter();
         }
         this.checkDelveProximity();
