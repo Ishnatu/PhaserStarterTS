@@ -20,10 +20,15 @@
       ],
       "@assets/*": [
         "src/assets/*"
+      ],
+      "@shared/*": [
+        "shared/*"
       ]
     }
   },
   "include": [
-    "src"
+    "src",
+    "server",
+    "shared"
   ]
 }
