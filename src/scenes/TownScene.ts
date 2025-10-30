@@ -4,14 +4,15 @@ import { SceneManager } from '../systems/SceneManager';
 import { ItemDatabase } from '../config/ItemDatabase';
 import { EquipmentManager } from '../systems/EquipmentManager';
 import { DiceRoller } from '../utils/DiceRoller';
-import { PlayerEquipment } from '../types/GameTypes';
+import { PlayerEquipment, InventoryItem } from '../types/GameTypes';
 import { ShopData } from '../config/ShopData';
 import { BuffManager } from '../systems/BuffManager';
+import { ForgingSystem } from '../systems/ForgingSystem';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
   private infoText!: Phaser.GameObjects.Text;
-  private menuState: 'none' | 'inventory' | 'equipment' | 'shop' = 'none';
+  private menuState: 'none' | 'inventory' | 'equipment' | 'shop' | 'forge' = 'none';
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
 
@@ -116,6 +117,11 @@ export class TownScene extends Phaser.Scene {
   private interactWithNPC(name: string, description: string): void {
     if (name === 'Merchant') {
       this.openShop();
+      return;
+    }
+
+    if (name === 'Blacksmith') {
+      this.openForge();
       return;
     }
 
@@ -667,6 +673,182 @@ export class TownScene extends Phaser.Scene {
     
     const item = ItemDatabase.getItem(itemId);
     this.showMessage(`Purchased ${item?.name || 'item'} for ${price} ${currency}!`);
+    this.infoText.setText(this.getPlayerInfo());
+  }
+
+  private openForge(): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+    let selectedItem: InventoryItem | null = null;
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setInteractive();
+    const panel = this.add.rectangle(width / 2, height / 2, 750, 550, 0x2a2a3e).setOrigin(0.5);
+    uiElements.push(overlay, panel);
+
+    const title = this.add.text(width / 2, height / 2 - 250, 'Blacksmith\'s Forge', {
+      fontSize: '24px',
+      color: '#f0a020',
+    }).setOrigin(0.5);
+    uiElements.push(title);
+
+    const balanceText = this.add.text(width / 2, height / 2 - 210, `${player.arcaneAsh} AA | ${player.crystallineAnimus.toFixed(1)} CA`, {
+      fontSize: '14px',
+      color: '#88ff88',
+    }).setOrigin(0.5);
+    uiElements.push(balanceText);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'forge';
+
+    const renderForge = () => {
+      uiElements.slice(4).forEach(el => el.destroy());
+      uiElements.splice(4);
+
+      const forgeableItems = player.inventory.filter(item => ForgingSystem.canForgeItem(item));
+
+      if (forgeableItems.length === 0) {
+        const noItemsText = this.add.text(width / 2, height / 2, 'No forgeable items in inventory.\n(Weapons and armor can be enhanced)', {
+          fontSize: '16px',
+          color: '#cccccc',
+          align: 'center',
+        }).setOrigin(0.5);
+        uiElements.push(noItemsText);
+      } else {
+        const itemsStartY = height / 2 - 160;
+        const itemHeight = 35;
+        const maxDisplay = 8;
+
+        forgeableItems.slice(0, maxDisplay).forEach((invItem, index) => {
+          const y = itemsStartY + index * itemHeight;
+          const displayName = ForgingSystem.getItemDisplayName(invItem);
+          const currentLevel = invItem.enhancementLevel || 0;
+          const maxLevel = ForgingSystem.getMaxEnhancementLevel();
+          
+          const itemText = this.add.text(width / 2 - 330, y, displayName, {
+            fontSize: '14px',
+            color: '#ffffff',
+          });
+          uiElements.push(itemText);
+
+          const levelText = this.add.text(width / 2 + 80, y, currentLevel === maxLevel ? 'MAX' : `+${currentLevel}`, {
+            fontSize: '14px',
+            color: currentLevel === maxLevel ? '#ff8800' : '#88ff88',
+          });
+          uiElements.push(levelText);
+
+          if (currentLevel < maxLevel) {
+            const selectBtn = this.add.text(width / 2 + 150, y, '[Select]', {
+              fontSize: '13px',
+              color: selectedItem === invItem ? '#ff8800' : '#8888ff',
+            }).setInteractive({ useHandCursor: true })
+              .on('pointerdown', () => {
+                selectedItem = invItem;
+                renderForge();
+              });
+            uiElements.push(selectBtn);
+          }
+        });
+
+        if (selectedItem) {
+          const detailY = height / 2 + 50;
+          const currentLevel = selectedItem.enhancementLevel || 0;
+          const targetLevel = currentLevel + 1;
+          const cost = ForgingSystem.getForgingCost(targetLevel);
+
+          if (cost) {
+            const detailPanel = this.add.rectangle(width / 2, detailY + 30, 700, 140, 0x1a1a2e).setOrigin(0.5);
+            uiElements.push(detailPanel);
+
+            const detailTitle = this.add.text(width / 2, detailY - 20, `Enhance to +${targetLevel}`, {
+              fontSize: '18px',
+              color: '#f0a020',
+            }).setOrigin(0.5);
+            uiElements.push(detailTitle);
+
+            const tierData = [
+              { tier: 1, success: '95%', fail: 'No change', destroy: 'None' },
+              { tier: 2, success: '85%', fail: 'No change', destroy: 'None' },
+              { tier: 3, success: '70%', fail: 'Downgrade', destroy: 'None' },
+              { tier: 4, success: '60%', fail: 'Downgrade', destroy: 'None' },
+              { tier: 5, success: '45%', fail: 'Downgrade', destroy: '10%' },
+              { tier: 6, success: '35%', fail: 'Downgrade', destroy: '15%' },
+              { tier: 7, success: '25%', fail: 'Downgrade', destroy: '25%' },
+              { tier: 8, success: '15%', fail: 'Downgrade', destroy: '35%' },
+              { tier: 9, success: '10%', fail: 'Downgrade', destroy: '50%' },
+            ][targetLevel - 1];
+
+            const detailsText = this.add.text(width / 2 - 320, detailY + 10, 
+              `Success: ${tierData.success}  |  Failure: ${tierData.fail}  |  Destroy: ${tierData.destroy}\nCost: ${cost.aa} AA + ${cost.ca} CA`, {
+              fontSize: '13px',
+              color: '#ffffff',
+            });
+            uiElements.push(detailsText);
+
+            const weapon = ItemDatabase.getWeapon(selectedItem.itemId);
+            if (weapon) {
+              const baseDmg = `${weapon.damage.numDice}d${weapon.damage.dieSize}+${weapon.damage.modifier}`;
+              const enhanced = ForgingSystem.calculateEnhancedDamage(weapon, targetLevel);
+              const newDmg = `${enhanced.numDice}d${enhanced.dieSize}+${enhanced.modifier}`;
+              const dmgText = this.add.text(width / 2 - 320, detailY + 50, `Damage: ${baseDmg} → ${newDmg}`, {
+                fontSize: '13px',
+                color: '#88ff88',
+              });
+              uiElements.push(dmgText);
+            }
+
+            const forgeBtn = this.createButton(width / 2, detailY + 90, 'Forge Item', () => {
+              this.attemptForging(selectedItem!);
+              selectedItem = null;
+              renderForge();
+            });
+            uiElements.push(forgeBtn);
+          }
+        }
+      }
+
+      const closeBtn = this.createButton(width / 2, height / 2 + 230, 'Close', () => {
+        destroyAll();
+      });
+      uiElements.push(closeBtn);
+    };
+
+    renderForge();
+  }
+
+  private attemptForging(item: InventoryItem): void {
+    const player = this.gameState.getPlayer();
+    const result = ForgingSystem.attemptForging(item, player.arcaneAsh, player.crystallineAnimus);
+
+    if (!result.success && result.destroyed) {
+      this.gameState.removeItemFromInventory(item.itemId, 1);
+      this.showMessage(result.message);
+      this.infoText.setText(this.getPlayerInfo());
+      return;
+    }
+
+    if (!result.success && !result.downgraded) {
+      this.showMessage(result.message);
+      return;
+    }
+
+    const targetLevel = (item.enhancementLevel || 0) + 1;
+    const cost = ForgingSystem.getForgingCost(targetLevel);
+    
+    if (cost) {
+      player.arcaneAsh -= cost.aa;
+      player.crystallineAnimus -= cost.ca;
+    }
+
+    item.enhancementLevel = result.newLevel;
+    this.gameState.updatePlayer(player);
+    this.showMessage(result.message);
     this.infoText.setText(this.getPlayerInfo());
   }
 }

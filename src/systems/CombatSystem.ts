@@ -1,8 +1,9 @@
-import { CombatState, Enemy, PlayerData, AttackResult } from '../types/GameTypes';
+import { CombatState, Enemy, PlayerData, AttackResult, WeaponData } from '../types/GameTypes';
 import { GameConfig } from '../config/GameConfig';
 import { DiceRoller } from '../utils/DiceRoller';
 import { EquipmentManager } from './EquipmentManager';
 import { BuffManager } from './BuffManager';
+import { ForgingSystem } from './ForgingSystem';
 
 export class CombatSystem {
   private combatState: CombatState | null = null;
@@ -73,11 +74,11 @@ export class CombatSystem {
       if (weapons) {
         this.combatState.combatLog.push(`Dual wielding attack! (-${staminaCost} stamina)`);
         
-        const mainHandResult = this.performSingleAttack(target, weapons.mainHand, 'main hand');
+        const mainHandResult = this.performSingleAttack(target, weapons.mainHand, weapons.mainHandLevel, 'main hand');
         let offHandResult: AttackResult | null = null;
         
         if (target.health > 0) {
-          offHandResult = this.performSingleAttack(target, weapons.offHand, 'off hand');
+          offHandResult = this.performSingleAttack(target, weapons.offHand, weapons.offHandLevel, 'off hand');
         }
         
         if (target.health <= 0) {
@@ -122,7 +123,7 @@ export class CombatSystem {
     return this.performFullAttack(target, staminaCost);
   }
 
-  private performSingleAttack(target: Enemy, weapon: any, weaponLabel: string): AttackResult {
+  private performSingleAttack(target: Enemy, weapon: WeaponData, enhancementLevel: number, weaponLabel: string): AttackResult {
     if (!this.combatState) {
       return {
         hit: false,
@@ -162,7 +163,7 @@ export class CombatSystem {
       };
     }
 
-    const weaponDamage = weapon.damage;
+    const weaponDamage = ForgingSystem.calculateEnhancedDamage(weapon, enhancementLevel);
     let damageBeforeReduction: number;
     let damageRollInfo: string;
     
@@ -250,8 +251,10 @@ export class CombatSystem {
       };
     }
 
-    const weapon = EquipmentManager.getEquippedWeapon(this.combatState.player);
-    const weaponDamage = weapon ? weapon.damage : { numDice: 1, dieSize: 4, modifier: this.combatState.player.stats.damageBonus };
+    const weaponWithEnhancement = EquipmentManager.getEquippedWeaponWithEnhancement(this.combatState.player);
+    const weaponDamage = weaponWithEnhancement 
+      ? ForgingSystem.calculateEnhancedDamage(weaponWithEnhancement.weapon, weaponWithEnhancement.enhancementLevel)
+      : { numDice: 1, dieSize: 4, modifier: this.combatState.player.stats.damageBonus };
 
     let damageBeforeReduction: number;
     let damageRollInfo: string;
