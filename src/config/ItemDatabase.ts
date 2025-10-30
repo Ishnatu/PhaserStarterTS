@@ -144,10 +144,10 @@ export class ItemDatabase {
         name: 'Leather Cap',
         slot: 'helmet',
         armorType: 'light',
-        evasionModifier: 0,
-        damageReduction: 0.10,
+        evasionModifier: 1,
+        damageReduction: 0,
         rarity: 'common',
-        description: 'Light leather headwear. Evasion 9, 10% damage reduction.'
+        description: 'Light leather headwear. +1 evasion.'
       },
       {
         id: 'helmet_heavy',
@@ -155,9 +155,9 @@ export class ItemDatabase {
         slot: 'helmet',
         armorType: 'heavy',
         evasionModifier: -1,
-        damageReduction: 0.20,
+        damageReduction: 0.02,
         rarity: 'common',
-        description: 'Heavy iron helmet. Evasion 8, 20% damage reduction.'
+        description: 'Heavy iron helmet. -1 evasion, 2% damage reduction.'
       },
       {
         id: 'chest_leather',
@@ -167,7 +167,7 @@ export class ItemDatabase {
         evasionModifier: -1,
         damageReduction: 0.10,
         rarity: 'common',
-        description: 'Light leather chest armor. Evasion 9, 10% damage reduction.'
+        description: 'Light leather chest armor. -1 evasion, 10% damage reduction.'
       },
       {
         id: 'chest_heavy',
@@ -177,17 +177,17 @@ export class ItemDatabase {
         evasionModifier: -2,
         damageReduction: 0.20,
         rarity: 'uncommon',
-        description: 'Heavy plate chest armor. Evasion 8, 20% damage reduction.'
+        description: 'Heavy plate chest armor. -2 evasion, 20% damage reduction.'
       },
       {
         id: 'legs_leather',
         name: 'Leather Pants',
         slot: 'legs',
         armorType: 'light',
-        evasionModifier: 0,
-        damageReduction: 0.10,
+        evasionModifier: 1,
+        damageReduction: 0,
         rarity: 'common',
-        description: 'Light leather leg armor. Evasion 9, 10% damage reduction.'
+        description: 'Light leather leg armor. +1 evasion.'
       },
       {
         id: 'legs_heavy',
@@ -195,59 +195,59 @@ export class ItemDatabase {
         slot: 'legs',
         armorType: 'heavy',
         evasionModifier: -1,
-        damageReduction: 0.20,
+        damageReduction: 0.02,
         rarity: 'common',
-        description: 'Heavy plate leg armor. Evasion 8, 20% damage reduction.'
+        description: 'Heavy plate leg armor. -1 evasion, 2% damage reduction.'
       },
       {
         id: 'boots_leather',
         name: 'Leather Boots',
         slot: 'boots',
         armorType: 'light',
-        evasionModifier: 0,
-        damageReduction: 0.10,
+        evasionModifier: 1,
+        damageReduction: 0,
         rarity: 'common',
-        description: 'Light leather boots. Evasion 9, 10% damage reduction.'
+        description: 'Light leather boots. +1 evasion.'
       },
       {
         id: 'boots_heavy',
         name: 'Steel Boots',
         slot: 'boots',
         armorType: 'heavy',
-        evasionModifier: 0,
-        damageReduction: 0.20,
+        evasionModifier: -1,
+        damageReduction: 0.02,
         rarity: 'common',
-        description: 'Heavy steel boots. Evasion 8, 20% damage reduction.'
+        description: 'Heavy steel boots. -1 evasion, 2% damage reduction.'
       },
       {
         id: 'shoulders_leather',
         name: 'Leather Pauldrons',
         slot: 'shoulders',
         armorType: 'light',
-        evasionModifier: 0,
-        damageReduction: 0.10,
+        evasionModifier: 1,
+        damageReduction: 0,
         rarity: 'common',
-        description: 'Light leather shoulder guards. Evasion 9, 10% damage reduction.'
+        description: 'Light leather shoulder guards. +1 evasion.'
       },
       {
         id: 'shoulders_heavy',
         name: 'Steel Pauldrons',
         slot: 'shoulders',
         armorType: 'heavy',
-        evasionModifier: 0,
-        damageReduction: 0.20,
+        evasionModifier: -1,
+        damageReduction: 0.02,
         rarity: 'uncommon',
-        description: 'Heavy steel shoulder guards. Evasion 8, 20% damage reduction.'
+        description: 'Heavy steel shoulder guards. -1 evasion, 2% damage reduction.'
       },
       {
         id: 'cape_basic',
         name: 'Traveler\'s Cloak',
         slot: 'cape',
         armorType: 'light',
-        evasionModifier: 0,
+        evasionModifier: 1,
         damageReduction: 0,
         rarity: 'common',
-        description: 'A simple traveling cloak. Provides minimal protection.'
+        description: 'A simple traveling cloak. +1 evasion.'
       },
     ];
 

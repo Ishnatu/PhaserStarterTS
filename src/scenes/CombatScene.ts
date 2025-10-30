@@ -6,6 +6,7 @@ import { EnemyFactory } from '../systems/EnemyFactory';
 import { ItemDatabase } from '../config/ItemDatabase';
 import { DiceRoller } from '../utils/DiceRoller';
 import { Delve, DelveRoom, Enemy } from '../types/GameTypes';
+import { GameConfig } from '../config/GameConfig';
 
 export class CombatScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -339,6 +340,26 @@ export class CombatScene extends Phaser.Scene {
     });
   }
 
+  private usePotionNoTurnEnd(itemId: string): void {
+    const player = this.gameState.getPlayer();
+    const potion = ItemDatabase.getPotion(itemId);
+    
+    if (!potion) return;
+
+    const restorationRoll = DiceRoller.rollDiceTotal(potion.restoration);
+    const amount = restorationRoll.total;
+
+    if (potion.type === 'health') {
+      player.health = Math.min(player.maxHealth, player.health + amount);
+    } else if (potion.type === 'stamina') {
+      player.stamina = Math.min(player.maxStamina, player.stamina + amount);
+    }
+
+    this.gameState.removeItemFromInventory(itemId, 1);
+    this.gameState.updatePlayer(player);
+    this.updateCombatDisplay();
+  }
+
   private attemptRun(): void {
     const runChance = Math.random();
     
@@ -362,6 +383,39 @@ export class CombatScene extends Phaser.Scene {
   private attackEnemy(targetIndex: number): void {
     if (!this.combatSystem.isPlayerTurn()) return;
 
+    const player = this.gameState.getPlayer();
+    const staminaCost = GameConfig.COMBAT.STAMINA_COST_PER_ATTACK;
+    
+    if (player.stamina < staminaCost) {
+      const staminaPotionItem = player.inventory.find(item => item.itemId === 'potion_stamina');
+      
+      if (staminaPotionItem && staminaPotionItem.quantity > 0) {
+        this.showMessage('Exhausted! Automatically using Stamina Potion...');
+        this.usePotionNoTurnEnd('potion_stamina');
+        
+        this.time.delayedCall(1500, () => {
+          const updatedPlayer = this.gameState.getPlayer();
+          if (updatedPlayer.stamina >= staminaCost) {
+            this.executeAttack(targetIndex);
+          } else {
+            this.showMessage('Still exhausted after potion! Must flee combat!');
+            this.time.delayedCall(1500, () => {
+              this.attemptRun();
+            });
+          }
+        });
+      } else {
+        this.showMessage('Exhausted with no stamina potions! Must flee combat!');
+        this.time.delayedCall(1500, () => {
+          this.attemptRun();
+        });
+      }
+    } else {
+      this.executeAttack(targetIndex);
+    }
+  }
+
+  private executeAttack(targetIndex: number): void {
     const result = this.combatSystem.playerAttack(targetIndex);
     this.updateCombatDisplay();
 
