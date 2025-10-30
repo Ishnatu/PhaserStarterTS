@@ -182,15 +182,15 @@ export class CombatScene extends Phaser.Scene {
   private renderCombatLog(): void {
     const { width, height } = this.cameras.main;
     const logX = 20;
-    const logY = height - 250;
+    const logY = 80;
 
-    this.add.rectangle(logX, logY, 400, 100, 0x1a1a2e, 0.8).setOrigin(0);
+    this.add.rectangle(logX, logY, 480, 320, 0x1a1a2e, 0.8).setOrigin(0);
     
     this.logText = this.add.text(logX + 10, logY + 10, 'Combat begins!', {
       fontSize: '12px',
       color: '#ffffff',
       align: 'left',
-      wordWrap: { width: 380 },
+      wordWrap: { width: 460 },
     });
   }
 
