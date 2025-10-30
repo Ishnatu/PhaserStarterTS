@@ -22,16 +22,18 @@ export class CombatScene extends Phaser.Scene {
   private wildEnemies?: Enemy[];
   private isOverlayActive: boolean = false;
   private actionButtons: Phaser.GameObjects.Container[] = [];
+  private returnToLocation?: { x: number; y: number };
 
   constructor() {
     super('CombatScene');
   }
 
-  init(data: { delve: Delve; room: DelveRoom; wildEncounter?: boolean; wildEnemies?: Enemy[] }) {
+  init(data: { delve: Delve; room: DelveRoom; wildEncounter?: boolean; wildEnemies?: Enemy[]; returnToLocation?: { x: number; y: number } }) {
     this.currentDelve = data.delve;
     this.currentRoom = data.room;
     this.isWildEncounter = data.wildEncounter || false;
     this.wildEnemies = data.wildEnemies;
+    this.returnToLocation = data.returnToLocation;
   }
 
   create() {
@@ -533,7 +535,7 @@ export class CombatScene extends Phaser.Scene {
 
     this.createMenuButton(width / 2, height / 2 + 120, 'Continue', () => {
       if (this.isWildEncounter) {
-        SceneManager.getInstance().transitionTo('explore');
+        SceneManager.getInstance().transitionTo('explore', { returnToLocation: this.returnToLocation });
       } else {
         SceneManager.getInstance().transitionTo('delve', { delve: this.currentDelve });
       }

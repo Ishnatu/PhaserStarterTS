@@ -627,6 +627,7 @@ export class ExploreScene extends Phaser.Scene {
       room: mockRoom,
       wildEncounter: true,
       wildEnemies: enemies,
+      returnToLocation: { x: this.player.x, y: this.player.y },
     });
   }
 
@@ -736,14 +737,14 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
-    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setInteractive();
-    const panel = this.add.rectangle(width / 2, height / 2, 400, 350, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0);
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+    const panel = this.add.rectangle(width / 2, height / 2, 400, 350, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     uiElements.push(overlay, panel);
 
     const title = this.add.text(width / 2, height / 2 - 150, 'Menu', {
       fontSize: '28px',
       color: '#f0a020',
-    }).setOrigin(0.5).setScrollFactor(0);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     uiElements.push(title);
 
     const destroyAll = () => {
@@ -759,30 +760,30 @@ export class ExploreScene extends Phaser.Scene {
     const shortRestBtn = this.createButton(width / 2, height / 2 - 80, 'Short Rest', () => {
       destroyAll();
       this.takeShortRest();
-    }).setScrollFactor(0);
+    }).setScrollFactor(0).setDepth(1002);
     uiElements.push(shortRestBtn);
 
     const inventoryBtn = this.createButton(width / 2, height / 2 - 30, 'Inventory', () => {
       uiElements.forEach(el => el.destroy());
       this.openInventory();
-    }).setScrollFactor(0);
+    }).setScrollFactor(0).setDepth(1002);
     uiElements.push(inventoryBtn);
 
     const equipmentBtn = this.createButton(width / 2, height / 2 + 20, 'Equipment', () => {
       uiElements.forEach(el => el.destroy());
       this.openEquipment();
-    }).setScrollFactor(0);
+    }).setScrollFactor(0).setDepth(1002);
     uiElements.push(equipmentBtn);
 
     const mainMenuBtn = this.createButton(width / 2, height / 2 + 70, 'Return to Main Menu', () => {
       destroyAll();
       this.scene.start('MainMenuScene');
-    }).setScrollFactor(0);
+    }).setScrollFactor(0).setDepth(1002);
     uiElements.push(mainMenuBtn);
 
     const closeBtn = this.createButton(width / 2, height / 2 + 130, 'Close', () => {
       destroyAll();
-    }).setScrollFactor(0);
+    }).setScrollFactor(0).setDepth(1002);
     uiElements.push(closeBtn);
 
     this.isOverlayActive = true;
