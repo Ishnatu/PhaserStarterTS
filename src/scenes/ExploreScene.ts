@@ -152,7 +152,7 @@ export class ExploreScene extends Phaser.Scene {
     for (let i = 0; i < 8; i++) {
       const x = 200 + Math.random() * (this.WORLD_SIZE - 400);
       const y = 200 + Math.random() * (this.WORLD_SIZE - 400);
-      const tier = Math.floor(Math.random() * 3) + 1;
+      const tier = 1; // Only Tier 1 delves in current area
 
       const marker = this.createDelveMarker(x, y, tier);
       this.delveMarkers.push(marker);

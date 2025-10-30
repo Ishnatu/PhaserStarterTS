@@ -2,21 +2,43 @@ import { Enemy, DiceRoll } from '../types/GameTypes';
 
 export class EnemyFactory {
   static createEnemy(tier: number, isBoss: boolean = false): Enemy {
+    // Tier 1 specific stats
+    if (tier === 1) {
+      const health = isBoss ? 60 : 22;
+      const evasion = isBoss ? 10 : 5;
+      
+      const weaponDamage: DiceRoll = {
+        numDice: 1,
+        dieSize: 4,
+        modifier: 2,
+      };
+
+      const lootTable = this.generateLootTable(tier, isBoss);
+
+      return {
+        id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        name: isBoss ? this.getBossName(tier) : this.getEnemyName(tier),
+        health,
+        maxHealth: health,
+        evasion,
+        damageReduction: 0,
+        weaponDamage,
+        lootTable,
+      };
+    }
+
+    // Higher tier enemies (unchanged)
     const multiplier = isBoss ? 2.0 : 1.0;
-    
-    // Tier 1 (Void Spawn) has reduced stats - halved for balance
-    const tierMultiplier = tier === 1 ? 0.5 : 1.0;
-    
-    const baseHealth = (30 + (tier * 15)) * tierMultiplier;
+    const baseHealth = 30 + (tier * 15);
     const health = Math.floor(baseHealth * multiplier);
 
-    const baseEvasion = Math.floor((10 + Math.floor(tier * 0.5)) * tierMultiplier);
+    const baseEvasion = 10 + Math.floor(tier * 0.5);
     const damageReduction = tier >= 3 ? 0.1 : 0;
 
     const weaponDamage: DiceRoll = {
       numDice: 1,
       dieSize: 6 + Math.min(tier * 2, 6),
-      modifier: Math.floor((2 + tier) * tierMultiplier),
+      modifier: 2 + tier,
     };
 
     const lootTable = this.generateLootTable(tier, isBoss);
