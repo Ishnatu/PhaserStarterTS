@@ -140,6 +140,28 @@ export class EquipmentManager {
     return ItemDatabase.getWeapon(player.equipment.mainHand);
   }
 
+  static isDualWielding(player: PlayerData): boolean {
+    if (!player.equipment.mainHand || !player.equipment.offHand) return false;
+    
+    const mainWeapon = ItemDatabase.getWeapon(player.equipment.mainHand);
+    const offWeapon = ItemDatabase.getWeapon(player.equipment.offHand);
+    
+    return !!(mainWeapon && offWeapon && !mainWeapon.twoHanded && !offWeapon.twoHanded);
+  }
+
+  static getDualWieldWeapons(player: PlayerData): { mainHand: WeaponData; offHand: WeaponData } | undefined {
+    if (!this.isDualWielding(player)) return undefined;
+    
+    const mainWeapon = ItemDatabase.getWeapon(player.equipment.mainHand!);
+    const offWeapon = ItemDatabase.getWeapon(player.equipment.offHand!);
+    
+    if (mainWeapon && offWeapon) {
+      return { mainHand: mainWeapon, offHand: offWeapon };
+    }
+    
+    return undefined;
+  }
+
   private static addToInventory(player: PlayerData, itemId: string, quantity: number): void {
     const existing = player.inventory.find(item => item.itemId === itemId);
     if (existing) {

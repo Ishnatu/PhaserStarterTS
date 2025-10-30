@@ -66,6 +66,157 @@ export class CombatSystem {
 
     this.combatState.player.stamina = Math.max(0, this.combatState.player.stamina - staminaCost);
 
+    const isDualWielding = EquipmentManager.isDualWielding(this.combatState.player);
+    
+    if (isDualWielding) {
+      const weapons = EquipmentManager.getDualWieldWeapons(this.combatState.player);
+      if (weapons) {
+        this.combatState.combatLog.push(`Dual wielding attack! (-${staminaCost} stamina)`);
+        
+        const mainHandResult = this.performSingleAttack(target, weapons.mainHand, 'main hand');
+        let offHandResult: AttackResult | null = null;
+        
+        if (target.health > 0) {
+          offHandResult = this.performSingleAttack(target, weapons.offHand, 'off hand');
+        }
+        
+        if (target.health <= 0) {
+          this.combatState.combatLog.push(`${target.name} has been defeated!`);
+        }
+
+        this.checkCombatEnd();
+        if (!this.combatState.isComplete) {
+          this.combatState.currentTurn = 'enemy';
+        }
+
+        let combinedMessage = '';
+        if (!offHandResult) {
+          combinedMessage = mainHandResult.hit 
+            ? 'Dual wield: main hand killed enemy before off hand could strike'
+            : 'Dual wield: main hand missed, off hand attack skipped (enemy already dead)';
+        } else {
+          if (mainHandResult.hit && offHandResult.hit) {
+            combinedMessage = 'Dual wield: both weapons hit!';
+          } else if (mainHandResult.hit) {
+            combinedMessage = 'Dual wield: main hand hit, off hand missed';
+          } else if (offHandResult.hit) {
+            combinedMessage = 'Dual wield: main hand missed, off hand hit';
+          } else {
+            combinedMessage = 'Dual wield: both attacks missed!';
+          }
+        }
+
+        const combinedResult: AttackResult = {
+          hit: mainHandResult.hit || (offHandResult?.hit || false),
+          critical: mainHandResult.critical || (offHandResult?.critical || false),
+          attackRoll: Math.max(mainHandResult.attackRoll, offHandResult?.attackRoll || 0),
+          damage: mainHandResult.damage + (offHandResult?.damage || 0),
+          damageBeforeReduction: mainHandResult.damageBeforeReduction + (offHandResult?.damageBeforeReduction || 0),
+          message: combinedMessage,
+        };
+
+        return combinedResult;
+      }
+    }
+
+    return this.performFullAttack(target, staminaCost);
+  }
+
+  private performSingleAttack(target: Enemy, weapon: any, weaponLabel: string): AttackResult {
+    if (!this.combatState) {
+      return {
+        hit: false,
+        critical: false,
+        attackRoll: 0,
+        damage: 0,
+        damageBeforeReduction: 0,
+        message: 'No combat state!',
+      };
+    }
+
+    const attackResult = DiceRoller.rollAttack(this.combatState.player.stats.attackBonus);
+    
+    const attackRollBonus = BuffManager.getAttackRollBonus(this.combatState.player);
+    let finalAttackTotal = attackResult.total;
+    let bonusRollText = '';
+    
+    if (attackRollBonus) {
+      const bonusRoll = DiceRoller.rollDiceTotal({ ...attackRollBonus, modifier: 0 });
+      finalAttackTotal += bonusRoll.total;
+      bonusRollText = ` +${bonusRoll.total} (Cat'riena's Blessing)`;
+    }
+    
+    const hit = finalAttackTotal >= target.evasion;
+
+    if (!hit) {
+      const missMessage = `[${weaponLabel}] You swing and miss! (Rolled ${attackResult.d20}+${this.combatState.player.stats.attackBonus}${bonusRollText}=${finalAttackTotal} vs Evasion ${target.evasion})`;
+      this.combatState.combatLog.push(missMessage);
+      
+      return {
+        hit: false,
+        critical: false,
+        attackRoll: attackResult.d20,
+        damage: 0,
+        damageBeforeReduction: 0,
+        message: missMessage,
+      };
+    }
+
+    const weaponDamage = weapon.damage;
+    let damageBeforeReduction: number;
+    let damageRollInfo: string;
+    
+    const buffDamageBonus = BuffManager.getDamageBonus(this.combatState.player);
+
+    if (attackResult.critical) {
+      const critResult = DiceRoller.rollCriticalDamage(weaponDamage);
+      damageBeforeReduction = critResult.total + buffDamageBonus;
+      const buffText = buffDamageBonus > 0 ? ` +${buffDamageBonus} (Enraged Spirit)` : '';
+      damageRollInfo = `CRITICAL HIT! (${critResult.maxDie} max + ${critResult.extraRoll} roll + ${critResult.modifier}${buffText} = ${damageBeforeReduction})`;
+    } else {
+      const damageResult = DiceRoller.rollDiceTotal(weaponDamage);
+      damageBeforeReduction = damageResult.total + buffDamageBonus;
+      const rollsStr = damageResult.rolls.join('+');
+      const buffText = buffDamageBonus > 0 ? `+${buffDamageBonus}` : '';
+      damageRollInfo = `(${rollsStr}+${damageResult.modifier}${buffText ? '+' + buffText : ''} = ${damageBeforeReduction})`;
+    }
+
+    const damageReduction = target.damageReduction;
+    const damage = Math.max(1, Math.floor(damageBeforeReduction * (1 - damageReduction)));
+
+    target.health = Math.max(0, target.health - damage);
+    
+    let logMessage = `[${weaponLabel}] You hit ${target.name}! ${damageRollInfo}`;
+    if (damageReduction > 0) {
+      logMessage += ` -> ${damage} damage after ${Math.floor(damageReduction * 100)}% reduction`;
+    } else {
+      logMessage += ` -> ${damage} damage`;
+    }
+    
+    this.combatState.combatLog.push(logMessage);
+
+    return {
+      hit: true,
+      critical: attackResult.critical,
+      attackRoll: attackResult.d20,
+      damage,
+      damageBeforeReduction,
+      message: logMessage,
+    };
+  }
+
+  private performFullAttack(target: Enemy, staminaCost: number): AttackResult {
+    if (!this.combatState) {
+      return {
+        hit: false,
+        critical: false,
+        attackRoll: 0,
+        damage: 0,
+        damageBeforeReduction: 0,
+        message: 'No combat state!',
+      };
+    }
+
     const attackResult = DiceRoller.rollAttack(this.combatState.player.stats.attackBonus);
     
     const attackRollBonus = BuffManager.getAttackRollBonus(this.combatState.player);
