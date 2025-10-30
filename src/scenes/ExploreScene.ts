@@ -832,14 +832,14 @@ export class ExploreScene extends Phaser.Scene {
     const player = this.gameState.getPlayer();
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
-    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setInteractive();
-    const panel = this.add.rectangle(width / 2, height / 2, 700, 500, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0);
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+    const panel = this.add.rectangle(width / 2, height / 2, 700, 500, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     uiElements.push(overlay, panel);
 
     const title = this.add.text(width / 2, height / 2 - 220, `Inventory (${player.inventory.reduce((sum, item) => sum + item.quantity, 0)}/${player.inventorySlots})`, {
       fontSize: '24px',
       color: '#f0a020',
-    }).setOrigin(0.5).setScrollFactor(0);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     uiElements.push(title);
 
     const destroyAll = () => {
@@ -868,21 +868,71 @@ export class ExploreScene extends Phaser.Scene {
       const itemLabel = this.add.text(width / 2 - 320, y, `${item.name} x${invItem.quantity}`, {
         fontSize: '14px',
         color: '#ffffff',
-      }).setScrollFactor(0);
+      }).setScrollFactor(0).setDepth(1001);
       uiElements.push(itemLabel);
 
+      const weapon = ItemDatabase.getWeapon(invItem.itemId);
+      const armor = ItemDatabase.getArmor(invItem.itemId);
       const isPotion = ItemDatabase.getPotion(invItem.itemId);
 
+      if (weapon) {
+        if (weapon.twoHanded) {
+          const equipBtn = this.add.text(width / 2 + 70, y, '[Equip]', {
+            fontSize: '12px',
+            color: '#88ff88',
+          }).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => {
+              this.equipItemFromInventory(invItem.itemId, 'mainHand');
+              destroyAll();
+              this.openInventory();
+            }).setScrollFactor(0).setDepth(1002);
+          uiElements.push(equipBtn);
+        } else {
+          const equipMHBtn = this.add.text(width / 2 + 40, y, '[Equip MH]', {
+            fontSize: '11px',
+            color: '#88ff88',
+          }).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => {
+              this.equipItemFromInventory(invItem.itemId, 'mainHand');
+              destroyAll();
+              this.openInventory();
+            }).setScrollFactor(0).setDepth(1002);
+          uiElements.push(equipMHBtn);
+
+          const equipOHBtn = this.add.text(width / 2 + 115, y, '[Equip OH]', {
+            fontSize: '11px',
+            color: '#88ff88',
+          }).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => {
+              this.equipItemFromInventory(invItem.itemId, 'offHand');
+              destroyAll();
+              this.openInventory();
+            }).setScrollFactor(0).setDepth(1002);
+          uiElements.push(equipOHBtn);
+        }
+      } else if (armor) {
+        const equipBtn = this.add.text(width / 2 + 70, y, '[Equip]', {
+          fontSize: '12px',
+          color: '#88ff88',
+        }).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            this.equipItemFromInventory(invItem.itemId);
+            destroyAll();
+            this.openInventory();
+          }).setScrollFactor(0).setDepth(1002);
+        uiElements.push(equipBtn);
+      }
+
       if (isPotion) {
-        const useBtn = this.add.text(width / 2 + 120, y, '[Use]', {
-          fontSize: '13px',
+        const useBtn = this.add.text(width / 2 + 140, y, '[Use]', {
+          fontSize: '12px',
           color: '#8888ff',
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
             this.usePotion(invItem.itemId);
             destroyAll();
             this.openInventory();
-          }).setScrollFactor(0);
+          }).setScrollFactor(0).setDepth(1002);
         uiElements.push(useBtn);
       }
 
@@ -891,10 +941,39 @@ export class ExploreScene extends Phaser.Scene {
 
     const closeBtn = this.createButton(width / 2, height / 2 + 220, 'Close', () => {
       destroyAll();
-    }).setScrollFactor(0);
+    }).setScrollFactor(0).setDepth(1002);
     uiElements.push(closeBtn);
 
     this.isOverlayActive = true;
+  }
+
+  private equipItemFromInventory(itemId: string, targetSlot?: keyof PlayerEquipment): void {
+    const player = this.gameState.getPlayer();
+    
+    const weapon = ItemDatabase.getWeapon(itemId);
+    const armor = ItemDatabase.getArmor(itemId);
+
+    if (weapon) {
+      const slot = targetSlot || 'mainHand';
+      const result = EquipmentManager.equipItem(player, itemId, slot);
+      this.showMessage(result.message);
+      if (result.success) {
+        this.gameState.updatePlayer(player);
+      }
+    } else if (armor) {
+      let slot: keyof PlayerEquipment = 'chest';
+      if (armor.slot === 'shield') {
+        slot = 'offHand';
+      } else {
+        slot = armor.slot as keyof PlayerEquipment;
+      }
+      
+      const result = EquipmentManager.equipItem(player, itemId, slot);
+      this.showMessage(result.message);
+      if (result.success) {
+        this.gameState.updatePlayer(player);
+      }
+    }
   }
 
   private usePotion(itemId: string): void {

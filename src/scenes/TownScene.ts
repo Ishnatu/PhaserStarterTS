@@ -239,11 +239,47 @@ export class TownScene extends Phaser.Scene {
       });
       uiElements.push(itemLabel);
 
-      const isEquipment = ItemDatabase.getWeapon(invItem.itemId) || ItemDatabase.getArmor(invItem.itemId);
+      const weapon = ItemDatabase.getWeapon(invItem.itemId);
+      const armor = ItemDatabase.getArmor(invItem.itemId);
       const isPotion = ItemDatabase.getPotion(invItem.itemId);
 
-      if (isEquipment) {
-        const equipBtn = this.add.text(width / 2 + 120, y, '[Equip]', {
+      if (weapon) {
+        if (weapon.twoHanded) {
+          const equipBtn = this.add.text(width / 2 + 100, y, '[Equip]', {
+            fontSize: '13px',
+            color: '#88ff88',
+          }).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => {
+              this.equipItemFromInventory(invItem.itemId, 'mainHand');
+              destroyAll();
+              this.openInventory();
+            });
+          uiElements.push(equipBtn);
+        } else {
+          const equipMHBtn = this.add.text(width / 2 + 70, y, '[Equip MH]', {
+            fontSize: '12px',
+            color: '#88ff88',
+          }).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => {
+              this.equipItemFromInventory(invItem.itemId, 'mainHand');
+              destroyAll();
+              this.openInventory();
+            });
+          uiElements.push(equipMHBtn);
+
+          const equipOHBtn = this.add.text(width / 2 + 150, y, '[Equip OH]', {
+            fontSize: '12px',
+            color: '#88ff88',
+          }).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => {
+              this.equipItemFromInventory(invItem.itemId, 'offHand');
+              destroyAll();
+              this.openInventory();
+            });
+          uiElements.push(equipOHBtn);
+        }
+      } else if (armor) {
+        const equipBtn = this.add.text(width / 2 + 100, y, '[Equip]', {
           fontSize: '13px',
           color: '#88ff88',
         }).setInteractive({ useHandCursor: true })
@@ -289,14 +325,15 @@ export class TownScene extends Phaser.Scene {
     uiElements.push(closeBtn);
   }
 
-  private equipItemFromInventory(itemId: string): void {
+  private equipItemFromInventory(itemId: string, targetSlot?: keyof PlayerEquipment): void {
     const player = this.gameState.getPlayer();
     
     const weapon = ItemDatabase.getWeapon(itemId);
     const armor = ItemDatabase.getArmor(itemId);
 
     if (weapon) {
-      const result = EquipmentManager.equipItem(player, itemId, 'mainHand');
+      const slot = targetSlot || 'mainHand';
+      const result = EquipmentManager.equipItem(player, itemId, slot);
       this.showMessage(result.message);
       if (result.success) {
         this.gameState.updatePlayer(player);
