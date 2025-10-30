@@ -6,6 +6,8 @@ import { EnemyFactory } from '../systems/EnemyFactory';
 import { EquipmentManager } from '../systems/EquipmentManager';
 import { GameConfig } from '../config/GameConfig';
 import { ItemDatabase } from '../config/ItemDatabase';
+import { ShopData } from '../config/ShopData';
+import { BuffManager } from '../systems/BuffManager';
 import { DiceRoller } from '../utils/DiceRoller';
 import { PlayerEquipment } from '../types/GameTypes';
 
@@ -229,7 +231,11 @@ export class ExploreScene extends Phaser.Scene {
   }
 
   private checkRandomEncounter(): void {
-    if (Math.random() < GameConfig.WORLD.RANDOM_ENCOUNTER_CHANCE) {
+    const player = this.gameState.getPlayer();
+    const encounterMultiplier = BuffManager.getEncounterRateMultiplier(player);
+    const adjustedChance = GameConfig.WORLD.RANDOM_ENCOUNTER_CHANCE * encounterMultiplier;
+    
+    if (Math.random() < adjustedChance) {
       this.movementStepCounter = 0;
       this.encounterCooldown = true;
       this.triggerEncounter();
@@ -238,94 +244,335 @@ export class ExploreScene extends Phaser.Scene {
 
   private triggerEncounter(): void {
     const encounterType = this.generateRandomEncounter();
-    const uiElements: Phaser.GameObjects.GameObject[] = [];
-    
-    const blocker = this.add.rectangle(
-      0,
-      0,
-      this.cameras.main.width,
-      this.cameras.main.height,
-      0x000000,
-      0.01
-    ).setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
-    uiElements.push(blocker);
-
-    const overlay = this.add.rectangle(
-      this.cameras.main.width / 2,
-      this.cameras.main.height / 2,
-      500,
-      300,
-      0x000000,
-      0.9
-    ).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    uiElements.push(overlay);
-
-    const titleText = this.add.text(
-      this.cameras.main.width / 2,
-      this.cameras.main.height / 2 - 100,
-      'Random Encounter!',
-      {
-        fontSize: '24px',
-        color: '#ff8844',
-      }
-    ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    uiElements.push(titleText);
-
-    const descText = this.add.text(
-      this.cameras.main.width / 2,
-      this.cameras.main.height / 2 - 30,
-      encounterType.description,
-      {
-        fontSize: '16px',
-        color: '#ffffff',
-        align: 'center',
-        wordWrap: { width: 400 },
-      }
-    ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    uiElements.push(descText);
-
     this.isOverlayActive = true;
 
-    if (encounterType.type === 'combat' && encounterType.enemies) {
-      this.time.delayedCall(2000, () => {
-        uiElements.forEach(el => el.destroy());
-        this.isOverlayActive = false;
-        this.startWildCombat(encounterType.enemies!);
-      });
-    } else if (encounterType.type === 'treasure' && encounterType.loot) {
-      const loot = encounterType.loot;
-      this.gameState.addArcaneAsh(loot.aa);
-      this.gameState.addCrystallineAnimus(loot.ca);
-      
-      const lootText = this.add.text(
-        this.cameras.main.width / 2,
-        this.cameras.main.height / 2 + 40,
-        `+${loot.aa} AA, +${loot.ca.toFixed(1)} CA`,
-        {
-          fontSize: '18px',
-          color: '#ffcc00',
+    if (encounterType.type === 'combat') {
+      this.handleCombatEncounter(encounterType);
+    } else if (encounterType.type === 'treasure') {
+      this.handleTreasureEncounter(encounterType);
+    } else if (encounterType.type === 'shrine') {
+      this.handleShrineEncounter(encounterType);
+    } else if (encounterType.type === 'void_corruption') {
+      this.handleVoidCorruptionEncounter(encounterType);
+    } else if (encounterType.type === 'trapped_chest') {
+      this.handleTrappedChestEncounter(encounterType);
+    } else if (encounterType.type === 'wandering_merchant') {
+      this.handleWanderingMerchantEncounter(encounterType);
+    }
+  }
+
+  private handleCombatEncounter(encounterType: any): void {
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+    const { width, height } = this.cameras.main;
+
+    const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
+      .setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+    const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x000000, 0.9)
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+    const titleText = this.add.text(width / 2, height / 2 - 100, 'Random Encounter!', {
+      fontSize: '24px', color: '#ff8844',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    const descText = this.add.text(width / 2, height / 2 - 30, encounterType.description, {
+      fontSize: '16px', color: '#ffffff', align: 'center', wordWrap: { width: 400 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    uiElements.push(blocker, overlay, titleText, descText);
+
+    this.time.delayedCall(2000, () => {
+      uiElements.forEach(el => el.destroy());
+      this.isOverlayActive = false;
+      this.startWildCombat(encounterType.enemies);
+    });
+  }
+
+  private handleTreasureEncounter(encounterType: any): void {
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+    const { width, height } = this.cameras.main;
+
+    const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
+      .setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+    const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x000000, 0.9)
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+    const titleText = this.add.text(width / 2, height / 2 - 100, 'Treasure Found!', {
+      fontSize: '24px', color: '#ffcc00',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    const descText = this.add.text(width / 2, height / 2 - 30, encounterType.description, {
+      fontSize: '16px', color: '#ffffff', align: 'center', wordWrap: { width: 400 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    const loot = encounterType.loot;
+    this.gameState.addArcaneAsh(loot.aa);
+    this.gameState.addCrystallineAnimus(loot.ca);
+
+    const lootText = this.add.text(width / 2, height / 2 + 40, `+${loot.aa} AA, +${loot.ca.toFixed(1)} CA`, {
+      fontSize: '18px', color: '#ffcc00',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    uiElements.push(blocker, overlay, titleText, descText, lootText);
+
+    this.time.delayedCall(3000, () => {
+      uiElements.forEach(el => el.destroy());
+      this.encounterCooldown = false;
+      this.isOverlayActive = false;
+    });
+  }
+
+  private handleShrineEncounter(encounterType: any): void {
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+
+    const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
+      .setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+    const overlay = this.add.rectangle(width / 2, height / 2, 500, 350, 0x2a0a2a, 0.95)
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+    const titleText = this.add.text(width / 2, height / 2 - 130, 'Shrine to the Faceless Old God', {
+      fontSize: '24px', color: '#aa44ff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    const descText = this.add.text(width / 2, height / 2 - 70, encounterType.description, {
+      fontSize: '16px', color: '#ffffff', align: 'center', wordWrap: { width: 450 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    const choiceText = this.add.text(width / 2, height / 2, 'Offer 50 Arcane Ash?', {
+      fontSize: '18px', color: '#ffcc88',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    uiElements.push(blocker, overlay, titleText, descText, choiceText);
+
+    const yesBtn = this.createButton(width / 2 - 70, height / 2 + 60, 'Offer (50 AA)', () => {
+      if (player.arcaneAsh < 50) {
+        choiceText.setText('Not enough Arcane Ash!').setColor('#ff4444');
+        this.time.delayedCall(2000, () => {
+          uiElements.forEach(el => el.destroy());
+          yesBtn.destroy();
+          noBtn.destroy();
+          this.encounterCooldown = false;
+          this.isOverlayActive = false;
+        });
+        return;
+      }
+
+      this.gameState.addArcaneAsh(-50);
+      yesBtn.destroy();
+      noBtn.destroy();
+
+      const roll = Math.random();
+      if (roll < 0.70) {
+        choiceText.setText('The void accepts your offering...\nbut grants nothing in return.').setColor('#888888');
+        this.time.delayedCall(3000, () => {
+          uiElements.forEach(el => el.destroy());
+          this.encounterCooldown = false;
+          this.isOverlayActive = false;
+        });
+      } else {
+        const outcomeRoll = Math.random();
+        let outcomeMessage = '';
+        
+        if (outcomeRoll < 0.25) {
+          BuffManager.addBuff(player, 'enraged_spirit');
+          this.gameState.updatePlayer(player);
+          outcomeMessage = 'Blessing of the Enraged Spirit!\n+5 damage per hit for 1 hour';
+        } else if (outcomeRoll < 0.50) {
+          BuffManager.addBuff(player, 'catriena_blessing');
+          this.gameState.updatePlayer(player);
+          outcomeMessage = "Blessing of the Angel Cat'riena!\n+1d4 to all attack rolls for 1 hour";
+        } else if (outcomeRoll < 0.75) {
+          BuffManager.addBuff(player, 'aroma_of_void');
+          this.gameState.updatePlayer(player);
+          outcomeMessage = 'Aroma of the Void!\n2x encounter rate until town return';
+        } else {
+          const weaponList = ShopData.getWeaponShopItems();
+          const randomWeapon = weaponList[Math.floor(Math.random() * weaponList.length)];
+          player.inventory.push({ itemId: randomWeapon.itemId, quantity: 1 });
+          this.gameState.updatePlayer(player);
+          const weaponData = ItemDatabase.getWeapon(randomWeapon.itemId);
+          outcomeMessage = `The void bestows a gift!\nReceived: ${weaponData?.name || 'weapon'}`;
         }
-      ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-      uiElements.push(lootText);
+
+        choiceText.setText(outcomeMessage).setColor('#44ff44');
+        this.time.delayedCall(3500, () => {
+          uiElements.forEach(el => el.destroy());
+          this.encounterCooldown = false;
+          this.isOverlayActive = false;
+        });
+      }
+    }).setScrollFactor(0).setDepth(1002);
+
+    const noBtn = this.createButton(width / 2 + 70, height / 2 + 60, 'Decline', () => {
+      uiElements.forEach(el => el.destroy());
+      yesBtn.destroy();
+      noBtn.destroy();
+      this.encounterCooldown = false;
+      this.isOverlayActive = false;
+    }).setScrollFactor(0).setDepth(1002);
+  }
+
+  private handleVoidCorruptionEncounter(encounterType: any): void {
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+    const { width, height } = this.cameras.main;
+
+    const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
+      .setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+    const overlay = this.add.rectangle(width / 2, height / 2, 500, 350, 0x1a0a2a, 0.95)
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+    const titleText = this.add.text(width / 2, height / 2 - 130, 'Void Corruption Pocket', {
+      fontSize: '24px', color: '#8844ff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    const descText = this.add.text(width / 2, height / 2 - 70, encounterType.description, {
+      fontSize: '16px', color: '#ffffff', align: 'center', wordWrap: { width: 450 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    const choiceText = this.add.text(width / 2, height / 2, 'Enter the corruption?\nFace an elite enemy for 2x loot!', {
+      fontSize: '16px', color: '#ffcc88', align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    uiElements.push(blocker, overlay, titleText, descText, choiceText);
+
+    const enterBtn = this.createButton(width / 2 - 70, height / 2 + 70, 'Enter', () => {
+      uiElements.forEach(el => el.destroy());
+      enterBtn.destroy();
+      fleeBtn.destroy();
+      this.isOverlayActive = false;
+
+      const eliteEnemy = EnemyFactory.createEnemy(2, false);
+      eliteEnemy.lootTable.forEach(item => item.dropChance *= 2);
+      this.startWildCombat([eliteEnemy]);
+    }).setScrollFactor(0).setDepth(1002);
+
+    const fleeBtn = this.createButton(width / 2 + 70, height / 2 + 70, 'Flee', () => {
+      uiElements.forEach(el => el.destroy());
+      enterBtn.destroy();
+      fleeBtn.destroy();
+      this.encounterCooldown = false;
+      this.isOverlayActive = false;
+    }).setScrollFactor(0).setDepth(1002);
+  }
+
+  private handleTrappedChestEncounter(encounterType: any): void {
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+
+    const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
+      .setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+    const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x2a1a0a, 0.95)
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+    const titleText = this.add.text(width / 2, height / 2 - 100, 'Trapped Chest!', {
+      fontSize: '24px', color: '#ff8844',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    const descText = this.add.text(width / 2, height / 2 - 50, encounterType.description + '\nAttempting to open...', {
+      fontSize: '16px', color: '#ffffff', align: 'center', wordWrap: { width: 450 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    uiElements.push(blocker, overlay, titleText, descText);
+
+    this.time.delayedCall(1500, () => {
+      const skillCheck = Math.random();
+      
+      if (skillCheck < 0.60) {
+        const aa = Math.floor(Math.random() * 41) + 40;
+        const ca = (Math.random() * 3) + 3;
+        
+        this.gameState.addArcaneAsh(aa);
+        this.gameState.addCrystallineAnimus(ca);
+
+        const resultText = this.add.text(width / 2, height / 2 + 20, 
+          `Success! Disarmed the trap!\n+${aa} AA, +${ca.toFixed(1)} CA`, {
+          fontSize: '18px', color: '#44ff44', align: 'center',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+        uiElements.push(resultText);
+      } else {
+        const damage = Math.floor(Math.random() * 11) + 15;
+        player.health = Math.max(0, player.health - damage);
+        this.gameState.updatePlayer(player);
+
+        const resultText = this.add.text(width / 2, height / 2 + 20, 
+          `Failed! The trap triggers!\nTook ${damage} damage!`, {
+          fontSize: '18px', color: '#ff4444', align: 'center',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+        uiElements.push(resultText);
+      }
 
       this.time.delayedCall(3000, () => {
         uiElements.forEach(el => el.destroy());
         this.encounterCooldown = false;
         this.isOverlayActive = false;
       });
-    } else {
-      this.time.delayedCall(2500, () => {
-        uiElements.forEach(el => el.destroy());
-        this.encounterCooldown = false;
-        this.isOverlayActive = false;
-      });
+    });
+  }
+
+  private handleWanderingMerchantEncounter(encounterType: any): void {
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+    const { width, height } = this.cameras.main;
+
+    const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
+      .setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+    const overlay = this.add.rectangle(width / 2, height / 2, 600, 450, 0x1a1a2a, 0.95)
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+    const titleText = this.add.text(width / 2, height / 2 - 200, 'Wandering Merchant', {
+      fontSize: '24px', color: '#ffaa44',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    const descText = this.add.text(width / 2, height / 2 - 160, encounterType.description, {
+      fontSize: '16px', color: '#ffffff', align: 'center', wordWrap: { width: 550 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    uiElements.push(blocker, overlay, titleText, descText);
+
+    const allItems = ShopData.getAllShopItems();
+    const randomItems = [];
+    for (let i = 0; i < 5; i++) {
+      randomItems.push(allItems[Math.floor(Math.random() * allItems.length)]);
     }
+
+    let yPos = height / 2 - 110;
+    randomItems.forEach((shopItem, index) => {
+      const itemData = ItemDatabase.getItem(shopItem.itemId);
+      const price = Math.floor(shopItem.price * 1.5);
+      
+      const itemText = this.add.text(width / 2 - 220, yPos, 
+        `${itemData?.name || shopItem.itemId} - ${price} ${shopItem.currency}`, {
+        fontSize: '14px', color: '#ffffff',
+      }).setScrollFactor(0).setDepth(1001);
+      
+      const buyBtn = this.createButton(width / 2 + 150, yPos, 'Buy', () => {
+        const player = this.gameState.getPlayer();
+        const canAfford = shopItem.currency === 'AA' 
+          ? player.arcaneAsh >= price 
+          : player.crystallineAnimus >= price;
+
+        if (!canAfford) {
+          itemText.setColor('#ff4444');
+          this.time.delayedCall(500, () => itemText.setColor('#ffffff'));
+          return;
+        }
+
+        if (shopItem.currency === 'AA') {
+          this.gameState.addArcaneAsh(-price);
+        } else {
+          this.gameState.addCrystallineAnimus(-price);
+        }
+
+        player.inventory.push({ itemId: shopItem.itemId, quantity: 1 });
+        this.gameState.updatePlayer(player);
+        
+        itemText.setColor('#44ff44').setText(`${itemData?.name || shopItem.itemId} - PURCHASED`);
+        buyBtn.setVisible(false);
+      }).setScrollFactor(0).setDepth(1002);
+
+      uiElements.push(itemText, buyBtn);
+      yPos += 50;
+    });
+
+    const closeBtn = this.createButton(width / 2, height / 2 + 180, 'Leave', () => {
+      uiElements.forEach(el => el.destroy());
+      closeBtn.destroy();
+      this.encounterCooldown = false;
+      this.isOverlayActive = false;
+    }).setScrollFactor(0).setDepth(1002);
   }
 
   private generateRandomEncounter(): any {
     const roll = Math.random();
     
-    if (roll < 0.5) {
+    if (roll < 0.40) {
       const numEnemies = Math.floor(Math.random() * 2) + 1;
       const enemies = [];
       for (let i = 0; i < numEnemies; i++) {
@@ -337,26 +584,34 @@ export class ExploreScene extends Phaser.Scene {
         description: `You've been ambushed by ${numEnemies} ${enemies[0].name}${numEnemies > 1 ? 's' : ''}!`,
         enemies,
       };
-    } else if (roll < 0.75) {
-      const aa = Math.floor(Math.random() * 30) + 10;
-      const ca = (Math.random() * 2).toFixed(1);
+    } else if (roll < 0.60) {
+      const aa = Math.floor(Math.random() * 41) + 40;
+      const ca = (Math.random() * 3) + 3;
       
       return {
         type: 'treasure',
         description: 'You stumble upon a hidden cache of resources!',
-        loot: { aa, ca: parseFloat(ca) },
+        loot: { aa, ca: parseFloat(ca.toFixed(1)) },
+      };
+    } else if (roll < 0.75) {
+      return {
+        type: 'shrine',
+        description: 'You discover a shrine to the Faceless Old God...\nCorrupted whispers promise power for the faithful.',
+      };
+    } else if (roll < 0.85) {
+      return {
+        type: 'void_corruption',
+        description: 'A pocket of void corruption pulses before you.\nDangerous... but potentially rewarding.',
+      };
+    } else if (roll < 0.95) {
+      return {
+        type: 'trapped_chest',
+        description: 'You spot an ornate chest partially buried in the earth.',
       };
     } else {
-      const events = [
-        'You notice strange markings on a nearby tree...',
-        'A mysterious fog rolls through, but passes harmlessly.',
-        'You hear distant howling, but see nothing.',
-        'Ancient ruins peek through the undergrowth.',
-      ];
-      
       return {
-        type: 'event',
-        description: events[Math.floor(Math.random() * events.length)],
+        type: 'wandering_merchant',
+        description: 'A mysterious merchant appears from the shadows...\n"Care to peruse my wares, traveler?"',
       };
     }
   }
