@@ -98,35 +98,37 @@ export class CombatScene extends Phaser.Scene {
 
   private renderPlayer(): void {
     const { width, height } = this.cameras.main;
-    const playerX = 180;
-    const playerY = height - 150;
+    const playerX = 240;
+    const playerY = height - 200;
 
     const playerBox = this.add.rectangle(playerX, playerY, 100, 100, 0x4488ff);
     
     const player = this.gameState.getPlayer();
     
-    const playerInfoBg = this.add.rectangle(playerX - 200, playerY - 80, 200, 90, 0x2a2a3e, 0.9).setOrigin(0);
+    // Nameplate below sprite - horizontal layout
+    const plateY = playerY + 80;
+    const playerInfoBg = this.add.rectangle(60, plateY, 440, 60, 0x2a2a3e, 0.9).setOrigin(0);
     
-    this.add.text(playerX - 190, playerY - 75, 'YOU', {
+    this.add.text(80, plateY + 10, 'YOU', {
       fontSize: '16px',
       color: '#ffffff',
       fontStyle: 'bold',
     });
 
-    this.add.text(playerX - 190, playerY - 50, `Lv ${player.level}`, {
+    this.add.text(80, plateY + 35, `Lv ${player.level}`, {
       fontSize: '14px',
       color: '#ffcc00',
     });
 
-    this.playerHealthText = this.add.text(playerX - 190, playerY - 30, 
+    this.playerHealthText = this.add.text(200, plateY + 10, 
       `HP: ${player.health}/${player.maxHealth}`, {
-      fontSize: '13px',
+      fontSize: '14px',
       color: '#00ff00',
     });
 
-    this.playerStaminaText = this.add.text(playerX - 190, playerY - 10, 
+    this.playerStaminaText = this.add.text(200, plateY + 35, 
       `SP: ${player.stamina}/${player.maxStamina}`, {
-      fontSize: '13px',
+      fontSize: '14px',
       color: '#ffcc00',
     });
   }
