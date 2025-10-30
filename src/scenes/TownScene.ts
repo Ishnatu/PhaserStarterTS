@@ -5,6 +5,7 @@ import { ItemDatabase } from '../config/ItemDatabase';
 import { EquipmentManager } from '../systems/EquipmentManager';
 import { DiceRoller } from '../utils/DiceRoller';
 import { PlayerEquipment } from '../types/GameTypes';
+import { ShopData } from '../config/ShopData';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -110,6 +111,11 @@ export class TownScene extends Phaser.Scene {
   }
 
   private interactWithNPC(name: string, description: string): void {
+    if (name === 'Merchant') {
+      this.openShop();
+      return;
+    }
+
     const msg = this.add.text(
       this.cameras.main.centerX,
       this.cameras.main.centerY,
@@ -454,5 +460,159 @@ export class TownScene extends Phaser.Scene {
       this.infoText.setText(this.getPlayerInfo());
     });
     uiElements.push(closeBtn);
+  }
+
+  private openShop(): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+    let currentCategory: 'weapons' | 'armor' | 'potions' = 'weapons';
+
+    const renderShop = () => {
+      uiElements.forEach(el => el.destroy());
+      uiElements.length = 0;
+
+      const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setInteractive();
+      const panel = this.add.rectangle(width / 2, height / 2, 750, 550, 0x2a2a3e).setOrigin(0.5);
+      uiElements.push(overlay, panel);
+
+      const title = this.add.text(width / 2, height / 2 - 250, 'Merchant\'s Shop', {
+        fontSize: '24px',
+        color: '#f0a020',
+      }).setOrigin(0.5);
+      uiElements.push(title);
+
+      const currencyText = this.add.text(width / 2, height / 2 - 210, `Arcane Ash: ${player.arcaneAsh} AA`, {
+        fontSize: '16px',
+        color: '#66cc66',
+      }).setOrigin(0.5);
+      uiElements.push(currencyText);
+
+      const tabY = height / 2 - 170;
+      const tabSpacing = 120;
+
+      const weaponsTab = this.add.text(width / 2 - tabSpacing, tabY, 'Weapons', {
+        fontSize: '14px',
+        color: currentCategory === 'weapons' ? '#ffffff' : '#888888',
+        backgroundColor: currentCategory === 'weapons' ? '#444466' : '#2a2a3e',
+        padding: { x: 15, y: 8 },
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          currentCategory = 'weapons';
+          renderShop();
+        });
+      uiElements.push(weaponsTab);
+
+      const armorTab = this.add.text(width / 2, tabY, 'Armor', {
+        fontSize: '14px',
+        color: currentCategory === 'armor' ? '#ffffff' : '#888888',
+        backgroundColor: currentCategory === 'armor' ? '#444466' : '#2a2a3e',
+        padding: { x: 15, y: 8 },
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          currentCategory = 'armor';
+          renderShop();
+        });
+      uiElements.push(armorTab);
+
+      const potionsTab = this.add.text(width / 2 + tabSpacing, tabY, 'Potions', {
+        fontSize: '14px',
+        color: currentCategory === 'potions' ? '#ffffff' : '#888888',
+        backgroundColor: currentCategory === 'potions' ? '#444466' : '#2a2a3e',
+        padding: { x: 15, y: 8 },
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          currentCategory = 'potions';
+          renderShop();
+        });
+      uiElements.push(potionsTab);
+
+      let shopItems;
+      if (currentCategory === 'weapons') {
+        shopItems = ShopData.getWeaponShopItems();
+      } else if (currentCategory === 'armor') {
+        shopItems = ShopData.getArmorShopItems();
+      } else {
+        shopItems = ShopData.getPotionShopItems();
+      }
+
+      const itemsStartY = height / 2 - 130;
+      const itemHeight = 28;
+      const maxDisplay = 12;
+
+      shopItems.slice(0, maxDisplay).forEach((shopItem, index) => {
+        const item = ItemDatabase.getItem(shopItem.itemId);
+        if (!item) return;
+
+        const y = itemsStartY + index * itemHeight;
+
+        const itemLabel = this.add.text(width / 2 - 340, y, item.name, {
+          fontSize: '13px',
+          color: '#ffffff',
+        });
+        uiElements.push(itemLabel);
+
+        const priceLabel = this.add.text(width / 2 + 80, y, `${shopItem.price} AA`, {
+          fontSize: '13px',
+          color: '#ffcc00',
+        });
+        uiElements.push(priceLabel);
+
+        const canAfford = player.arcaneAsh >= shopItem.price;
+        const buyBtn = this.add.text(width / 2 + 200, y, '[Buy]', {
+          fontSize: '13px',
+          color: canAfford ? '#88ff88' : '#666666',
+        }).setInteractive({ useHandCursor: canAfford })
+          .on('pointerdown', () => {
+            if (canAfford) {
+              this.purchaseItem(shopItem.itemId, shopItem.price);
+              renderShop();
+            }
+          });
+        uiElements.push(buyBtn);
+      });
+
+      const closeBtn = this.createButton(width / 2, height / 2 + 240, 'Close', () => {
+        destroyAll();
+        this.infoText.setText(this.getPlayerInfo());
+      });
+      uiElements.push(closeBtn);
+    };
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+    };
+
+    renderShop();
+  }
+
+  private purchaseItem(itemId: string, price: number): void {
+    const player = this.gameState.getPlayer();
+    
+    if (player.arcaneAsh < price) {
+      this.showMessage('Not enough Arcane Ash!');
+      return;
+    }
+
+    const totalInventory = player.inventory.reduce((sum, item) => sum + item.quantity, 0);
+    if (totalInventory >= player.inventorySlots) {
+      this.showMessage('Inventory is full!');
+      return;
+    }
+
+    player.arcaneAsh -= price;
+    
+    const existing = player.inventory.find(item => item.itemId === itemId);
+    if (existing) {
+      existing.quantity += 1;
+    } else {
+      player.inventory.push({ itemId, quantity: 1 });
+    }
+
+    this.gameState.updatePlayer(player);
+    
+    const item = ItemDatabase.getItem(itemId);
+    this.showMessage(`Purchased ${item?.name || 'item'} for ${price} AA!`);
+    this.infoText.setText(this.getPlayerInfo());
   }
 }
