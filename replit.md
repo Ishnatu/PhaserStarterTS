@@ -21,7 +21,10 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Game Engine**: Phaser 3.90.0 (Canvas/WebGL)
 - **Language**: TypeScript 5.4
 - **Build Tool**: Vite 5.0
-- **State Management**: LocalStorage (temporary, with plans for cloud migration)
+- **Backend**: Express.js with TypeScript, running on port 3000
+- **Database**: PostgreSQL (Neon) via Drizzle ORM
+- **Authentication**: Replit Auth (OpenID Connect) with session-based auth
+- **State Management**: Server-side PostgreSQL saves with 30-second auto-save, LocalStorage fallback for offline play
 - **Core Gameplay Loop**: Main Menu -> Town (Roboka) -> Explore Map -> Delve (3-5 Rooms) -> Combat -> Back to Town.
 - **D20 Combat System**: Turn-based combat featuring d20 attack rolls against evasion, critical hits (natural 20 = brutal critical), weapon damage dice (1d4 to 2d6), and damage reduction from armor. Stamina is a key resource, with exhaustion leading to combat defeat. Combat transitions feature a 2-second fade-out "Combat Begins!" banner.
 - **Combat UI**: Pokemon-style layout with enemy positioned at top right with info panel, player at bottom left with info panel, combat log in bottom left area, and action menu in bottom right corner. Menu includes Attack, Inventory (for mid-combat potion usage), and Run (50% success chance) options. Using a potion or running consumes the player's turn.
@@ -39,7 +42,8 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **UI System**: All overlays use viewport-locking (setScrollFactor(0)) and interactive blocking to freeze gameplay. Menu system in wilderness (Short Rest, Inventory, Equipment, Return to Menu) and delves (Inventory, Abandon Delve, Return to Menu). Potion usage available in wilderness, between delve stages, and during combat.
 - **Overlay Mechanics**: Uses isOverlayActive flag to disable player movement when menus/overlays are open, while keeping overlay buttons interactive. All UI elements tracked in arrays for proper cleanup.
 - **ESC Key Navigation**: Hierarchical menu navigation using ESC key. From submenus (Inventory, Equipment) → ESC returns to main menu. From main menu → ESC closes menu. From gameplay → ESC opens quit confirmation menu.
-- **Save/Load System**: Implemented using LocalStorage.
+- **Save/Load System**: Server-authoritative saves stored in PostgreSQL database. Authenticated users get persistent cloud saves with auto-save every 30 seconds. Offline mode available using LocalStorage for unauthenticated sessions.
+- **Authentication System**: Login/register flow via Replit Auth (supports Google, GitHub, X, Apple, email/password). Session management handled server-side with PostgreSQL session store. Main menu shows login status and provides both authenticated and offline play options.
 - **Modular Architecture**: Designed with separated concerns (scenes, systems, config, types, utils) using TypeScript and singleton patterns for managers (GameState, Scene) for extensibility.
 - **HMR Configuration**: Vite dev server configured for Hot Module Replacement in Replit using WSS and `REPLIT_DEV_DOMAIN`.
 
@@ -56,11 +60,33 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Game Engine**: Phaser 3.90.0
 - **Language**: TypeScript 5.4
 - **Build Tool**: Vite 5.0
-- **Temporary State/Save Storage**: LocalStorage
+- **Backend Framework**: Express.js 5.1
+- **Database**: PostgreSQL via @neondatabase/serverless
+- **ORM**: Drizzle ORM 0.44.7
+- **Authentication**: openid-client 6.8.1 (Replit Auth)
+- **Session Store**: connect-pg-simple 10.0.0
 
 ### Future Integrations
 - **Blockchain**: Ronin Network (EVM-compatible Layer 1)
 - **Wallet**: Ronin Wallet
-- **NFTs**: Voidtouched Gems
-- **Backend**: Cloud saves, multiplayer hub
+- **NFTs**: Voidtouched Gems (server-authoritative minting with claim system)
+- **Backend Expansion**: Server-side combat validation, economy anti-cheat, multiplayer hub
 - **Hosting**: TBD (Chainstack/Liquify for Ronin RPC)
+
+## Security Architecture
+
+### Server-Authoritative Model (Phase 1 - Current)
+- **Authentication**: Required for persistent saves and future blockchain features
+- **Save Data**: Stored server-side in PostgreSQL, validated on load
+- **Session Management**: Secure HTTP-only cookies with 7-day expiration
+- **API Protection**: All game endpoints require authentication via isAuthenticated middleware
+
+### Planned Anti-Cheat (Phase 2 - Pre-Blockchain)
+Before enabling blockchain integration, the following systems will move server-side:
+- **Combat Resolution**: All d20 rolls, damage calculation, and loot generation on server
+- **Currency Transactions**: AA/CA earning and spending validated server-side
+- **Forging System**: Enhancement attempts processed server-side with server-generated RNG
+- **Inventory Management**: Server validates all item transfers and equipment changes
+- **Economy Monitoring**: Rate limiting, audit logs, and anomaly detection
+
+This prevents client-side manipulation before any in-game assets can be converted to blockchain tokens or NFTs.
