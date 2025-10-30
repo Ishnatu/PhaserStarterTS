@@ -30,7 +30,8 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Economy**: Uses Arcane Ash (AA) for common transactions and Crystalline Animus (CA) for rare items and enchantments.
 - **Inventory & Equipment**: Features an 8-slot equipment system (Main Hand, Off Hand, Helmet, Chest, Legs, Boots, Shoulders, Cape) with two-handed weapon mechanics, light/heavy armor, and shields. A 15-slot active inventory bag and an 80-slot footlocker are available.
 - **Loot System**: Enemies drop tier-based items, including weapons, armor, and potions.
-- **Random Encounters**: Triggered in the wilderness, featuring combat, treasure, or event outcomes. Combat encounters display a 2-second announcement before automatically transitioning to battle.
+- **Random Encounters**: Reduced frequency system (2.5% chance every 50 steps) with six encounter types: Combat (40%), Treasure (20%), Shrine to Faceless Old God (15%), Void Corruption Pocket (10%), Trapped Chest (10%), and Wandering Merchant (5%). Combat encounters display a 2-second announcement before automatically transitioning to battle.
+- **Buff System**: Time-based temporary effects tracked via BuffManager. Buffs include Enraged Spirit (+5 melee damage, 1 hour), Cat'riena's Blessing (+1d4 to attack rolls, 1 hour), and Aroma of the Void (2x wilderness encounter rate until town return). All town-returning buffs clear automatically when entering Roboka.
 - **Expanded Wilderness**: 3000x3000 world with camera-follow system (0.1 lerp) that smoothly tracks player movement. Eight procedurally placed delve entrances scattered across the map. Town portal marker provides instant return to Roboka (50px proximity trigger).
 - **UI System**: All overlays use viewport-locking (setScrollFactor(0)) and interactive blocking to freeze gameplay. Menu system in wilderness (Short Rest, Inventory, Equipment, Return to Menu) and delves (Inventory, Abandon Delve, Return to Menu). Potion usage available in wilderness, between delve stages, and during combat.
 - **Overlay Mechanics**: Uses isOverlayActive flag to disable player movement when menus/overlays are open, while keeping overlay buttons interactive. All UI elements tracked in arrays for proper cleanup.
@@ -43,7 +44,8 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Town (Roboka)**: Player hub with interactive NPCs (Blacksmith, Merchant, Innkeeper, Quest Giver, Gem Expert, Marketplace).
 - **Death/Respawn**: Upon defeat, the player's soul returns to Roboka.
 - **Item Database**: Comprehensive database including weapons, armor, potions, and materials.
-- **Potion Mechanics**: Restore health/stamina (2d4+8).
+- **Potion Mechanics**: Restore health/stamina (8d4+15, averaging ~35 HP/Stamina per use).
+- **Merchant System**: Comprehensive shop in Roboka featuring all base-level items (weapons 50-275 AA, armor 30-125 AA, potions 25 AA). Real-time AA/CA balance tracking with purchase validation. Wandering Merchant encounters offer rare 5% discount mobile shops in wilderness.
 
 ## External Dependencies
 
