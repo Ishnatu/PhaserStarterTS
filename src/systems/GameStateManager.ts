@@ -19,6 +19,8 @@ export class GameStateManager {
     return GameStateManager.instance;
   }
 
+  private exploredTilesSet: Set<string> = new Set();
+
   private createInitialState(): GameState {
     const player: PlayerData = {
       health: GameConfig.PLAYER.STARTING_HEALTH,
@@ -50,6 +52,7 @@ export class GameStateManager {
       activeBuffs: [],
       exploredTiles: [],
     };
+    this.exploredTilesSet = new Set();
 
     player.stats = EquipmentManager.calculatePlayerStats(player);
 
@@ -107,6 +110,7 @@ export class GameStateManager {
   }
 
   saveToLocalStorage(): void {
+    this.gameState.player.exploredTiles = Array.from(this.exploredTilesSet);
     localStorage.setItem('gemforge_save', JSON.stringify(this.gameState));
   }
 
@@ -115,6 +119,7 @@ export class GameStateManager {
     if (saved) {
       try {
         this.gameState = JSON.parse(saved);
+        this.exploredTilesSet = new Set(this.gameState.player.exploredTiles || []);
         return true;
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -127,9 +132,11 @@ export class GameStateManager {
   loadFromObject(data: any): void {
     this.gameState = data;
     this.gameState.player.stats = EquipmentManager.calculatePlayerStats(this.gameState.player);
+    this.exploredTilesSet = new Set(this.gameState.player.exploredTiles || []);
   }
 
   async saveToServer(): Promise<boolean> {
+    this.gameState.player.exploredTiles = Array.from(this.exploredTilesSet);
     return await ApiClient.saveGame(this.gameState);
   }
 
@@ -155,6 +162,7 @@ export class GameStateManager {
 
   resetGame(): void {
     this.gameState = this.createInitialState();
+    this.exploredTilesSet = new Set();
     localStorage.removeItem('gemforge_save');
     this.disableAutoSave();
   }
@@ -235,13 +243,14 @@ export class GameStateManager {
 
   markTileExplored(x: number, y: number): void {
     const tileKey = `${Math.floor(x / 32)},${Math.floor(y / 32)}`;
-    if (!this.gameState.player.exploredTiles.includes(tileKey)) {
+    if (!this.exploredTilesSet.has(tileKey)) {
+      this.exploredTilesSet.add(tileKey);
       this.gameState.player.exploredTiles.push(tileKey);
     }
   }
 
   isTileExplored(x: number, y: number): boolean {
     const tileKey = `${Math.floor(x / 32)},${Math.floor(y / 32)}`;
-    return this.gameState.player.exploredTiles.includes(tileKey);
+    return this.exploredTilesSet.has(tileKey);
   }
 }
