@@ -128,18 +128,25 @@ export class DelveScene extends Phaser.Scene {
 
     const btnY = roomY + 180;
 
-    if (currentRoom.type === 'combat' || currentRoom.type === 'boss') {
-      this.createButton(width / 2, btnY, 'Enter Combat', () => {
-        this.startCombat(currentRoom);
-      });
-    } else if (currentRoom.type === 'treasure') {
-      this.createButton(width / 2, btnY, 'Collect Treasure', () => {
-        this.collectTreasure(currentRoom);
-      });
+    if (!currentRoom.completed) {
+      if (currentRoom.type === 'combat' || currentRoom.type === 'boss') {
+        this.createButton(width / 2, btnY, 'Enter Combat', () => {
+          this.startCombat(currentRoom);
+        });
+      } else if (currentRoom.type === 'treasure') {
+        this.createButton(width / 2, btnY, 'Collect Treasure', () => {
+          this.collectTreasure(currentRoom);
+        });
+      } else {
+        this.createButton(width / 2, btnY, 'Solve Challenge', () => {
+          this.solveChallenge(currentRoom);
+        });
+      }
     } else {
-      this.createButton(width / 2, btnY, 'Solve Challenge', () => {
-        this.solveChallenge(currentRoom);
-      });
+      this.add.text(width / 2, btnY, '✓ Room Cleared', {
+        fontSize: '16px',
+        color: '#00ff00',
+      }).setOrigin(0.5);
     }
 
     if (currentRoom.connections.length > 0 && currentRoom.completed) {
@@ -186,6 +193,10 @@ export class DelveScene extends Phaser.Scene {
   }
 
   private startCombat(room: DelveRoom): void {
+    if (room.completed) {
+      console.warn('Attempted to start combat in already-completed room');
+      return;
+    }
     SceneManager.getInstance().transitionTo('combat', {
       delve: this.currentDelve,
       room: room,
@@ -193,6 +204,10 @@ export class DelveScene extends Phaser.Scene {
   }
 
   private collectTreasure(room: DelveRoom): void {
+    if (room.completed) {
+      console.warn('Attempted to collect treasure from already-completed room');
+      return;
+    }
     room.completed = true;
     this.gameState.addArcaneAsh(50 * this.currentDelve.tier);
     this.gameState.addCrystallineAnimus(0.5 * this.currentDelve.tier);
@@ -201,6 +216,10 @@ export class DelveScene extends Phaser.Scene {
   }
 
   private solveChallenge(room: DelveRoom): void {
+    if (room.completed) {
+      console.warn('Attempted to solve already-completed challenge');
+      return;
+    }
     room.completed = true;
     this.showMessage('Challenge overcome!');
     this.scene.restart({ delve: this.currentDelve });
