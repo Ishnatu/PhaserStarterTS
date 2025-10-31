@@ -179,9 +179,26 @@ export class ExploreScene extends Phaser.Scene {
   }
 
   private generateDelves(): void {
+    const state = this.gameState.getState();
+    
+    // If we have discovered delves, use those positions (persistent within session)
+    if (state.discoveredDelves.length > 0) {
+      // Load existing delves
+      state.discoveredDelves.forEach(delve => {
+        // Don't create markers for completed delves
+        if (!this.gameState.isDelveCompleted(delve.x, delve.y)) {
+          const marker = this.createDelveMarker(delve.x, delve.y, delve.tier);
+          this.delveMarkers.push(marker);
+        }
+      });
+      return;
+    }
+
+    // Generate new delves (only on first visit or after returning from town)
     const robokaX = this.WORLD_SIZE / 2;
     const robokaY = this.WORLD_SIZE / 2;
     const minDistanceFromTown = 200;
+    const newDelves: { x: number; y: number; tier: number }[] = [];
 
     for (let i = 0; i < 8; i++) {
       let x: number;
@@ -200,13 +217,14 @@ export class ExploreScene extends Phaser.Scene {
       );
 
       const tier = 1; // Only Tier 1 delves in current area
+      newDelves.push({ x, y, tier });
 
-      // Don't create markers for completed delves
-      if (!this.gameState.isDelveCompleted(x, y)) {
-        const marker = this.createDelveMarker(x, y, tier);
-        this.delveMarkers.push(marker);
-      }
+      const marker = this.createDelveMarker(x, y, tier);
+      this.delveMarkers.push(marker);
     }
+
+    // Store delves in game state for persistence
+    state.discoveredDelves = newDelves;
   }
 
   private createTownPortal(): void {
@@ -1005,6 +1023,10 @@ export class ExploreScene extends Phaser.Scene {
     );
 
     if (distance < 50) {
+      // Clear delves when returning to town - they'll regenerate on next wilderness visit
+      const state = this.gameState.getState();
+      state.discoveredDelves = [];
+      
       SceneManager.getInstance().transitionTo('town');
     }
   }
