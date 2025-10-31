@@ -14,10 +14,15 @@ const config: Phaser.Types.Core.GameConfig = {
   width: 1920,
   height: 1080,
   backgroundColor: '#0f0f13',
+  pixelArt: true,
+  antialias: false,
   scene: [MainMenuScene, TownScene, ExploreScene, DelveScene, CombatScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
+  },
+  render: {
+    pixelArt: true,
   },
 };
 

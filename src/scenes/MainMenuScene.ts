@@ -10,19 +10,21 @@ export class MainMenuScene extends Phaser.Scene {
     super('MainMenuScene');
   }
 
+  preload() {
+    this.load.image('gemforge-logo', '/assets/ui/gemforge-logo.png');
+  }
+
   async create() {
     const { width, height } = this.cameras.main;
 
     this.add.rectangle(0, 0, width, height, 0x1a1a2e).setOrigin(0);
 
-    this.add.text(width / 2, height / 3, 'Gemforge Chronicles', {
-      fontSize: '48px',
-      color: '#f0a020',
-      fontStyle: 'bold',
-    }).setOrigin(0.5);
+    const logo = this.add.sprite(width / 2, height / 3 - 50, 'gemforge-logo');
+    logo.setOrigin(0.5);
+    logo.setScale(0.6);
 
-    this.add.text(width / 2, height / 3 + 60, 'Phase One: The Hunt', {
-      fontSize: '20px',
+    this.add.text(width / 2, height / 3 + 150, 'Phase One: The Hunt', {
+      fontSize: '24px',
       color: '#cccccc',
     }).setOrigin(0.5);
 

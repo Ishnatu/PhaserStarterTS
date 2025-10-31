@@ -50,6 +50,7 @@ export class ExploreScene extends Phaser.Scene {
     this.load.image('tree2', '/assets/terrain/tree2.png');
     this.load.image('tree3', '/assets/terrain/tree3.png');
     this.load.image('tree4', '/assets/terrain/tree4.png');
+    this.load.image('gemforge-logo', '/assets/ui/gemforge-logo.png');
   }
 
   init(data?: { returnToLocation?: { x: number; y: number } }) {
@@ -74,10 +75,11 @@ export class ExploreScene extends Phaser.Scene {
     this.fogOfWarGraphics = this.add.graphics();
     this.fogOfWarGraphics.setDepth(10);
 
-    const titleText = this.add.text(width / 2, 20, 'The Wilds of Grawgonia', {
-      fontSize: '24px',
-      color: '#90ee90',
-    }).setOrigin(0.5).setScrollFactor(0);
+    const logo = this.add.sprite(width / 2, 50, 'gemforge-logo');
+    logo.setOrigin(0.5);
+    logo.setScale(0.15);
+    logo.setScrollFactor(0);
+    logo.setDepth(100);
 
     const returnLocation = this.registry.get('returnToLocation') as { x: number; y: number } | undefined;
     const playerData = this.gameState.getPlayer();
