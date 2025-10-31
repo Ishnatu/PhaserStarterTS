@@ -360,8 +360,6 @@ export class ExploreScene extends Phaser.Scene {
     const uiElements: Phaser.GameObjects.GameObject[] = [];
     const { width, height } = this.cameras.main;
 
-    const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
-      .setOrigin(0).setScrollFactor(0).setDepth(999);
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x000000, 0.9)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 100, 'Random Encounter!', {
@@ -371,7 +369,7 @@ export class ExploreScene extends Phaser.Scene {
       fontSize: '16px', color: '#ffffff', align: 'center', wordWrap: { width: 400 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-    uiElements.push(blocker, overlay, titleText, descText);
+    uiElements.push(overlay, titleText, descText);
 
     this.time.delayedCall(2000, () => {
       uiElements.forEach(el => el.destroy());
@@ -384,8 +382,6 @@ export class ExploreScene extends Phaser.Scene {
     const uiElements: Phaser.GameObjects.GameObject[] = [];
     const { width, height } = this.cameras.main;
 
-    const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
-      .setOrigin(0).setScrollFactor(0).setDepth(999);
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x000000, 0.9)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 100, 'Treasure Found!', {
@@ -403,7 +399,7 @@ export class ExploreScene extends Phaser.Scene {
       fontSize: '18px', color: '#ffcc00',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-    uiElements.push(blocker, overlay, titleText, descText, lootText);
+    uiElements.push(overlay, titleText, descText, lootText);
 
     this.time.delayedCall(3000, () => {
       uiElements.forEach(el => el.destroy());
@@ -417,8 +413,6 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
 
-    const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
-      .setOrigin(0).setScrollFactor(0).setDepth(999);
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 350, 0x2a0a2a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 130, 'Shrine to the Faceless Old God', {
@@ -431,7 +425,7 @@ export class ExploreScene extends Phaser.Scene {
       fontSize: '18px', color: '#ffcc88',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-    uiElements.push(blocker, overlay, titleText, descText, choiceText);
+    uiElements.push(overlay, titleText, descText, choiceText);
 
     const yesBtn = this.createButton(width / 2 - 70, height / 2 + 60, 'Offer (50 AA)', () => {
       if (player.arcaneAsh < 50) {
@@ -505,8 +499,6 @@ export class ExploreScene extends Phaser.Scene {
     const uiElements: Phaser.GameObjects.GameObject[] = [];
     const { width, height } = this.cameras.main;
 
-    const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
-      .setOrigin(0).setScrollFactor(0).setDepth(999);
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 350, 0x1a0a2a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 130, 'Void Corruption Pocket', {
@@ -519,7 +511,7 @@ export class ExploreScene extends Phaser.Scene {
       fontSize: '16px', color: '#ffcc88', align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-    uiElements.push(blocker, overlay, titleText, descText, choiceText);
+    uiElements.push(overlay, titleText, descText, choiceText);
 
     const enterBtn = this.createButton(width / 2 - 70, height / 2 + 70, 'Enter', () => {
       uiElements.forEach(el => el.destroy());
@@ -546,8 +538,6 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
 
-    const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
-      .setOrigin(0).setScrollFactor(0).setDepth(999);
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x2a1a0a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 100, 'Trapped Chest!', {
@@ -557,7 +547,7 @@ export class ExploreScene extends Phaser.Scene {
       fontSize: '16px', color: '#ffffff', align: 'center', wordWrap: { width: 450 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-    uiElements.push(blocker, overlay, titleText, descText);
+    uiElements.push(overlay, titleText, descText);
 
     this.time.delayedCall(1500, () => {
       const skillCheck = Math.random();
@@ -598,8 +588,6 @@ export class ExploreScene extends Phaser.Scene {
     const uiElements: Phaser.GameObjects.GameObject[] = [];
     const { width, height } = this.cameras.main;
 
-    const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
-      .setOrigin(0).setScrollFactor(0).setDepth(999);
     const overlay = this.add.rectangle(width / 2, height / 2, 600, 450, 0x1a1a2a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 200, 'Wandering Merchant', {
@@ -609,7 +597,7 @@ export class ExploreScene extends Phaser.Scene {
       fontSize: '16px', color: '#ffffff', align: 'center', wordWrap: { width: 550 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-    uiElements.push(blocker, overlay, titleText, descText);
+    uiElements.push(overlay, titleText, descText);
 
     const allItems = ShopData.getAllShopItems();
     const randomItems = [];
@@ -1205,13 +1193,17 @@ export class ExploreScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerover', () => bg.setFillStyle(0x555577))
       .on('pointerout', () => bg.setFillStyle(0x444466))
-      .on('pointerdown', callback);
+      .on('pointerdown', callback)
+      .setDepth(1002);
 
     const label = this.add.text(0, 0, text, {
       fontSize: '12px',
       color: '#ffffff',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(1002);
 
-    return this.add.container(x, y, [bg, label]);
+    const container = this.add.container(x, y, [bg, label]);
+    container.setScrollFactor(0).setDepth(1002);
+    
+    return container;
   }
 }
