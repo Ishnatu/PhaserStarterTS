@@ -102,6 +102,7 @@ export interface PlayerData {
   inventorySlots: number;
   footlockerSlots: number;
   activeBuffs: PlayerBuff[];
+  exploredTiles: string[];
 }
 
 export interface DelveRoom {

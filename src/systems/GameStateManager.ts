@@ -48,6 +48,7 @@ export class GameStateManager {
       inventorySlots: 15,
       footlockerSlots: 80,
       activeBuffs: [],
+      exploredTiles: [],
     };
 
     player.stats = EquipmentManager.calculatePlayerStats(player);
@@ -230,5 +231,17 @@ export class GameStateManager {
       return true;
     }
     return false;
+  }
+
+  markTileExplored(x: number, y: number): void {
+    const tileKey = `${Math.floor(x / 32)},${Math.floor(y / 32)}`;
+    if (!this.gameState.player.exploredTiles.includes(tileKey)) {
+      this.gameState.player.exploredTiles.push(tileKey);
+    }
+  }
+
+  isTileExplored(x: number, y: number): boolean {
+    const tileKey = `${Math.floor(x / 32)},${Math.floor(y / 32)}`;
+    return this.gameState.player.exploredTiles.includes(tileKey);
   }
 }
