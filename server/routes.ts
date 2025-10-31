@@ -20,11 +20,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Load game save for authenticated user
-  app.get("/api/game/load", isAuthenticated, async (req: any, res) => {
+  // Load game save - supports both authenticated users and anonymous sessions
+  app.get("/api/game/load", async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const gameSave = await storage.getGameSave(userId);
+      let gameSave;
+      
+      // Try authenticated user first
+      if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
+        const userId = req.user.claims.sub;
+        gameSave = await storage.getGameSaveByUserId(userId);
+      }
+      
+      // Fall back to session ID from header
+      if (!gameSave) {
+        const sessionId = req.headers['x-session-id'];
+        if (sessionId) {
+          gameSave = await storage.getGameSaveBySessionId(sessionId as string);
+        }
+      }
       
       if (!gameSave) {
         return res.status(404).json({ message: "No save found" });
@@ -40,18 +53,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Save game state for authenticated user
-  app.post("/api/game/save", isAuthenticated, async (req: any, res) => {
+  // Save game state - supports both authenticated users and anonymous sessions
+  app.post("/api/game/save", async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
       const { saveData } = req.body;
       
       if (!saveData) {
         return res.status(400).json({ message: "Save data required" });
       }
       
+      let userId: string | undefined;
+      let sessionId: string | undefined;
+      
+      // Use authenticated userId if available
+      if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      } else {
+        // Otherwise use session ID from header
+        sessionId = req.headers['x-session-id'] as string;
+        if (!sessionId) {
+          return res.status(400).json({ message: "Session ID required" });
+        }
+      }
+      
       const result = await storage.saveGame({
         userId,
+        sessionId,
         saveData,
       });
       
