@@ -77,7 +77,7 @@ export class ExploreScene extends Phaser.Scene {
 
     const logo = this.add.sprite(width / 2, 45, 'gemforge-logo');
     logo.setOrigin(0.5);
-    logo.setScale(0.12);
+    logo.setScale(0.048);
     logo.setScrollFactor(0);
     logo.setDepth(100);
 

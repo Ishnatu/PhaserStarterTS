@@ -21,7 +21,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     const logo = this.add.sprite(width / 2, 200, 'gemforge-logo');
     logo.setOrigin(0.5);
-    logo.setScale(0.45);
+    logo.setScale(0.18);
 
     this.add.text(width / 2, 400, 'Phase One: The Hunt', {
       fontSize: '24px',
