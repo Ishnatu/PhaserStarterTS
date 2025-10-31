@@ -49,9 +49,10 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Modular Architecture**: Designed with separated concerns (scenes, systems, config, types, utils) using TypeScript and singleton patterns for managers (GameState, Scene) for extensibility.
 - **HMR Configuration**: Vite dev server configured for Hot Module Replacement in Replit using WSS and `REPLIT_DEV_DOMAIN`.
 - **Innkeeper Rest System**: Players can spend 50 Arcane Ash at the Weary Traveler Inn to fully restore health and stamina. Button disabled if already fully rested or insufficient funds.
+- **Vault Keeper Storage System**: Dedicated NPC in town provides access to 80-slot footlocker storage. Dual-panel UI shows footlocker (left) and inventory (right) side-by-side with [Retrieve] and [Store] buttons for seamless item management. Capacity tracking displays used/total slots for both containers.
 
 ### Feature Specifications
-- **Town (Roboka)**: Player hub with interactive NPCs (Blacksmith, Merchant, Innkeeper, Quest Giver, Gem Expert, Marketplace).
+- **Town (Roboka)**: Player hub with interactive NPCs (Blacksmith, Merchant, Innkeeper, Vault Keeper, Quest Giver, Gem Expert, Marketplace).
 - **Death/Respawn**: Upon defeat, the player's soul returns to Roboka.
 - **Item Database**: Comprehensive database including weapons, armor, potions, and materials.
 - **Potion Mechanics**: Restore health/stamina (8d4+15, averaging ~35 HP/Stamina per use).

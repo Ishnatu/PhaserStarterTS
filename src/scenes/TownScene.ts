@@ -12,7 +12,7 @@ import { ForgingSystem } from '../systems/ForgingSystem';
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
   private infoText!: Phaser.GameObjects.Text;
-  private menuState: 'none' | 'inventory' | 'equipment' | 'shop' | 'forge' | 'inn' = 'none';
+  private menuState: 'none' | 'inventory' | 'equipment' | 'shop' | 'forge' | 'inn' | 'footlocker' = 'none';
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
 
@@ -71,7 +71,7 @@ export class TownScene extends Phaser.Scene {
   }
 
   private handleEscapeKey(): void {
-    if (this.menuState === 'inventory' || this.menuState === 'equipment' || this.menuState === 'shop') {
+    if (this.menuState === 'inventory' || this.menuState === 'equipment' || this.menuState === 'shop' || this.menuState === 'footlocker') {
       if (this.currentMenuCloseFunction) {
         this.currentMenuCloseFunction();
       }
@@ -87,6 +87,7 @@ export class TownScene extends Phaser.Scene {
       { name: 'Blacksmith', color: 0xff6633, description: 'Forges and upgrades equipment' },
       { name: 'Merchant', color: 0x66cc66, description: 'Buys and sells goods' },
       { name: 'Innkeeper', color: 0x6699ff, description: 'Provides rest and healing' },
+      { name: 'Vault Keeper', color: 0x88ddff, description: 'Manages your storage footlocker' },
       { name: 'Quest Giver', color: 0xffcc33, description: 'Offers missions and lore' },
       { name: 'Gem Expert', color: 0xcc66ff, description: 'Soulbinds Voidtouched Gems' },
       { name: 'Marketplace', color: 0xff9966, description: 'Player trading hub' },
@@ -127,6 +128,11 @@ export class TownScene extends Phaser.Scene {
 
     if (name === 'Innkeeper') {
       this.openInn();
+      return;
+    }
+
+    if (name === 'Vault Keeper') {
+      this.openFootlocker();
       return;
     }
 
@@ -408,6 +414,181 @@ export class TownScene extends Phaser.Scene {
       const item = ItemDatabase.getItem(itemId);
       this.showMessage(`Stored ${item?.name || 'item'} in footlocker`);
     }
+  }
+
+  private openFootlocker(footlockerScroll: number = 0, inventoryScroll: number = 0): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setInteractive();
+    const panel = this.add.rectangle(width / 2, height / 2, 850, 550, 0x2a2a3e).setOrigin(0.5);
+    uiElements.push(overlay, panel);
+
+    const title = this.add.text(width / 2, height / 2 - 250, 'Vault Keeper - Storage Footlocker', {
+      fontSize: '24px',
+      color: '#88ddff',
+    }).setOrigin(0.5);
+    uiElements.push(title);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'footlocker';
+
+    const footlockerCount = player.footlocker.reduce((sum, item) => sum + item.quantity, 0);
+    const inventoryCount = player.inventory.reduce((sum, item) => sum + item.quantity, 0);
+
+    const footlockerTitle = this.add.text(width / 2 - 300, height / 2 - 210, `Footlocker (${footlockerCount}/${player.footlockerSlots})`, {
+      fontSize: '18px',
+      color: '#88ddff',
+    });
+    uiElements.push(footlockerTitle);
+
+    const inventoryTitle = this.add.text(width / 2 + 100, height / 2 - 210, `Inventory (${inventoryCount}/${player.inventorySlots})`, {
+      fontSize: '18px',
+      color: '#f0a020',
+    });
+    uiElements.push(inventoryTitle);
+
+    const itemsStartY = height / 2 - 180;
+    const itemHeight = 28;
+    const maxDisplay = 14;
+
+    const footlockerItems = player.footlocker;
+    const footlockerStart = footlockerScroll;
+    const footlockerEnd = Math.min(footlockerStart + maxDisplay, footlockerItems.length);
+
+    for (let i = footlockerStart; i < footlockerEnd; i++) {
+      const invItem = footlockerItems[i];
+      const item = ItemDatabase.getItem(invItem.itemId);
+      if (!item) continue;
+
+      const displayIndex = i - footlockerStart;
+      const y = itemsStartY + displayIndex * itemHeight;
+      
+      const itemLabel = this.add.text(width / 2 - 400, y, `${item.name} x${invItem.quantity}`, {
+        fontSize: '13px',
+        color: '#ffffff',
+      });
+      uiElements.push(itemLabel);
+
+      const retrieveBtn = this.add.text(width / 2 - 120, y, '[Retrieve]', {
+        fontSize: '12px',
+        color: '#88ff88',
+      }).setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          if (this.gameState.moveFromFootlocker(invItem.itemId, 1)) {
+            this.showMessage(`Retrieved ${item.name}`);
+            destroyAll();
+            this.openFootlocker(footlockerScroll, inventoryScroll);
+          } else {
+            this.showMessage('Inventory is full!');
+          }
+        });
+      uiElements.push(retrieveBtn);
+    }
+
+    if (footlockerItems.length === 0) {
+      const emptyText = this.add.text(width / 2 - 300, itemsStartY, 'Footlocker is empty', {
+        fontSize: '14px',
+        color: '#666666',
+      });
+      uiElements.push(emptyText);
+    } else if (footlockerItems.length > maxDisplay) {
+      if (footlockerScroll > 0) {
+        const upBtn = this.add.text(width / 2 - 400, height / 2 - 210, '▲', {
+          fontSize: '16px',
+          color: '#88ddff',
+        }).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            destroyAll();
+            this.openFootlocker(Math.max(0, footlockerScroll - 1), inventoryScroll);
+          });
+        uiElements.push(upBtn);
+      }
+      if (footlockerEnd < footlockerItems.length) {
+        const downBtn = this.add.text(width / 2 - 400, height / 2 + 200, '▼', {
+          fontSize: '16px',
+          color: '#88ddff',
+        }).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            destroyAll();
+            this.openFootlocker(footlockerScroll + 1, inventoryScroll);
+          });
+        uiElements.push(downBtn);
+      }
+    }
+
+    const inventoryItems = player.inventory;
+    const inventoryStart = inventoryScroll;
+    const inventoryEnd = Math.min(inventoryStart + maxDisplay, inventoryItems.length);
+
+    for (let i = inventoryStart; i < inventoryEnd; i++) {
+      const invItem = inventoryItems[i];
+      const item = ItemDatabase.getItem(invItem.itemId);
+      if (!item) continue;
+
+      const displayIndex = i - inventoryStart;
+      const y = itemsStartY + displayIndex * itemHeight;
+      
+      const itemLabel = this.add.text(width / 2 + 100, y, `${item.name} x${invItem.quantity}`, {
+        fontSize: '13px',
+        color: '#ffffff',
+      });
+      uiElements.push(itemLabel);
+
+      const storeBtn = this.add.text(width / 2 + 350, y, '[Store]', {
+        fontSize: '12px',
+        color: '#ffaa44',
+      }).setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          this.storeItem(invItem.itemId);
+          destroyAll();
+          this.openFootlocker(footlockerScroll, inventoryScroll);
+        });
+      uiElements.push(storeBtn);
+    }
+
+    if (inventoryItems.length === 0) {
+      const emptyText = this.add.text(width / 2 + 100, itemsStartY, 'Inventory is empty', {
+        fontSize: '14px',
+        color: '#666666',
+      });
+      uiElements.push(emptyText);
+    } else if (inventoryItems.length > maxDisplay) {
+      if (inventoryScroll > 0) {
+        const upBtn = this.add.text(width / 2 + 100, height / 2 - 210, '▲', {
+          fontSize: '16px',
+          color: '#f0a020',
+        }).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            destroyAll();
+            this.openFootlocker(footlockerScroll, Math.max(0, inventoryScroll - 1));
+          });
+        uiElements.push(upBtn);
+      }
+      if (inventoryEnd < inventoryItems.length) {
+        const downBtn = this.add.text(width / 2 + 100, height / 2 + 200, '▼', {
+          fontSize: '16px',
+          color: '#f0a020',
+        }).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            destroyAll();
+            this.openFootlocker(footlockerScroll, inventoryScroll + 1);
+          });
+        uiElements.push(downBtn);
+      }
+    }
+
+    const closeBtn = this.createButton(width / 2, height / 2 + 230, 'Close', () => {
+      destroyAll();
+    });
+    uiElements.push(closeBtn);
   }
 
   private openEquipment(): void {
