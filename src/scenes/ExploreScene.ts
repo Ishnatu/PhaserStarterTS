@@ -37,6 +37,7 @@ export class ExploreScene extends Phaser.Scene {
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
   private terrainContainer!: Phaser.GameObjects.Container;
+  private treeSprites: Phaser.GameObjects.Sprite[] = [];
   private fogOfWarGraphics!: Phaser.GameObjects.Graphics;
   private unexploredGraphics!: Phaser.GameObjects.Graphics;
   private readonly VISIBILITY_RADIUS: number = 256;
@@ -349,6 +350,8 @@ export class ExploreScene extends Phaser.Scene {
     const cameraY = camera.scrollY;
     
     this.terrainContainer.removeAll(true);
+    this.treeSprites.forEach(tree => tree.destroy());
+    this.treeSprites = [];
     this.unexploredGraphics.clear();
     this.fogOfWarGraphics.clear();
     
@@ -395,14 +398,16 @@ export class ExploreScene extends Phaser.Scene {
       this.terrainContainer.add(path);
     } else if (terrainType === 'tree') {
       const grass = this.add.rectangle(x, y, this.TILE_SIZE, this.TILE_SIZE, 0x2d5016).setOrigin(0);
+      this.terrainContainer.add(grass);
       
+      // Add tree sprite separately (not to container) so it can have independent depth
       const treeVariation = this.getTreeVariation(x, y);
       const tree = this.add.sprite(x + 16, y + 16, `tree${treeVariation}`);
       tree.setScale(0.12);
       tree.setOrigin(0.5, 0.75);
-      tree.setDepth(8);
+      tree.setDepth(8); // Above terrain(1) but below fog(10) and unexplored(12)
       
-      this.terrainContainer.add([grass, tree]);
+      this.treeSprites.push(tree);
     }
   }
 
