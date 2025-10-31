@@ -427,13 +427,18 @@ export class ExploreScene extends Phaser.Scene {
 
     uiElements.push(overlay, titleText, descText, choiceText);
 
-    const yesBtn = this.createButton(width / 2 - 70, height / 2 + 60, 'Offer (50 AA)', () => {
+    const yesBtnBg = this.add.rectangle(width / 2 - 70, height / 2 + 60, 140, 30, 0x444466)
+      .setScrollFactor(0).setDepth(1002)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
       if (player.arcaneAsh < 50) {
         choiceText.setText('Not enough Arcane Ash!').setColor('#ff4444');
         this.time.delayedCall(2000, () => {
           uiElements.forEach(el => el.destroy());
-          yesBtn.destroy();
-          noBtn.destroy();
+          yesBtnBg.destroy();
+          yesBtnLabel.destroy();
+          noBtnBg.destroy();
+          noBtnLabel.destroy();
           this.encounterCooldown = false;
           this.isOverlayActive = false;
         });
@@ -441,8 +446,10 @@ export class ExploreScene extends Phaser.Scene {
       }
 
       this.gameState.addArcaneAsh(-50);
-      yesBtn.destroy();
-      noBtn.destroy();
+      yesBtnBg.destroy();
+      yesBtnLabel.destroy();
+      noBtnBg.destroy();
+      noBtnLabel.destroy();
 
       const roll = Math.random();
       if (roll < 0.70) {
@@ -484,15 +491,28 @@ export class ExploreScene extends Phaser.Scene {
           this.isOverlayActive = false;
         });
       }
-    }).setScrollFactor(0).setDepth(1002);
+    });
 
-    const noBtn = this.createButton(width / 2 + 70, height / 2 + 60, 'Decline', () => {
-      uiElements.forEach(el => el.destroy());
-      yesBtn.destroy();
-      noBtn.destroy();
-      this.encounterCooldown = false;
-      this.isOverlayActive = false;
-    }).setScrollFactor(0).setDepth(1002);
+    const yesBtnLabel = this.add.text(width / 2 - 70, height / 2 + 60, 'Offer (50 AA)', {
+      fontSize: '12px', color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
+
+    const noBtnBg = this.add.rectangle(width / 2 + 70, height / 2 + 60, 140, 30, 0x444466)
+      .setScrollFactor(0).setDepth(1002)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
+        uiElements.forEach(el => el.destroy());
+        yesBtnBg.destroy();
+        yesBtnLabel.destroy();
+        noBtnBg.destroy();
+        noBtnLabel.destroy();
+        this.encounterCooldown = false;
+        this.isOverlayActive = false;
+      });
+
+    const noBtnLabel = this.add.text(width / 2 + 70, height / 2 + 60, 'Decline', {
+      fontSize: '12px', color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
   }
 
   private handleVoidCorruptionEncounter(encounterType: any): void {
@@ -513,24 +533,42 @@ export class ExploreScene extends Phaser.Scene {
 
     uiElements.push(overlay, titleText, descText, choiceText);
 
-    const enterBtn = this.createButton(width / 2 - 70, height / 2 + 70, 'Enter', () => {
-      uiElements.forEach(el => el.destroy());
-      enterBtn.destroy();
-      fleeBtn.destroy();
-      this.isOverlayActive = false;
+    const enterBtnBg = this.add.rectangle(width / 2 - 70, height / 2 + 70, 140, 30, 0x444466)
+      .setScrollFactor(0).setDepth(1002)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
+        uiElements.forEach(el => el.destroy());
+        enterBtnBg.destroy();
+        enterBtnLabel.destroy();
+        fleeBtnBg.destroy();
+        fleeBtnLabel.destroy();
+        this.isOverlayActive = false;
 
-      const eliteEnemy = EnemyFactory.createEnemy(2, false);
-      eliteEnemy.lootTable.forEach(item => item.dropChance *= 2);
-      this.startWildCombat([eliteEnemy]);
-    }).setScrollFactor(0).setDepth(1002);
+        const eliteEnemy = EnemyFactory.createEnemy(2, false);
+        eliteEnemy.lootTable.forEach(item => item.dropChance *= 2);
+        this.startWildCombat([eliteEnemy]);
+      });
 
-    const fleeBtn = this.createButton(width / 2 + 70, height / 2 + 70, 'Flee', () => {
-      uiElements.forEach(el => el.destroy());
-      enterBtn.destroy();
-      fleeBtn.destroy();
-      this.encounterCooldown = false;
-      this.isOverlayActive = false;
-    }).setScrollFactor(0).setDepth(1002);
+    const enterBtnLabel = this.add.text(width / 2 - 70, height / 2 + 70, 'Enter', {
+      fontSize: '12px', color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
+
+    const fleeBtnBg = this.add.rectangle(width / 2 + 70, height / 2 + 70, 140, 30, 0x444466)
+      .setScrollFactor(0).setDepth(1002)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
+        uiElements.forEach(el => el.destroy());
+        enterBtnBg.destroy();
+        enterBtnLabel.destroy();
+        fleeBtnBg.destroy();
+        fleeBtnLabel.destroy();
+        this.encounterCooldown = false;
+        this.isOverlayActive = false;
+      });
+
+    const fleeBtnLabel = this.add.text(width / 2 + 70, height / 2 + 70, 'Flee', {
+      fontSize: '12px', color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
   }
 
   private handleTrappedChestEncounter(encounterType: any): void {
