@@ -1,15 +1,21 @@
-// API client for authenticated requests to backend
+// API client for both authenticated and anonymous session requests to backend
+import { SessionManager } from './SessionManager';
+
 export class ApiClient {
   private static baseUrl = '';
 
   static async fetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
     const url = `${this.baseUrl}${endpoint}`;
     
+    // Include session ID in headers for anonymous users
+    const sessionId = SessionManager.getOrCreateSessionId();
+    
     const response = await fetch(url, {
       ...options,
-      credentials: 'include', // Include cookies for session auth
+      credentials: 'include', // Include cookies for session auth (if authenticated)
       headers: {
         'Content-Type': 'application/json',
+        'X-Session-Id': sessionId, // Send session ID for anonymous sessions
         ...options.headers,
       },
     });
