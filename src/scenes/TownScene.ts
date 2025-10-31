@@ -12,7 +12,7 @@ import { ForgingSystem } from '../systems/ForgingSystem';
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
   private infoText!: Phaser.GameObjects.Text;
-  private menuState: 'none' | 'inventory' | 'equipment' | 'shop' | 'forge' = 'none';
+  private menuState: 'none' | 'inventory' | 'equipment' | 'shop' | 'forge' | 'inn' = 'none';
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
 
@@ -122,6 +122,11 @@ export class TownScene extends Phaser.Scene {
 
     if (name === 'Blacksmith') {
       this.openForge();
+      return;
+    }
+
+    if (name === 'Innkeeper') {
+      this.openInn();
       return;
     }
 
@@ -850,5 +855,95 @@ export class TownScene extends Phaser.Scene {
     this.gameState.updatePlayer(player);
     this.showMessage(result.message);
     this.infoText.setText(this.getPlayerInfo());
+  }
+
+  private openInn(): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+    const REST_COST = 50;
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setInteractive();
+    const panel = this.add.rectangle(width / 2, height / 2, 600, 400, 0x2a2a3e).setOrigin(0.5);
+    uiElements.push(overlay, panel);
+
+    const title = this.add.text(width / 2, height / 2 - 160, 'The Weary Traveler Inn', {
+      fontSize: '28px',
+      color: '#6699ff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+    uiElements.push(title);
+
+    const innkeeperText = this.add.text(width / 2, height / 2 - 100, '"Welcome, traveler. Rest your weary bones."', {
+      fontSize: '14px',
+      color: '#cccccc',
+      fontStyle: 'italic',
+    }).setOrigin(0.5);
+    uiElements.push(innkeeperText);
+
+    const playerStatusText = this.add.text(width / 2, height / 2 - 50, 
+      `Current Health: ${player.health} / ${player.maxHealth}\n` +
+      `Current Stamina: ${player.stamina} / ${player.maxStamina}`, {
+      fontSize: '16px',
+      color: '#ffffff',
+      align: 'center',
+    }).setOrigin(0.5);
+    uiElements.push(playerStatusText);
+
+    const costText = this.add.text(width / 2, height / 2 + 20, 
+      `Rest Cost: ${REST_COST} Arcane Ash`, {
+      fontSize: '16px',
+      color: '#ffcc66',
+    }).setOrigin(0.5);
+    uiElements.push(costText);
+
+    const balanceText = this.add.text(width / 2, height / 2 + 50, 
+      `Your Balance: ${player.arcaneAsh} AA`, {
+      fontSize: '14px',
+      color: player.arcaneAsh >= REST_COST ? '#88ff88' : '#ff8888',
+    }).setOrigin(0.5);
+    uiElements.push(balanceText);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'inn';
+
+    const isFullyRested = player.health >= player.maxHealth && player.stamina >= player.maxStamina;
+    const canAfford = player.arcaneAsh >= REST_COST;
+
+    if (isFullyRested) {
+      const restBtn = this.createButton(width / 2, height / 2 + 100, 'Already Fully Rested', () => {});
+      const btnBg = restBtn.getAt(0) as Phaser.GameObjects.Rectangle;
+      btnBg.setFillStyle(0x666666);
+      btnBg.disableInteractive();
+      uiElements.push(restBtn);
+    } else if (!canAfford) {
+      const restBtn = this.createButton(width / 2, height / 2 + 100, 'Not Enough Arcane Ash', () => {});
+      const btnBg = restBtn.getAt(0) as Phaser.GameObjects.Rectangle;
+      btnBg.setFillStyle(0x883333);
+      btnBg.disableInteractive();
+      uiElements.push(restBtn);
+    } else {
+      const restBtn = this.createButton(width / 2, height / 2 + 100, 'Rest and Restore', () => {
+        player.arcaneAsh -= REST_COST;
+        player.health = player.maxHealth;
+        player.stamina = player.maxStamina;
+        this.gameState.updatePlayer(player);
+        this.showMessage('You feel refreshed and restored!');
+        this.infoText.setText(this.getPlayerInfo());
+        destroyAll();
+      });
+      uiElements.push(restBtn);
+    }
+
+    const closeBtn = this.createButton(width / 2, height / 2 + 160, 'Leave', () => {
+      destroyAll();
+    });
+    uiElements.push(closeBtn);
   }
 }

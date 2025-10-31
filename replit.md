@@ -48,6 +48,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Authentication System**: Login/register flow via Replit Auth (supports Google, GitHub, X, Apple, email/password). Session management handled server-side with PostgreSQL session store. Main menu shows login status and provides both authenticated and offline play options.
 - **Modular Architecture**: Designed with separated concerns (scenes, systems, config, types, utils) using TypeScript and singleton patterns for managers (GameState, Scene) for extensibility.
 - **HMR Configuration**: Vite dev server configured for Hot Module Replacement in Replit using WSS and `REPLIT_DEV_DOMAIN`.
+- **Innkeeper Rest System**: Players can spend 50 Arcane Ash at the Weary Traveler Inn to fully restore health and stamina. Button disabled if already fully rested or insufficient funds.
 
 ### Feature Specifications
 - **Town (Roboka)**: Player hub with interactive NPCs (Blacksmith, Merchant, Innkeeper, Quest Giver, Gem Expert, Marketplace).
