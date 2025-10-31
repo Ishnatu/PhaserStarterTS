@@ -31,7 +31,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     const startButton = this.add.sprite(width / 2, height / 2 + 20, 'start-button');
     startButton.setOrigin(0.5);
-    startButton.setScale(0.5);
+    startButton.setScale(0.4);
     startButton.setInteractive({ useHandCursor: true });
     
     startButton.on('pointerover', () => {
