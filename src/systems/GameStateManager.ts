@@ -51,6 +51,7 @@ export class GameStateManager {
       footlockerSlots: 80,
       activeBuffs: [],
       exploredTiles: [],
+      completedDelves: [],
     };
     this.exploredTilesSet = new Set();
 
@@ -120,6 +121,9 @@ export class GameStateManager {
       try {
         this.gameState = JSON.parse(saved);
         this.exploredTilesSet = new Set(this.gameState.player.exploredTiles || []);
+        if (!this.gameState.player.completedDelves) {
+          this.gameState.player.completedDelves = [];
+        }
         return true;
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -133,6 +137,9 @@ export class GameStateManager {
     this.gameState = data;
     this.gameState.player.stats = EquipmentManager.calculatePlayerStats(this.gameState.player);
     this.exploredTilesSet = new Set(this.gameState.player.exploredTiles || []);
+    if (!this.gameState.player.completedDelves) {
+      this.gameState.player.completedDelves = [];
+    }
   }
 
   async saveToServer(): Promise<boolean> {
@@ -252,5 +259,23 @@ export class GameStateManager {
   isTileExplored(x: number, y: number): boolean {
     const tileKey = `${Math.floor(x / 32)},${Math.floor(y / 32)}`;
     return this.exploredTilesSet.has(tileKey);
+  }
+
+  markDelveCompleted(x: number, y: number): void {
+    if (!this.gameState.player.completedDelves) {
+      this.gameState.player.completedDelves = [];
+    }
+    const delveKey = `${Math.floor(x)},${Math.floor(y)}`;
+    if (!this.gameState.player.completedDelves.includes(delveKey)) {
+      this.gameState.player.completedDelves.push(delveKey);
+    }
+  }
+
+  isDelveCompleted(x: number, y: number): boolean {
+    if (!this.gameState.player.completedDelves) {
+      return false;
+    }
+    const delveKey = `${Math.floor(x)},${Math.floor(y)}`;
+    return this.gameState.player.completedDelves.includes(delveKey);
   }
 }

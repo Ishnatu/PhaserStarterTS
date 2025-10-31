@@ -182,8 +182,11 @@ export class ExploreScene extends Phaser.Scene {
       const y = 200 + Math.random() * (this.WORLD_SIZE - 400);
       const tier = 1; // Only Tier 1 delves in current area
 
-      const marker = this.createDelveMarker(x, y, tier);
-      this.delveMarkers.push(marker);
+      // Don't create markers for completed delves
+      if (!this.gameState.isDelveCompleted(x, y)) {
+        const marker = this.createDelveMarker(x, y, tier);
+        this.delveMarkers.push(marker);
+      }
     }
   }
 
@@ -234,7 +237,8 @@ export class ExploreScene extends Phaser.Scene {
   }
 
   private checkDelveProximity(): void {
-    for (const marker of this.delveMarkers) {
+    for (let i = this.delveMarkers.length - 1; i >= 0; i--) {
+      const marker = this.delveMarkers[i];
       const distance = Phaser.Math.Distance.Between(
         this.player.x,
         this.player.y,
@@ -243,6 +247,12 @@ export class ExploreScene extends Phaser.Scene {
       );
 
       if (distance < 40) {
+        // Double check if delve is already completed
+        if (this.gameState.isDelveCompleted(marker.x, marker.y)) {
+          marker.destroy();
+          this.delveMarkers.splice(i, 1);
+          return;
+        }
         this.enterDelve(marker.getData('tier'), marker.x, marker.y);
       }
     }

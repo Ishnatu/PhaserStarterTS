@@ -186,7 +186,9 @@ export class DelveScene extends Phaser.Scene {
   }
 
   private exitDelve(): void {
+    // Mark delve as completed
     if (this.currentDelve.location) {
+      this.gameState.markDelveCompleted(this.currentDelve.location.x, this.currentDelve.location.y);
       SceneManager.getInstance().transitionTo('explore', {
         returnToLocation: { x: this.currentDelve.location.x, y: this.currentDelve.location.y }
       });
