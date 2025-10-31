@@ -11,8 +11,8 @@ import { ItemDatabase } from './config/ItemDatabase';
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game',
-  width: 800,
-  height: 600,
+  width: 1920,
+  height: 1080,
   backgroundColor: '#0f0f13',
   scene: [MainMenuScene, TownScene, ExploreScene, DelveScene, CombatScene],
   scale: {
