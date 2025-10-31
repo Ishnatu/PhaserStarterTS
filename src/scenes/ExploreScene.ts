@@ -192,6 +192,8 @@ export class ExploreScene extends Phaser.Scene {
           this.delveMarkers.push(marker);
         }
       });
+      // Set delve positions for terrain generation (clear spaces around delves)
+      TerrainGenerator.setDelvePositions(state.discoveredDelves);
       return;
     }
 
@@ -226,6 +228,9 @@ export class ExploreScene extends Phaser.Scene {
 
     // Store delves in game state for persistence
     state.discoveredDelves = newDelves;
+    
+    // Set delve positions for terrain generation (clear spaces around delves)
+    TerrainGenerator.setDelvePositions(newDelves);
   }
 
   private createTownPortal(): void {
@@ -1023,6 +1028,7 @@ export class ExploreScene extends Phaser.Scene {
       // Clear delves when returning to town - they'll regenerate on next wilderness visit
       const state = this.gameState.getState();
       state.discoveredDelves = [];
+      TerrainGenerator.clearDelvePositions();
       
       SceneManager.getInstance().transitionTo('town');
     }

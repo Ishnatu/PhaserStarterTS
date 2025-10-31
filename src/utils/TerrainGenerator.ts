@@ -8,10 +8,36 @@ export interface TerrainTile {
 
 export class TerrainGenerator {
   private static seed: number = 12345;
+  private static delvePositions: { x: number; y: number }[] = [];
+  private static readonly DELVE_CLEAR_RADIUS = 80; // 2.5 tiles of clear space around delves
   
   private static seededRandom(): number {
     const x = Math.sin(this.seed++) * 10000;
     return x - Math.floor(x);
+  }
+
+  static setDelvePositions(positions: { x: number; y: number }[]): void {
+    this.delvePositions = positions;
+  }
+
+  static clearDelvePositions(): void {
+    this.delvePositions = [];
+  }
+
+  private static isNearDelve(x: number, y: number): boolean {
+    // Use tile center for accurate distance calculation (tiles are 32px)
+    const tileCenterX = x + 16;
+    const tileCenterY = y + 16;
+    
+    for (const delve of this.delvePositions) {
+      const distance = Math.sqrt(
+        Math.pow(tileCenterX - delve.x, 2) + Math.pow(tileCenterY - delve.y, 2)
+      );
+      if (distance < this.DELVE_CLEAR_RADIUS) {
+        return true;
+      }
+    }
+    return false;
   }
 
   static generateTile(x: number, y: number): TerrainType {
@@ -22,7 +48,8 @@ export class TerrainGenerator {
     
     const rand = this.seededRandom();
     
-    if (rand < 0.05) return 'tree';
+    // Don't spawn trees near delves
+    if (rand < 0.05 && !this.isNearDelve(x, y)) return 'tree';
     
     if (rand < 0.15) return 'path';
     
