@@ -108,7 +108,7 @@ export class ExploreScene extends Phaser.Scene {
 
     const menuBtn = this.createButton(width - 120, 20, 'Menu', () => {
       this.openMenu();
-    }).setScrollFactor(0).setDepth(100);
+    });
 
     this.createHealthAndStaminaBars();
 
