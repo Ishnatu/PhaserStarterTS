@@ -405,7 +405,9 @@ export class ExploreScene extends Phaser.Scene {
       const tree = this.add.sprite(x + 16, y + 16, `tree${treeVariation}`);
       tree.setScale(0.12);
       tree.setOrigin(0.5, 0.75);
-      tree.setDepth(8); // Above terrain(1) but below fog(10) and unexplored(12)
+      // Y-sort trees: higher Y = render in front (depth 8.000x to 8.999x range)
+      // This prevents trunks from appearing in front of other trees' canopies
+      tree.setDepth(8 + y / 10000);
       
       this.treeSprites.push(tree);
     }
@@ -896,19 +898,14 @@ export class ExploreScene extends Phaser.Scene {
     const barWidth = 300;
     const barHeight = 30;
     const startX = 20;
-    const startY = 60;
+    const startY = 40;
 
-    // Health Bar
-    this.add.text(startX, startY - 20, 'Health', {
-      fontSize: '16px',
-      color: '#ffffff',
-    }).setScrollFactor(0).setDepth(100);
-
+    // Health Bar (no label - shows on hover)
     this.healthBarBg = this.add.rectangle(startX, startY, barWidth, barHeight, 0x330000)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(100)
-      .setInteractive();
+      .setInteractive({ useHandCursor: true });
 
     this.healthBarFill = this.add.rectangle(startX + 2, startY + 2, barWidth - 4, barHeight - 4, 0xff0000)
       .setOrigin(0, 0)
@@ -922,24 +919,19 @@ export class ExploreScene extends Phaser.Scene {
       padding: { x: 8, y: 4 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setVisible(false);
 
-    // Stamina Bar
-    this.add.text(startX, startY + barHeight + 30, 'Stamina', {
-      fontSize: '16px',
-      color: '#ffffff',
-    }).setScrollFactor(0).setDepth(100);
-
-    this.staminaBarBg = this.add.rectangle(startX, startY + barHeight + 50, barWidth, barHeight, 0x333300)
+    // Stamina Bar (no label - shows on hover)
+    this.staminaBarBg = this.add.rectangle(startX, startY + barHeight + 10, barWidth, barHeight, 0x333300)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(100)
-      .setInteractive();
+      .setInteractive({ useHandCursor: true });
 
-    this.staminaBarFill = this.add.rectangle(startX + 2, startY + barHeight + 52, barWidth - 4, barHeight - 4, 0xffff00)
+    this.staminaBarFill = this.add.rectangle(startX + 2, startY + barHeight + 12, barWidth - 4, barHeight - 4, 0xffff00)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(101);
 
-    this.staminaTooltip = this.add.text(startX + barWidth / 2, startY + barHeight + 50 + barHeight / 2, '', {
+    this.staminaTooltip = this.add.text(startX + barWidth / 2, startY + barHeight + 10 + barHeight / 2, '', {
       fontSize: '14px',
       color: '#ffffff',
       backgroundColor: '#000000cc',
@@ -947,7 +939,7 @@ export class ExploreScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setVisible(false);
 
     // Currency text
-    this.currencyText = this.add.text(startX, startY + barHeight * 2 + 80, '', {
+    this.currencyText = this.add.text(startX, startY + barHeight * 2 + 20, '', {
       fontSize: '16px',
       color: '#f0a020',
       backgroundColor: '#00000088',
@@ -1062,11 +1054,11 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
-    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setDepth(999);
-    const panel = this.add.rectangle(width / 2, height / 2, 400, 350, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setDepth(999).setInteractive();
+    const panel = this.add.rectangle(width / 2, height / 2, 400, 300, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     uiElements.push(overlay, panel);
 
-    const title = this.add.text(width / 2, height / 2 - 150, 'Menu', {
+    const title = this.add.text(width / 2, height / 2 - 120, 'Menu', {
       fontSize: '28px',
       color: '#f0a020',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
@@ -1082,31 +1074,25 @@ export class ExploreScene extends Phaser.Scene {
     this.currentMenuCloseFunction = destroyAll;
     this.menuState = 'main';
 
-    const shortRestBtn = this.createButton(width / 2, height / 2 - 80, 'Short Rest', () => {
-      destroyAll();
-      this.takeShortRest();
-    }).setScrollFactor(0).setDepth(1002);
-    uiElements.push(shortRestBtn);
-
-    const inventoryBtn = this.createButton(width / 2, height / 2 - 30, 'Inventory', () => {
+    const inventoryBtn = this.createButton(width / 2, height / 2 - 50, 'Inventory', () => {
       uiElements.forEach(el => el.destroy());
       this.openInventory();
     }).setScrollFactor(0).setDepth(1002);
     uiElements.push(inventoryBtn);
 
-    const equipmentBtn = this.createButton(width / 2, height / 2 + 20, 'Equipment', () => {
+    const equipmentBtn = this.createButton(width / 2, height / 2, 'Equipment', () => {
       uiElements.forEach(el => el.destroy());
       this.openEquipment();
     }).setScrollFactor(0).setDepth(1002);
     uiElements.push(equipmentBtn);
 
-    const mainMenuBtn = this.createButton(width / 2, height / 2 + 70, 'Return to Main Menu', () => {
+    const exitBtn = this.createButton(width / 2, height / 2 + 50, 'Exit', () => {
       destroyAll();
       this.scene.start('MainMenuScene');
     }).setScrollFactor(0).setDepth(1002);
-    uiElements.push(mainMenuBtn);
+    uiElements.push(exitBtn);
 
-    const closeBtn = this.createButton(width / 2, height / 2 + 130, 'Close', () => {
+    const closeBtn = this.createButton(width / 2, height / 2 + 100, 'Close', () => {
       destroyAll();
     }).setScrollFactor(0).setDepth(1002);
     uiElements.push(closeBtn);
