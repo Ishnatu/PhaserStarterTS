@@ -4,14 +4,13 @@ import { GameStateManager } from '../systems/GameStateManager';
 import { ApiClient } from '../utils/ApiClient';
 
 export class MainMenuScene extends Phaser.Scene {
-  private statusText?: Phaser.GameObjects.Text;
-
   constructor() {
     super('MainMenuScene');
   }
 
   preload() {
     this.load.image('gemforge-logo', '/assets/ui/gemforge-logo.png');
+    this.load.image('start-button', '/assets/ui/start-button.png');
   }
 
   async create() {
@@ -23,21 +22,27 @@ export class MainMenuScene extends Phaser.Scene {
     logo.setOrigin(0.5);
     logo.setScale(0.18);
 
-    this.add.text(width / 2, 400, 'Phase One: The Hunt', {
-      fontSize: '24px',
-      color: '#cccccc',
+    this.add.text(width / 2, 400, 'PHASE ONE: THE HUNT', {
+      fontSize: '20px',
+      color: '#f0a020',
+      fontFamily: 'Courier New, monospace',
+      fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    this.statusText = this.add.text(width / 2, height / 2 - 20, 'Persistent saves enabled', {
-      fontSize: '14px',
-      color: '#00ff00',
-    }).setOrigin(0.5);
-
-    this.createButton(width / 2, height / 2 + 40, 'Start Game', async () => {
-      if (this.statusText) {
-        this.statusText.setText('Loading your save...');
-      }
-      
+    const startButton = this.add.sprite(width / 2, height / 2 + 20, 'start-button');
+    startButton.setOrigin(0.5);
+    startButton.setScale(0.5);
+    startButton.setInteractive({ useHandCursor: true });
+    
+    startButton.on('pointerover', () => {
+      startButton.setTint(0xdddddd);
+    });
+    
+    startButton.on('pointerout', () => {
+      startButton.clearTint();
+    });
+    
+    startButton.on('pointerdown', async () => {
       const saveData = await ApiClient.loadGame();
       const gameState = GameStateManager.getInstance();
       
@@ -57,24 +62,4 @@ export class MainMenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
   }
 
-  private createButton(
-    x: number,
-    y: number,
-    text: string,
-    callback: () => void
-  ): Phaser.GameObjects.Container {
-    const bg = this.add.rectangle(0, 0, 300, 50, 0x444466)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => bg.setFillStyle(0x555577))
-      .on('pointerout', () => bg.setFillStyle(0x444466))
-      .on('pointerdown', callback);
-
-    const label = this.add.text(0, 0, text, {
-      fontSize: '18px',
-      color: '#ffffff',
-    }).setOrigin(0.5);
-
-    const container = this.add.container(x, y, [bg, label]);
-    return container;
-  }
 }
