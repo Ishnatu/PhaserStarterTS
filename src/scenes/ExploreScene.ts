@@ -39,6 +39,13 @@ export class ExploreScene extends Phaser.Scene {
     super('ExploreScene');
   }
 
+  preload() {
+    this.load.image('tree1', '/assets/terrain/tree1.png');
+    this.load.image('tree2', '/assets/terrain/tree2.png');
+    this.load.image('tree3', '/assets/terrain/tree3.png');
+    this.load.image('tree4', '/assets/terrain/tree4.png');
+  }
+
   init(data?: { returnToLocation?: { x: number; y: number } }) {
     if (data?.returnToLocation) {
       this.registry.set('returnToLocation', data.returnToLocation);
@@ -332,9 +339,19 @@ export class ExploreScene extends Phaser.Scene {
       this.terrainContainer.add(path);
     } else if (terrainType === 'tree') {
       const grass = this.add.rectangle(x, y, this.TILE_SIZE, this.TILE_SIZE, 0x2d5016).setOrigin(0);
-      const tree = this.add.circle(x + 16, y + 16, 12, 0x1a3a0f);
+      
+      const treeVariation = this.getTreeVariation(x, y);
+      const tree = this.add.sprite(x + 16, y + 16, `tree${treeVariation}`);
+      tree.setScale(0.5);
+      tree.setOrigin(0.5, 0.5);
+      
       this.terrainContainer.add([grass, tree]);
     }
+  }
+
+  private getTreeVariation(x: number, y: number): number {
+    const hash = ((x * 374761393) + (y * 668265263)) & 0x7FFFFFFF;
+    return (hash % 4) + 1;
   }
 
   private triggerEncounter(): void {
