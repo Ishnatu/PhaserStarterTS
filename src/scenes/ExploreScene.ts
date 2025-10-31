@@ -68,9 +68,10 @@ export class ExploreScene extends Phaser.Scene {
     this.add.rectangle(0, 0, this.WORLD_SIZE, this.WORLD_SIZE, 0x000000).setOrigin(0);
 
     this.terrainContainer = this.add.container(0, 0);
+    this.terrainContainer.setDepth(1);
     
     this.unexploredGraphics = this.add.graphics();
-    this.unexploredGraphics.setDepth(5);
+    this.unexploredGraphics.setDepth(12);
     
     this.fogOfWarGraphics = this.add.graphics();
     this.fogOfWarGraphics.setDepth(10);
@@ -90,6 +91,7 @@ export class ExploreScene extends Phaser.Scene {
     } else {
       this.player = this.add.rectangle(this.WORLD_SIZE / 2, this.WORLD_SIZE / 2, 32, 32, 0x4488ff);
     }
+    this.player.setDepth(5);
 
     this.cameras.main.setBounds(0, 0, this.WORLD_SIZE, this.WORLD_SIZE);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
@@ -228,6 +230,7 @@ export class ExploreScene extends Phaser.Scene {
     });
 
     this.townPortal = this.add.container(x, y, [glow, portal, label]);
+    this.townPortal.setDepth(7);
   }
 
   private createDelveMarker(x: number, y: number, tier: number): Phaser.GameObjects.Container {
@@ -253,6 +256,7 @@ export class ExploreScene extends Phaser.Scene {
 
     const container = this.add.container(x, y, [glow, entrance, label]);
     container.setData('tier', tier);
+    container.setDepth(7);
     
     return container;
   }
@@ -378,6 +382,7 @@ export class ExploreScene extends Phaser.Scene {
       const tree = this.add.sprite(x + 16, y + 16, `tree${treeVariation}`);
       tree.setScale(0.12);
       tree.setOrigin(0.5, 0.75);
+      tree.setDepth(8);
       
       this.terrainContainer.add([grass, tree]);
     }
