@@ -49,7 +49,7 @@ export class ExploreScene extends Phaser.Scene {
     this.load.image('tree1', '/assets/terrain/tree1.png');
     this.load.image('tree2', '/assets/terrain/tree2.png');
     this.load.image('tree3', '/assets/terrain/tree3.png');
-    this.load.image('tree4', '/assets/terrain/tree4.png');
+    this.load.image('delve-entrance', '/assets/terrain/delve-entrance.png');
     this.load.image('gemforge-logo', '/assets/ui/gemforge-logo.png');
   }
 
@@ -231,23 +231,27 @@ export class ExploreScene extends Phaser.Scene {
   }
 
   private createDelveMarker(x: number, y: number, tier: number): Phaser.GameObjects.Container {
-    const icon = this.add.rectangle(0, 0, 24, 24, 0x8b0000);
-    const glow = this.add.circle(0, 0, 16, 0xff0000, 0.3);
-    const label = this.add.text(0, -30, `Delve T${tier}`, {
-      fontSize: '12px',
-      color: '#ff6666',
+    const entrance = this.add.sprite(0, 0, 'delve-entrance');
+    entrance.setScale(0.15);
+    entrance.setOrigin(0.5, 0.75);
+    
+    const glow = this.add.circle(0, 0, 32, 0x8844ff, 0.2);
+    const label = this.add.text(0, -60, `Delve T${tier}`, {
+      fontSize: '14px',
+      color: '#aa88ff',
+      fontStyle: 'bold',
     }).setOrigin(0.5);
 
     this.tweens.add({
       targets: glow,
-      scale: 1.3,
-      alpha: 0.1,
-      duration: 1000,
+      scale: 1.4,
+      alpha: 0.05,
+      duration: 1200,
       yoyo: true,
       repeat: -1,
     });
 
-    const container = this.add.container(x, y, [glow, icon, label]);
+    const container = this.add.container(x, y, [glow, entrance, label]);
     container.setData('tier', tier);
     
     return container;
@@ -263,7 +267,7 @@ export class ExploreScene extends Phaser.Scene {
         marker.y
       );
 
-      if (distance < 40) {
+      if (distance < 50) {
         // Double check if delve is already completed
         if (this.gameState.isDelveCompleted(marker.x, marker.y)) {
           marker.destroy();
@@ -381,7 +385,7 @@ export class ExploreScene extends Phaser.Scene {
 
   private getTreeVariation(x: number, y: number): number {
     const hash = ((x * 374761393) + (y * 668265263)) & 0x7FFFFFFF;
-    return (hash % 4) + 1;
+    return (hash % 3) + 1;
   }
 
   private triggerEncounter(): void {
