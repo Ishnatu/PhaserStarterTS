@@ -361,7 +361,7 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
 
     const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
-      .setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+      .setOrigin(0).setScrollFactor(0).setDepth(999);
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x000000, 0.9)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 100, 'Random Encounter!', {
@@ -385,7 +385,7 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
 
     const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
-      .setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+      .setOrigin(0).setScrollFactor(0).setDepth(999);
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x000000, 0.9)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 100, 'Treasure Found!', {
@@ -418,7 +418,7 @@ export class ExploreScene extends Phaser.Scene {
     const player = this.gameState.getPlayer();
 
     const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
-      .setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+      .setOrigin(0).setScrollFactor(0).setDepth(999);
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 350, 0x2a0a2a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 130, 'Shrine to the Faceless Old God', {
@@ -506,7 +506,7 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
 
     const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
-      .setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+      .setOrigin(0).setScrollFactor(0).setDepth(999);
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 350, 0x1a0a2a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 130, 'Void Corruption Pocket', {
@@ -547,7 +547,7 @@ export class ExploreScene extends Phaser.Scene {
     const player = this.gameState.getPlayer();
 
     const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
-      .setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+      .setOrigin(0).setScrollFactor(0).setDepth(999);
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x2a1a0a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 100, 'Trapped Chest!', {
@@ -599,7 +599,7 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
 
     const blocker = this.add.rectangle(0, 0, width, height, 0x000000, 0.01)
-      .setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+      .setOrigin(0).setScrollFactor(0).setDepth(999);
     const overlay = this.add.rectangle(width / 2, height / 2, 600, 450, 0x1a1a2a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 200, 'Wandering Merchant', {
