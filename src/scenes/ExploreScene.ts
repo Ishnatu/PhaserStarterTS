@@ -11,6 +11,7 @@ import { BuffManager } from '../systems/BuffManager';
 import { DiceRoller } from '../utils/DiceRoller';
 import { PlayerEquipment } from '../types/GameTypes';
 import { ForgingSystem } from '../systems/ForgingSystem';
+import { TerrainGenerator } from '../utils/TerrainGenerator';
 
 export class ExploreScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -29,6 +30,10 @@ export class ExploreScene extends Phaser.Scene {
   private menuState: 'none' | 'main' | 'inventory' | 'equipment' | 'quit' = 'none';
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
+  private terrainContainer!: Phaser.GameObjects.Container;
+  private fogOfWarGraphics!: Phaser.GameObjects.Graphics;
+  private unexploredGraphics!: Phaser.GameObjects.Graphics;
+  private readonly VISIBILITY_RADIUS: number = 256;
 
   constructor() {
     super('ExploreScene');
@@ -46,7 +51,15 @@ export class ExploreScene extends Phaser.Scene {
 
     const { width, height } = this.cameras.main;
 
-    this.add.rectangle(0, 0, this.WORLD_SIZE, this.WORLD_SIZE, 0x1a4a2a).setOrigin(0);
+    this.add.rectangle(0, 0, this.WORLD_SIZE, this.WORLD_SIZE, 0x000000).setOrigin(0);
+
+    this.terrainContainer = this.add.container(0, 0);
+    
+    this.unexploredGraphics = this.add.graphics();
+    this.unexploredGraphics.setDepth(5);
+    
+    this.fogOfWarGraphics = this.add.graphics();
+    this.fogOfWarGraphics.setDepth(10);
 
     const titleText = this.add.text(width / 2, 20, 'The Wilds of Grawgonia', {
       fontSize: '24px',
@@ -143,6 +156,8 @@ export class ExploreScene extends Phaser.Scene {
       }
     }
 
+    this.markNearbyTilesExplored();
+    this.updateFogOfWar();
     this.updateInfo();
   }
 
@@ -240,6 +255,85 @@ export class ExploreScene extends Phaser.Scene {
       this.movementStepCounter = 0;
       this.encounterCooldown = true;
       this.triggerEncounter();
+    }
+  }
+
+  private markNearbyTilesExplored(): void {
+    const playerX = this.player.x;
+    const playerY = this.player.y;
+    const radius = this.VISIBILITY_RADIUS / this.TILE_SIZE;
+    
+    for (let dx = -radius; dx <= radius; dx++) {
+      for (let dy = -radius; dy <= radius; dy++) {
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance <= radius) {
+          const tileX = playerX + dx * this.TILE_SIZE;
+          const tileY = playerY + dy * this.TILE_SIZE;
+          this.gameState.markTileExplored(tileX, tileY);
+        }
+      }
+    }
+  }
+
+  private updateFogOfWar(): void {
+    const playerX = this.player.x;
+    const playerY = this.player.y;
+    
+    const camera = this.cameras.main;
+    const viewportWidth = camera.width;
+    const viewportHeight = camera.height;
+    const cameraX = camera.scrollX;
+    const cameraY = camera.scrollY;
+    
+    this.terrainContainer.removeAll(true);
+    this.unexploredGraphics.clear();
+    this.fogOfWarGraphics.clear();
+    
+    const startTileX = Math.floor((cameraX - this.TILE_SIZE) / this.TILE_SIZE);
+    const endTileX = Math.floor((cameraX + viewportWidth + this.TILE_SIZE) / this.TILE_SIZE);
+    const startTileY = Math.floor((cameraY - this.TILE_SIZE) / this.TILE_SIZE);
+    const endTileY = Math.floor((cameraY + viewportHeight + this.TILE_SIZE) / this.TILE_SIZE);
+    
+    for (let tileX = startTileX; tileX <= endTileX; tileX++) {
+      for (let tileY = startTileY; tileY <= endTileY; tileY++) {
+        const worldX = tileX * this.TILE_SIZE;
+        const worldY = tileY * this.TILE_SIZE;
+        
+        const isExplored = this.gameState.isTileExplored(worldX, worldY);
+        
+        if (isExplored) {
+          const terrainType = TerrainGenerator.generateTile(worldX, worldY);
+          this.renderTerrainTile(worldX, worldY, terrainType);
+          
+          const distanceToPlayer = Phaser.Math.Distance.Between(playerX, playerY, worldX, worldY);
+          if (distanceToPlayer > this.VISIBILITY_RADIUS) {
+            this.fogOfWarGraphics.fillStyle(0x000000, 0.6);
+            this.fogOfWarGraphics.fillRect(worldX, worldY, this.TILE_SIZE, this.TILE_SIZE);
+          }
+        } else {
+          this.unexploredGraphics.fillStyle(0x000000, 1.0);
+          this.unexploredGraphics.fillRect(worldX, worldY, this.TILE_SIZE, this.TILE_SIZE);
+        }
+      }
+    }
+  }
+
+  private renderTerrainTile(x: number, y: number, terrainType: string): void {
+    let color: number;
+    
+    if (terrainType === 'grass') {
+      const variant = TerrainGenerator.getGrassVariant(x, y);
+      const grassColors = [0x2d5016, 0x3a6319, 0x22401a];
+      color = grassColors[variant];
+      const grass = this.add.rectangle(x, y, this.TILE_SIZE, this.TILE_SIZE, color).setOrigin(0);
+      this.terrainContainer.add(grass);
+    } else if (terrainType === 'path') {
+      const path = this.add.rectangle(x, y, this.TILE_SIZE, this.TILE_SIZE, 0x8b7355).setOrigin(0);
+      this.terrainContainer.add(path);
+    } else if (terrainType === 'tree') {
+      const grass = this.add.rectangle(x, y, this.TILE_SIZE, this.TILE_SIZE, 0x2d5016).setOrigin(0);
+      const tree = this.add.circle(x + 16, y + 16, 12, 0x1a3a0f);
+      this.terrainContainer.add([grass, tree]);
     }
   }
 
