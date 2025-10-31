@@ -177,9 +177,26 @@ export class ExploreScene extends Phaser.Scene {
   }
 
   private generateDelves(): void {
+    const robokaX = this.WORLD_SIZE / 2;
+    const robokaY = this.WORLD_SIZE / 2;
+    const minDistanceFromTown = 200;
+
     for (let i = 0; i < 8; i++) {
-      const x = 200 + Math.random() * (this.WORLD_SIZE - 400);
-      const y = 200 + Math.random() * (this.WORLD_SIZE - 400);
+      let x: number;
+      let y: number;
+      let attempts = 0;
+      const maxAttempts = 100;
+
+      // Keep trying until we find a spot far enough from Roboka
+      do {
+        x = 200 + Math.random() * (this.WORLD_SIZE - 400);
+        y = 200 + Math.random() * (this.WORLD_SIZE - 400);
+        attempts++;
+      } while (
+        Phaser.Math.Distance.Between(x, y, robokaX, robokaY) < minDistanceFromTown &&
+        attempts < maxAttempts
+      );
+
       const tier = 1; // Only Tier 1 delves in current area
 
       // Don't create markers for completed delves
