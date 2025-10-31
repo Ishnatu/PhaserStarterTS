@@ -29,6 +29,14 @@ export class CombatScene extends Phaser.Scene {
   }
 
   init(data: { delve: Delve; room: DelveRoom; wildEncounter?: boolean; wildEnemies?: Enemy[]; returnToLocation?: { x: number; y: number } }) {
+    console.log('CombatScene init - received data:', {
+      hasDelve: !!data.delve,
+      delve: data.delve,
+      hasTier: data.delve ? data.delve.tier : 'no delve',
+      hasRoom: !!data.room,
+      roomType: data.room ? data.room.type : 'no room'
+    });
+    
     this.currentDelve = data.delve;
     this.currentRoom = data.room;
     this.isWildEncounter = data.wildEncounter || false;
@@ -80,6 +88,11 @@ export class CombatScene extends Phaser.Scene {
   private generateEnemies(): Enemy[] {
     if (this.isWildEncounter && this.wildEnemies) {
       return this.wildEnemies;
+    }
+
+    if (!this.currentDelve || !this.currentDelve.tier) {
+      console.error('CombatScene: currentDelve or tier is undefined!', this.currentDelve);
+      return [EnemyFactory.createEnemy(1, false)];
     }
 
     const tier = this.currentDelve.tier;
