@@ -372,8 +372,8 @@ export class ExploreScene extends Phaser.Scene {
       
       const treeVariation = this.getTreeVariation(x, y);
       const tree = this.add.sprite(x + 16, y + 16, `tree${treeVariation}`);
-      tree.setScale(0.08);
-      tree.setOrigin(0.5, 0.5);
+      tree.setScale(0.12);
+      tree.setOrigin(0.5, 0.75);
       
       this.terrainContainer.add([grass, tree]);
     }
