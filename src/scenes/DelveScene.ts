@@ -115,6 +115,14 @@ export class DelveScene extends Phaser.Scene {
 
     if (!currentRoom) return;
 
+    // Check if all rooms are completed
+    const allRoomsCompleted = Array.from(this.currentDelve.rooms.values()).every(room => room.completed);
+
+    if (allRoomsCompleted) {
+      this.showDelveCompletion();
+      return;
+    }
+
     const roomY = 200;
 
     this.add.rectangle(width / 2, roomY + 100, 600, 200, 0x2a2a4e, 0.5).setOrigin(0.5);
@@ -153,6 +161,37 @@ export class DelveScene extends Phaser.Scene {
       this.createButton(width / 2, btnY + 60, 'Proceed to Next Room', () => {
         this.moveToNextRoom(currentRoom);
       });
+    }
+  }
+
+  private showDelveCompletion(): void {
+    const { width, height } = this.cameras.main;
+
+    this.add.rectangle(width / 2, height / 2, 700, 300, 0x2a2a4e, 0.9).setOrigin(0.5);
+
+    this.add.text(width / 2, height / 2 - 80, 'Congratulations!', {
+      fontSize: '32px',
+      color: '#ffaa00',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    this.add.text(width / 2, height / 2 - 20, `You have cleared the Tier ${this.currentDelve.tier} Delve!`, {
+      fontSize: '20px',
+      color: '#ffffff',
+    }).setOrigin(0.5);
+
+    this.createButton(width / 2, height / 2 + 60, 'Exit Delve', () => {
+      this.exitDelve();
+    });
+  }
+
+  private exitDelve(): void {
+    if (this.currentDelve.location) {
+      SceneManager.getInstance().transitionTo('explore', {
+        returnToLocation: { x: this.currentDelve.location.x, y: this.currentDelve.location.y }
+      });
+    } else {
+      SceneManager.getInstance().transitionTo('explore');
     }
   }
 
