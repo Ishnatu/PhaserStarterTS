@@ -75,9 +75,9 @@ export class ExploreScene extends Phaser.Scene {
     this.fogOfWarGraphics = this.add.graphics();
     this.fogOfWarGraphics.setDepth(10);
 
-    const logo = this.add.sprite(width / 2, 50, 'gemforge-logo');
+    const logo = this.add.sprite(width / 2, 45, 'gemforge-logo');
     logo.setOrigin(0.5);
-    logo.setScale(0.15);
+    logo.setScale(0.12);
     logo.setScrollFactor(0);
     logo.setDepth(100);
 

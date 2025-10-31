@@ -19,11 +19,11 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.add.rectangle(0, 0, width, height, 0x1a1a2e).setOrigin(0);
 
-    const logo = this.add.sprite(width / 2, height / 3 - 50, 'gemforge-logo');
+    const logo = this.add.sprite(width / 2, 200, 'gemforge-logo');
     logo.setOrigin(0.5);
-    logo.setScale(0.6);
+    logo.setScale(0.45);
 
-    this.add.text(width / 2, height / 3 + 150, 'Phase One: The Hunt', {
+    this.add.text(width / 2, 400, 'Phase One: The Hunt', {
       fontSize: '24px',
       color: '#cccccc',
     }).setOrigin(0.5);
