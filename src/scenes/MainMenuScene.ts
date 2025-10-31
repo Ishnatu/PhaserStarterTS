@@ -4,8 +4,6 @@ import { GameStateManager } from '../systems/GameStateManager';
 import { ApiClient } from '../utils/ApiClient';
 
 export class MainMenuScene extends Phaser.Scene {
-  private isCheckingAuth: boolean = false;
-  private isAuthenticated: boolean = false;
   private statusText?: Phaser.GameObjects.Text;
 
   constructor() {
@@ -28,40 +26,10 @@ export class MainMenuScene extends Phaser.Scene {
       color: '#cccccc',
     }).setOrigin(0.5);
 
-    this.statusText = this.add.text(width / 2, height / 2 - 20, 'Checking authentication...', {
+    this.statusText = this.add.text(width / 2, height / 2 - 20, 'Persistent saves enabled', {
       fontSize: '14px',
-      color: '#ffff00',
+      color: '#00ff00',
     }).setOrigin(0.5);
-
-    // Check authentication status
-    await this.checkAuthentication();
-
-    if (this.isAuthenticated) {
-      this.showAuthenticatedMenu();
-    } else {
-      this.showUnauthenticatedMenu();
-    }
-
-    this.add.text(width / 2, height - 40, '© 2025 - A Dark Fantasy Extraction RPG', {
-      fontSize: '12px',
-      color: '#666666',
-    }).setOrigin(0.5);
-  }
-
-  private async checkAuthentication() {
-    this.isCheckingAuth = true;
-    const authStatus = await ApiClient.checkAuth();
-    this.isAuthenticated = authStatus.isAuthenticated;
-    this.isCheckingAuth = false;
-  }
-
-  private showAuthenticatedMenu() {
-    const { width, height } = this.cameras.main;
-    
-    if (this.statusText) {
-      this.statusText.setText('Logged in - Ready to play');
-      this.statusText.setColor('#00ff00');
-    }
 
     this.createButton(width / 2, height / 2 + 40, 'Start Game', async () => {
       if (this.statusText) {
@@ -81,27 +49,10 @@ export class MainMenuScene extends Phaser.Scene {
       SceneManager.getInstance().transitionTo('town');
     });
 
-    const logoutBtn = this.createButton(width / 2, height / 2 + 120, 'Logout', () => {
-      window.location.href = '/api/logout';
-    });
-  }
-
-  private showUnauthenticatedMenu() {
-    const { width, height } = this.cameras.main;
-    
-    if (this.statusText) {
-      this.statusText.setText('Login required for persistent saves');
-      this.statusText.setColor('#ff8888');
-    }
-
-    const loginBtn = this.createButton(width / 2, height / 2 + 40, 'Login / Sign Up', () => {
-      window.location.href = '/api/login';
-    });
-
-    const offlineBtn = this.createButton(width / 2, height / 2 + 120, 'Play Offline (Local Save)', () => {
-      GameStateManager.getInstance().loadFromLocalStorage();
-      SceneManager.getInstance().transitionTo('town');
-    });
+    this.add.text(width / 2, height - 40, '© 2025 - A Dark Fantasy Extraction RPG', {
+      fontSize: '12px',
+      color: '#666666',
+    }).setOrigin(0.5);
   }
 
   private createButton(
