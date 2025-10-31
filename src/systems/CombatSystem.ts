@@ -50,21 +50,6 @@ export class CombatSystem {
     }
 
     const staminaCost = GameConfig.COMBAT.STAMINA_COST_PER_ATTACK;
-    if (this.combatState.player.stamina < staminaCost) {
-      const exhaustionMessage = 'You are exhausted! You must flee combat!';
-      this.combatState.combatLog.push(exhaustionMessage);
-      this.combatState.isComplete = true;
-      this.combatState.playerVictory = false;
-      return {
-        hit: false,
-        critical: false,
-        attackRoll: 0,
-        damage: 0,
-        damageBeforeReduction: 0,
-        message: exhaustionMessage,
-      };
-    }
-
     this.combatState.player.stamina = Math.max(0, this.combatState.player.stamina - staminaCost);
 
     const isDualWielding = EquipmentManager.isDualWielding(this.combatState.player);
