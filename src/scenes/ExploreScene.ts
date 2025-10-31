@@ -90,19 +90,19 @@ export class ExploreScene extends Phaser.Scene {
 
     const menuBtn = this.createButton(width - 120, 20, 'Menu', () => {
       this.openMenu();
-    }).setScrollFactor(0);
+    }).setScrollFactor(0).setDepth(100);
 
     this.infoText = this.add.text(20, 60, '', {
       fontSize: '14px',
       color: '#ffffff',
       backgroundColor: '#00000088',
       padding: { x: 10, y: 5 },
-    }).setScrollFactor(0);
+    }).setScrollFactor(0).setDepth(100);
 
     this.add.text(20, height - 40, 'Arrow keys to move • Approach markers to interact', {
       fontSize: '12px',
       color: '#cccccc',
-    }).setScrollFactor(0);
+    }).setScrollFactor(0).setDepth(100);
   }
 
   private drainStaminaForMovement(pixelsMoved: number): void {
@@ -855,10 +855,13 @@ export class ExploreScene extends Phaser.Scene {
   }
 
   private openMenu(): void {
+    if (this.isOverlayActive) return;
+    this.isOverlayActive = true;
+    
     const { width, height } = this.cameras.main;
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
-    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setDepth(999);
     const panel = this.add.rectangle(width / 2, height / 2, 400, 350, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     uiElements.push(overlay, panel);
 
