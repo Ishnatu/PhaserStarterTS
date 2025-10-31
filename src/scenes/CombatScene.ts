@@ -323,9 +323,11 @@ export class CombatScene extends Phaser.Scene {
 
     if (potion.type === 'health') {
       player.health = Math.min(player.maxHealth, player.health + amount);
+      this.combatSystem.updatePlayerHealth(player.health);
       this.showMessage(`Used ${potion.name}! Restored ${amount} HP`);
     } else if (potion.type === 'stamina') {
       player.stamina = Math.min(player.maxStamina, player.stamina + amount);
+      this.combatSystem.updatePlayerStamina(player.stamina);
       this.showMessage(`Used ${potion.name}! Restored ${amount} Stamina`);
     }
 
@@ -353,8 +355,10 @@ export class CombatScene extends Phaser.Scene {
 
     if (potion.type === 'health') {
       player.health = Math.min(player.maxHealth, player.health + amount);
+      this.combatSystem.updatePlayerHealth(player.health);
     } else if (potion.type === 'stamina') {
       player.stamina = Math.min(player.maxStamina, player.stamina + amount);
+      this.combatSystem.updatePlayerStamina(player.stamina);
     }
 
     this.gameState.removeItemFromInventory(itemId, 1);

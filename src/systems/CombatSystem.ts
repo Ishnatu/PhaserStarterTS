@@ -389,6 +389,18 @@ export class CombatSystem {
     return this.combatState?.isComplete || false;
   }
 
+  updatePlayerHealth(health: number): void {
+    if (this.combatState) {
+      this.combatState.player.health = health;
+    }
+  }
+
+  updatePlayerStamina(stamina: number): void {
+    if (this.combatState) {
+      this.combatState.player.stamina = stamina;
+    }
+  }
+
   endCombat(): void {
     this.combatState = null;
   }
