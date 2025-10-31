@@ -51,6 +51,7 @@ export class ExploreScene extends Phaser.Scene {
     this.load.image('tree2', '/assets/terrain/tree2.png');
     this.load.image('tree3', '/assets/terrain/tree3.png');
     this.load.image('delve-entrance', '/assets/terrain/delve-entrance.png');
+    this.load.image('roboka-city', '/assets/terrain/roboka-city.png');
     this.load.image('gemforge-logo', '/assets/ui/gemforge-logo.png');
   }
 
@@ -237,23 +238,19 @@ export class ExploreScene extends Phaser.Scene {
     const x = this.WORLD_SIZE / 2 + 150;
     const y = this.WORLD_SIZE / 2;
 
-    const portal = this.add.circle(0, 0, 20, 0x4488ff, 0.7);
-    const glow = this.add.circle(0, 0, 24, 0x88ccff, 0.3);
-    const label = this.add.text(0, -40, 'Town Portal', {
-      fontSize: '12px',
-      color: '#88ccff',
+    const citySprite = this.add.sprite(0, 0, 'roboka-city');
+    citySprite.setScale(0.25);
+    citySprite.setOrigin(0.5, 0.65);
+    
+    const label = this.add.text(0, -140, 'Roboka', {
+      fontSize: '16px',
+      color: '#ffcc66',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3,
     }).setOrigin(0.5);
 
-    this.tweens.add({
-      targets: glow,
-      scale: 1.4,
-      alpha: 0.1,
-      duration: 1500,
-      yoyo: true,
-      repeat: -1,
-    });
-
-    this.townPortal = this.add.container(x, y, [glow, portal, label]);
+    this.townPortal = this.add.container(x, y, [citySprite, label]);
     this.townPortal.setDepth(7);
   }
 
