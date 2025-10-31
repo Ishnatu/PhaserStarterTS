@@ -69,17 +69,24 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 ### Future Integrations
 - **Blockchain**: Ronin Network (EVM-compatible Layer 1)
 - **Wallet**: Ronin Wallet
-- **NFTs**: Voidtouched Gems (server-authoritative minting with claim system)
+- **NFTs**: Voidtouched Gems (Ruby, Emerald, Sapphire) representing three key elements
+  - **Minting Flow**: Player mints item from game → item removed from game inventory → NFT created in wallet
+  - **Import Flow**: Player buys NFT on marketplace → connects wallet → syncs to import NFT as game item
+  - **Sync Triggers**: Automatic on login + manual "Sync Wallet" button during gameplay
+  - **No Duplicates**: Items exist either in-game OR as NFT, never both simultaneously
 - **Backend Expansion**: Server-side combat validation, economy anti-cheat, multiplayer hub
 - **Hosting**: TBD (Chainstack/Liquify for Ronin RPC)
 
 ## Security Architecture
 
 ### Server-Authoritative Model (Phase 1 - Current)
-- **Authentication**: Required for persistent saves and future blockchain features
-- **Save Data**: Stored server-side in PostgreSQL, validated on load
-- **Session Management**: Secure HTTP-only cookies with 7-day expiration
-- **API Protection**: All game endpoints require authentication via isAuthenticated middleware
+- **Authentication**: Optional - supports both authenticated users and anonymous sessions
+- **Session Management**: 
+  - Authenticated: Secure HTTP-only cookies with 7-day expiration via Replit Auth
+  - Anonymous: Client-generated session IDs stored in localStorage, sent via X-Session-Id header
+- **Save Data**: Stored server-side in PostgreSQL with dual-key support (userId OR sessionId)
+- **Save Priority**: Authenticated users' saves use userId (higher priority), anonymous users use sessionId
+- **Migration Path**: Authentication infrastructure intact and ready to re-enable for blockchain integration
 
 ### Planned Anti-Cheat (Phase 2 - Pre-Blockchain)
 Before enabling blockchain integration, the following systems will move server-side:
