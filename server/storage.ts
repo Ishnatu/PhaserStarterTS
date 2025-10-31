@@ -15,8 +15,9 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   
-  // Game save operations
-  getGameSave(userId: string): Promise<GameSave | undefined>;
+  // Game save operations - supports both authenticated and anonymous sessions
+  getGameSaveByUserId(userId: string): Promise<GameSave | undefined>;
+  getGameSaveBySessionId(sessionId: string): Promise<GameSave | undefined>;
   saveGame(save: InsertGameSave): Promise<GameSave>;
 }
 
@@ -42,8 +43,8 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  // Game save operations
-  async getGameSave(userId: string): Promise<GameSave | undefined> {
+  // Game save operations - supports both authenticated and anonymous sessions
+  async getGameSaveByUserId(userId: string): Promise<GameSave | undefined> {
     const [save] = await db
       .select()
       .from(gameSaves)
@@ -53,9 +54,25 @@ export class DatabaseStorage implements IStorage {
     return save;
   }
 
+  async getGameSaveBySessionId(sessionId: string): Promise<GameSave | undefined> {
+    const [save] = await db
+      .select()
+      .from(gameSaves)
+      .where(eq(gameSaves.sessionId, sessionId))
+      .orderBy(desc(gameSaves.lastSaved))
+      .limit(1);
+    return save;
+  }
+
   async saveGame(saveData: InsertGameSave): Promise<GameSave> {
-    // Upsert logic: if a save exists for this user, update it; otherwise insert
-    const existing = await this.getGameSave(saveData.userId);
+    // Upsert logic: find existing save by userId OR sessionId, then update or insert
+    let existing: GameSave | undefined;
+    
+    if (saveData.userId) {
+      existing = await this.getGameSaveByUserId(saveData.userId);
+    } else if (saveData.sessionId) {
+      existing = await this.getGameSaveBySessionId(saveData.sessionId);
+    }
     
     if (existing) {
       const [updated] = await db

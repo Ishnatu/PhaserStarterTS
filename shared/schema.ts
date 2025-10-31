@@ -31,14 +31,17 @@ export const users = pgTable("users", {
 });
 
 // Game save data table - stores the complete player state
+// Supports both authenticated users (via userId) and anonymous sessions (via sessionId)
 export const gameSaves = pgTable("game_saves", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }), // Optional: for authenticated users
+  sessionId: varchar("session_id"), // Optional: for anonymous sessions
   saveData: jsonb("save_data").notNull(), // Complete PlayerData object
   lastSaved: timestamp("last_saved").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("IDX_game_saves_user_id").on(table.userId),
+  index("IDX_game_saves_session_id").on(table.sessionId),
 ]);
 
 export type UpsertUser = typeof users.$inferInsert;
