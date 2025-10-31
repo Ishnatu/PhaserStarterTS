@@ -460,7 +460,8 @@ export class TownScene extends Phaser.Scene {
     const maxDisplay = 14;
 
     const footlockerItems = player.footlocker;
-    const footlockerStart = footlockerScroll;
+    const clampedFootlockerScroll = Math.max(0, Math.min(footlockerScroll, Math.max(0, footlockerItems.length - maxDisplay)));
+    const footlockerStart = clampedFootlockerScroll;
     const footlockerEnd = Math.min(footlockerStart + maxDisplay, footlockerItems.length);
 
     for (let i = footlockerStart; i < footlockerEnd; i++) {
@@ -485,7 +486,7 @@ export class TownScene extends Phaser.Scene {
           if (this.gameState.moveFromFootlocker(invItem.itemId, 1)) {
             this.showMessage(`Retrieved ${item.name}`);
             destroyAll();
-            this.openFootlocker(footlockerScroll, inventoryScroll);
+            this.openFootlocker(clampedFootlockerScroll, clampedInventoryScroll);
           } else {
             this.showMessage('Inventory is full!');
           }
@@ -499,15 +500,15 @@ export class TownScene extends Phaser.Scene {
         color: '#666666',
       });
       uiElements.push(emptyText);
-    } else if (footlockerItems.length > maxDisplay) {
-      if (footlockerScroll > 0) {
+    } else {
+      if (clampedFootlockerScroll > 0) {
         const upBtn = this.add.text(width / 2 - 400, height / 2 - 210, '▲', {
           fontSize: '16px',
           color: '#88ddff',
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
             destroyAll();
-            this.openFootlocker(Math.max(0, footlockerScroll - 1), inventoryScroll);
+            this.openFootlocker(clampedFootlockerScroll - 1, inventoryScroll);
           });
         uiElements.push(upBtn);
       }
@@ -518,14 +519,15 @@ export class TownScene extends Phaser.Scene {
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
             destroyAll();
-            this.openFootlocker(footlockerScroll + 1, inventoryScroll);
+            this.openFootlocker(clampedFootlockerScroll + 1, inventoryScroll);
           });
         uiElements.push(downBtn);
       }
     }
 
     const inventoryItems = player.inventory;
-    const inventoryStart = inventoryScroll;
+    const clampedInventoryScroll = Math.max(0, Math.min(inventoryScroll, Math.max(0, inventoryItems.length - maxDisplay)));
+    const inventoryStart = clampedInventoryScroll;
     const inventoryEnd = Math.min(inventoryStart + maxDisplay, inventoryItems.length);
 
     for (let i = inventoryStart; i < inventoryEnd; i++) {
@@ -549,7 +551,7 @@ export class TownScene extends Phaser.Scene {
         .on('pointerdown', () => {
           this.storeItem(invItem.itemId);
           destroyAll();
-          this.openFootlocker(footlockerScroll, inventoryScroll);
+          this.openFootlocker(clampedFootlockerScroll, clampedInventoryScroll);
         });
       uiElements.push(storeBtn);
     }
@@ -560,15 +562,15 @@ export class TownScene extends Phaser.Scene {
         color: '#666666',
       });
       uiElements.push(emptyText);
-    } else if (inventoryItems.length > maxDisplay) {
-      if (inventoryScroll > 0) {
+    } else {
+      if (clampedInventoryScroll > 0) {
         const upBtn = this.add.text(width / 2 + 100, height / 2 - 210, '▲', {
           fontSize: '16px',
           color: '#f0a020',
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
             destroyAll();
-            this.openFootlocker(footlockerScroll, Math.max(0, inventoryScroll - 1));
+            this.openFootlocker(clampedFootlockerScroll, clampedInventoryScroll - 1);
           });
         uiElements.push(upBtn);
       }
@@ -579,7 +581,7 @@ export class TownScene extends Phaser.Scene {
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
             destroyAll();
-            this.openFootlocker(footlockerScroll, inventoryScroll + 1);
+            this.openFootlocker(clampedFootlockerScroll, clampedInventoryScroll + 1);
           });
         uiElements.push(downBtn);
       }
