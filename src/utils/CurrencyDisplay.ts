@@ -34,10 +34,11 @@ export class CurrencyDisplay {
     y: number,
     aaAmount: number,
     caAmount: number,
-    fontSize: keyof typeof FONTS.size = 'medium',
-    separator: string = '  |  '
+    fontSize: keyof typeof FONTS.size = 'medium'
   ): Phaser.GameObjects.Container {
     const container = scene.add.container(x, y);
+    
+    const lineHeight = 22;
     
     const aaIcon = scene.add.image(0, 0, 'coin-aa');
     aaIcon.setScale(0.035);
@@ -50,25 +51,18 @@ export class CurrencyDisplay {
     });
     aaText.setOrigin(0, 0.5);
     
-    const separatorText = scene.add.text(28 + aaText.width + 8, 0, separator, {
-      fontSize: FONTS.size[fontSize],
-      color: '#666666',
-      fontFamily: FONTS.primary,
-    });
-    separatorText.setOrigin(0, 0.5);
-    
-    const caIcon = scene.add.image(28 + aaText.width + 8 + separatorText.width + 8, 0, 'coin-ca');
+    const caIcon = scene.add.image(0, lineHeight, 'coin-ca');
     caIcon.setScale(0.035);
     caIcon.setOrigin(0, 0.5);
     
-    const caText = scene.add.text(28 + aaText.width + 8 + separatorText.width + 8 + 28, 0, `${caAmount.toFixed(1)}`, {
+    const caText = scene.add.text(28, lineHeight, `${caAmount.toFixed(1)}`, {
       fontSize: FONTS.size[fontSize],
       color: '#ffffff',
       fontFamily: FONTS.primary,
     });
     caText.setOrigin(0, 0.5);
     
-    container.add([aaIcon, aaText, separatorText, caIcon, caText]);
+    container.add([aaIcon, aaText, caIcon, caText]);
     return container;
   }
 }
