@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SceneManager } from '../systems/SceneManager';
 import { GameStateManager } from '../systems/GameStateManager';
 import { ApiClient } from '../utils/ApiClient';
+import { FONTS } from '../config/fonts';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -23,10 +24,9 @@ export class MainMenuScene extends Phaser.Scene {
     logo.setScale(0.18);
 
     this.add.text(width / 2, 400, 'PHASE ONE: THE HUNT', {
-      fontSize: '20px',
+      fontSize: FONTS.size.large,
       color: '#f0a020',
-      fontFamily: 'Courier New, monospace',
-      fontStyle: 'bold',
+      fontFamily: FONTS.primary,
     }).setOrigin(0.5);
 
     const startButton = this.add.sprite(width / 2, height / 2 + 20, 'start-button');
@@ -57,8 +57,9 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     this.add.text(width / 2, height - 40, '© 2025 - A Dark Fantasy Extraction RPG', {
-      fontSize: '12px',
+      fontSize: FONTS.size.small,
       color: '#666666',
+      fontFamily: FONTS.primary,
     }).setOrigin(0.5);
   }
 
