@@ -119,11 +119,6 @@ export class ExploreScene extends Phaser.Scene {
       }
     });
 
-    const menuBtn = this.createButton(width - 120, 20, 'Menu', () => {
-      this.openMenu();
-    });
-    menuBtn.setDepth(2000); // Ensure menu button is above everything else
-
     this.createHealthAndStaminaBars();
 
     this.add.text(20, height - 40, 'Arrow keys to move • Approach markers to interact • M to open menu', {
