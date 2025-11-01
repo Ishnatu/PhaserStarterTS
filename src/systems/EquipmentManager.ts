@@ -25,6 +25,31 @@ export class EquipmentManager {
         if (armor) {
           calculatedEvasion += armor.evasionModifier;
           damageReduction += armor.damageReduction;
+          
+          // Apply enhancement bonuses for armor
+          // +5, +7, +9: light armor gets +2 evasion, heavy armor gets +10% DR
+          const enhancementLevel = equipped.enhancementLevel || 0;
+          if (enhancementLevel >= 5) {
+            if (armor.armorType === 'light') {
+              calculatedEvasion += 2;
+            } else if (armor.armorType === 'heavy') {
+              damageReduction += 0.10;
+            }
+          }
+          if (enhancementLevel >= 7) {
+            if (armor.armorType === 'light') {
+              calculatedEvasion += 2;
+            } else if (armor.armorType === 'heavy') {
+              damageReduction += 0.10;
+            }
+          }
+          if (enhancementLevel >= 9) {
+            if (armor.armorType === 'light') {
+              calculatedEvasion += 2;
+            } else if (armor.armorType === 'heavy') {
+              damageReduction += 0.10;
+            }
+          }
         }
       }
     }
@@ -32,7 +57,7 @@ export class EquipmentManager {
     return {
       baseEvasion,
       calculatedEvasion,
-      damageReduction: Math.min(0.9, damageReduction),
+      damageReduction: Math.min(0.50, damageReduction), // Cap at 50%
       attackBonus,
       damageBonus,
     };
@@ -104,15 +129,23 @@ export class EquipmentManager {
       return { success: false, message: 'Item not in inventory' };
     }
 
+    // Check durability - cannot equip broken items
+    const currentDurability = invItem.durability ?? 100;
+    if (currentDurability <= 0) {
+      return { success: false, message: 'Item is broken and needs repair!' };
+    }
+
     const previousItem = player.equipment[slot];
     if (previousItem) {
-      this.addToInventory(player, previousItem.itemId, 1, previousItem.enhancementLevel);
+      this.addToInventory(player, previousItem.itemId, 1, previousItem.enhancementLevel, previousItem.durability, previousItem.maxDurability);
     }
 
     this.removeFromInventory(player, itemId, 1);
     player.equipment[slot] = { 
       itemId, 
-      enhancementLevel: invItem.enhancementLevel || 0 
+      enhancementLevel: invItem.enhancementLevel || 0,
+      durability: invItem.durability,
+      maxDurability: invItem.maxDurability
     };
 
     const weapon = ItemDatabase.getWeapon(itemId);
@@ -137,7 +170,7 @@ export class EquipmentManager {
       return { success: false, message: 'Inventory is full' };
     }
 
-    this.addToInventory(player, equipped.itemId, 1, equipped.enhancementLevel);
+    this.addToInventory(player, equipped.itemId, 1, equipped.enhancementLevel, equipped.durability, equipped.maxDurability);
     player.equipment[slot] = undefined;
 
     player.stats = this.calculatePlayerStats(player);
@@ -188,15 +221,29 @@ export class EquipmentManager {
     return undefined;
   }
 
-  private static addToInventory(player: PlayerData, itemId: string, quantity: number, enhancementLevel?: number): void {
-    const existing = player.inventory.find(item => 
-      item.itemId === itemId && (item.enhancementLevel || 0) === (enhancementLevel || 0)
-    );
-    if (existing) {
-      existing.quantity += quantity;
-    } else {
-      player.inventory.push({ itemId, quantity, enhancementLevel });
+  private static addToInventory(player: PlayerData, itemId: string, quantity: number, enhancementLevel?: number, durability?: number, maxDurability?: number): void {
+    // For stackable items (potions), we can stack them
+    const potion = ItemDatabase.getPotion(itemId);
+    if (potion) {
+      const existing = player.inventory.find(item => item.itemId === itemId);
+      if (existing) {
+        existing.quantity += quantity;
+        return;
+      }
     }
+    
+    // For equipment (weapons/armor), each item is unique with its own durability
+    // Initialize durability if not provided
+    const finalDurability = durability ?? 100;
+    const finalMaxDurability = maxDurability ?? (100 + (enhancementLevel || 0) * 10);
+    
+    player.inventory.push({ 
+      itemId, 
+      quantity, 
+      enhancementLevel,
+      durability: finalDurability,
+      maxDurability: finalMaxDurability
+    });
   }
 
   private static removeFromInventory(player: PlayerData, itemId: string, quantity: number): boolean {

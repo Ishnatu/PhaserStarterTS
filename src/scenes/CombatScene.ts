@@ -7,6 +7,7 @@ import { ItemDatabase } from '../config/ItemDatabase';
 import { DiceRoller } from '../utils/DiceRoller';
 import { Delve, DelveRoom, Enemy } from '../types/GameTypes';
 import { GameConfig } from '../config/GameConfig';
+import { DurabilityManager } from '../systems/DurabilityManager';
 
 export class CombatScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -492,6 +493,20 @@ export class CombatScene extends Phaser.Scene {
     if (state.playerVictory) {
       this.currentRoom.completed = true;
       
+      const player = this.gameState.getPlayer();
+      
+      // Apply durability decay after combat
+      const weaponDecayMessages = DurabilityManager.decayWeaponsAfterCombat(player);
+      const armorDecayMessages = DurabilityManager.decayArmorAfterCombat(player);
+      const durabilityMessages = [...weaponDecayMessages, ...armorDecayMessages];
+      
+      // Auto-unequip broken items
+      const brokenMessages = DurabilityManager.unequipBrokenItems(player);
+      durabilityMessages.push(...brokenMessages);
+      
+      // Save durability changes
+      this.gameState.updatePlayer(player);
+      
       const aaReward = 30 * this.currentDelve.tier;
       const caReward = 0.3 * this.currentDelve.tier;
       
@@ -504,13 +519,13 @@ export class CombatScene extends Phaser.Scene {
         allLoot.push(...loot);
       });
       
-      this.showVictoryScreen(aaReward, caReward, allLoot);
+      this.showVictoryScreen(aaReward, caReward, allLoot, durabilityMessages);
     } else {
       this.showDefeatScreen();
     }
   }
 
-  private showVictoryScreen(aa: number, ca: number, loot: string[]): void {
+  private showVictoryScreen(aa: number, ca: number, loot: string[], durabilityMessages: string[]): void {
     const { width, height } = this.cameras.main;
     
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
@@ -542,6 +557,10 @@ export class CombatScene extends Phaser.Scene {
     
     if (itemsFailed.length > 0) {
       rewardText += '\n\nInventory Full:\n' + itemsFailed.map(name => `• ${name}`).join('\n');
+    }
+    
+    if (durabilityMessages.length > 0) {
+      rewardText += '\n\n' + durabilityMessages.join('\n');
     }
 
     this.add.text(width / 2, height / 2 - 20, rewardText, {

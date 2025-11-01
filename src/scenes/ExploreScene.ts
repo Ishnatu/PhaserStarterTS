@@ -12,6 +12,7 @@ import { DiceRoller } from '../utils/DiceRoller';
 import { PlayerEquipment } from '../types/GameTypes';
 import { ForgingSystem } from '../systems/ForgingSystem';
 import { TerrainGenerator } from '../utils/TerrainGenerator';
+import { DurabilityManager } from '../systems/DurabilityManager';
 
 export class ExploreScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -129,6 +130,21 @@ export class ExploreScene extends Phaser.Scene {
 
       const player = this.gameState.getPlayer();
       player.stamina = Math.max(0, player.stamina - staminaToDrain);
+      
+      // Decay armor durability during movement (0.1 per tile moved)
+      const durabilityMessages = DurabilityManager.decayArmorAfterMovement(player, tilesMoved);
+      if (durabilityMessages.length > 0) {
+        durabilityMessages.forEach(msg => this.showMessage(msg));
+      }
+      
+      // Auto-unequip broken items
+      const brokenMessages = DurabilityManager.unequipBrokenItems(player);
+      if (brokenMessages.length > 0) {
+        brokenMessages.forEach(msg => this.showMessage(msg));
+        // Recalculate stats after unequipping broken items
+        player.stats = EquipmentManager.calculatePlayerStats(player);
+      }
+      
       this.gameState.updatePlayer(player);
     }
   }

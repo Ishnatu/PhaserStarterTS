@@ -84,6 +84,10 @@ export class ForgingSystem {
     const successRoll = Math.random();
     
     if (successRoll < tier.successChance) {
+      // On success: increase maxDurability by 10 and restore to full
+      item.maxDurability = (item.maxDurability || 100) + 10;
+      item.durability = item.maxDurability;
+      
       return {
         success: true,
         destroyed: false,
@@ -106,6 +110,12 @@ export class ForgingSystem {
 
     if (tier.failureResult === 'downgrade') {
       const newLevel = Math.max(0, currentLevel - 1);
+      // On downgrade: reduce maxDurability by 10 (if it went down a level)
+      if (newLevel < currentLevel) {
+        item.maxDurability = Math.max(100, (item.maxDurability || 100) - 10);
+        item.durability = Math.min(item.durability || 100, item.maxDurability);
+      }
+      
       return {
         success: false,
         destroyed: false,
@@ -129,15 +139,27 @@ export class ForgingSystem {
       return { ...baseWeapon.damage };
     }
 
+    // New enhancement structure:
+    // +1, +3: durability only
+    // +2, +4, +6, +8: durability + 1 damage modifier
+    // +5, +7, +9: durability + additional damage dice
+    
     let bonusDice = 0;
     if (enhancementLevel >= 5) bonusDice++;
     if (enhancementLevel >= 7) bonusDice++;
     if (enhancementLevel >= 9) bonusDice++;
 
+    // Calculate damage modifier bonus (only at even levels: +2, +4, +6, +8)
+    let damageModifierBonus = 0;
+    if (enhancementLevel >= 2) damageModifierBonus++;
+    if (enhancementLevel >= 4) damageModifierBonus++;
+    if (enhancementLevel >= 6) damageModifierBonus++;
+    if (enhancementLevel >= 8) damageModifierBonus++;
+
     return {
       numDice: baseWeapon.damage.numDice + bonusDice,
       dieSize: baseWeapon.damage.dieSize,
-      modifier: baseWeapon.damage.modifier + enhancementLevel
+      modifier: baseWeapon.damage.modifier + damageModifierBonus
     };
   }
 
@@ -154,5 +176,52 @@ export class ForgingSystem {
     }
 
     return baseName;
+  }
+
+  static getRepairCost(item: InventoryItem): { aa: number; ca: number } {
+    const enhancementLevel = item.enhancementLevel || 0;
+    const currentDurability = item.durability || 100;
+    const maxDurability = item.maxDurability || 100;
+    const missingDurability = maxDurability - currentDurability;
+
+    if (missingDurability <= 0) {
+      return { aa: 0, ca: 0 };
+    }
+
+    // Base repair cost: 1 AA per durability point
+    // Enhanced items cost more: +10 AA per enhancement level
+    const baseCostPerPoint = 1 + (enhancementLevel * 10);
+    const totalAA = Math.ceil(missingDurability * baseCostPerPoint);
+    
+    // CA cost for enhanced items
+    const totalCA = enhancementLevel > 0 ? enhancementLevel * 0.05 * missingDurability : 0;
+
+    return { 
+      aa: totalAA, 
+      ca: Number(totalCA.toFixed(2))
+    };
+  }
+
+  static repairItem(item: InventoryItem): void {
+    item.durability = item.maxDurability || 100;
+  }
+
+  static needsRepair(item: InventoryItem): boolean {
+    const currentDurability = item.durability || 100;
+    const maxDurability = item.maxDurability || 100;
+    return currentDurability < maxDurability;
+  }
+
+  static getDurabilityPercentage(item: InventoryItem): number {
+    const currentDurability = item.durability || 100;
+    const maxDurability = item.maxDurability || 100;
+    return (currentDurability / maxDurability) * 100;
+  }
+
+  static getDurabilityColor(item: InventoryItem): string {
+    const percentage = this.getDurabilityPercentage(item);
+    if (percentage < 10) return '#ff0000'; // Red
+    if (percentage < 30) return '#ffcc00'; // Yellow
+    return '#ffffff'; // White
   }
 }

@@ -49,11 +49,15 @@ export interface InventoryItem {
   itemId: string;
   quantity: number;
   enhancementLevel?: number;
+  durability?: number;
+  maxDurability?: number;
 }
 
 export interface EquippedItem {
   itemId: string;
   enhancementLevel?: number;
+  durability?: number;
+  maxDurability?: number;
 }
 
 export interface PlayerEquipment {
