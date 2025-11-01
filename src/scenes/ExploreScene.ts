@@ -1198,13 +1198,13 @@ export class ExploreScene extends Phaser.Scene {
     }).setScrollFactor(0).setDepth(1002);
     uiElements.push(equipmentBtn);
 
-    const exitBtn = this.createButton(width / 2, height / 2 + 50, 'Exit', () => {
+    const exitBtn = this.createButton(width / 2, height / 2 + 50, 'Exit Game', () => {
       destroyAll();
       this.scene.start('MainMenuScene');
     }).setScrollFactor(0).setDepth(1002);
     uiElements.push(exitBtn);
 
-    const closeBtn = this.createButton(width / 2, height / 2 + 100, 'Close', () => {
+    const closeBtn = this.createButton(width / 2, height / 2 + 100, 'Close Menu', () => {
       destroyAll();
     }).setScrollFactor(0).setDepth(1002);
     uiElements.push(closeBtn);
@@ -1547,14 +1547,13 @@ export class ExploreScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerover', () => bg.setFillStyle(0x555577))
       .on('pointerout', () => bg.setFillStyle(0x444466))
-      .on('pointerdown', callback)
-      .setDepth(1002);
+      .on('pointerdown', callback);
 
     const label = this.add.text(0, 0, text, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
-    }).setOrigin(0.5).setDepth(1002);
+    }).setOrigin(0.5);
 
     const container = this.add.container(x, y, [bg, label]);
     container.setScrollFactor(0).setDepth(1002);
