@@ -13,6 +13,7 @@ import { PlayerEquipment } from '../types/GameTypes';
 import { ForgingSystem } from '../systems/ForgingSystem';
 import { TerrainGenerator } from '../utils/TerrainGenerator';
 import { DurabilityManager } from '../systems/DurabilityManager';
+import { CurrencyDisplay } from '../utils/CurrencyDisplay';
 
 export class ExploreScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -26,7 +27,7 @@ export class ExploreScene extends Phaser.Scene {
   private staminaBarBg!: Phaser.GameObjects.Rectangle;
   private healthTooltip!: Phaser.GameObjects.Text;
   private staminaTooltip!: Phaser.GameObjects.Text;
-  private currencyText!: Phaser.GameObjects.Text;
+  private currencyDisplay!: Phaser.GameObjects.Container;
   private movementStepCounter: number = 0;
   private encounterCooldown: boolean = false;
   private staminaDebt: number = 0;
@@ -54,6 +55,8 @@ export class ExploreScene extends Phaser.Scene {
     this.load.image('delve-entrance', '/assets/terrain/delve-entrance.png');
     this.load.image('roboka-city', '/assets/terrain/roboka-city.png');
     this.load.image('gemforge-logo', '/assets/ui/gemforge-logo.png');
+    this.load.image('coin-aa', '/assets/ui/currency/arcane-ash-coin.png');
+    this.load.image('coin-ca', '/assets/ui/currency/crystalline-animus-coin.png');
   }
 
   init(data?: { returnToLocation?: { x: number; y: number } }) {
@@ -956,13 +959,18 @@ export class ExploreScene extends Phaser.Scene {
       padding: { x: 8, y: 4 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setVisible(false);
 
-    // Currency text
-    this.currencyText = this.add.text(startX, startY + barHeight * 2 + 20, '', {
-      fontSize: '16px',
-      color: '#f0a020',
-      backgroundColor: '#00000088',
-      padding: { x: 10, y: 5 },
-    }).setScrollFactor(0).setDepth(100);
+    // Currency display
+    const player = this.gameState.getPlayer();
+    this.currencyDisplay = CurrencyDisplay.createInlineCurrency(
+      this,
+      startX,
+      startY + barHeight * 2 + 20,
+      player.arcaneAsh,
+      player.crystallineAnimus,
+      'small'
+    );
+    this.currencyDisplay.setScrollFactor(0);
+    this.currencyDisplay.setDepth(102);
 
     // Hover events
     this.healthBarBg.on('pointerover', () => {
@@ -994,8 +1002,18 @@ export class ExploreScene extends Phaser.Scene {
     this.healthTooltip.setText(`${player.health} / ${player.maxHealth} HP`);
     this.staminaTooltip.setText(`${player.stamina} / ${player.maxStamina} Stamina`);
 
-    // Update currency
-    this.currencyText.setText(`AA: ${player.arcaneAsh} | CA: ${player.crystallineAnimus.toFixed(1)}`);
+    // Update currency display
+    this.currencyDisplay.destroy();
+    this.currencyDisplay = CurrencyDisplay.createInlineCurrency(
+      this,
+      20,
+      68,
+      player.arcaneAsh,
+      player.crystallineAnimus,
+      'small'
+    );
+    this.currencyDisplay.setScrollFactor(0);
+    this.currencyDisplay.setDepth(102);
 
     // Pulsing effect when below 15%
     if (healthPercent < 0.15) {

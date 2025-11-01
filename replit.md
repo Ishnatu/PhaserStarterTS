@@ -16,6 +16,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 ### UI/UX Decisions
 - **Current Visual Assets**: Pixel art city sprite for Roboka in wilderness view, pixel art delve entrance markers, pixel art trees (3 variants) for terrain. Player and NPCs remain as colored rectangles during development.
 - **Typography**: VT323 monospace font (Google Fonts) for all UI text and menus, providing retro terminal aesthetic. Font config in `src/config/fonts.ts` with standardized sizes (small: 16px, medium: 20px, large: 28px, xlarge: 36px, title: 48px).
+- **Currency Icons**: Pixel art coin sprites for visual currency display. Arcane Ash (AA) uses dark coin with ash pile, Crystalline Animus (CA) uses lighter coin with crystal shards. CurrencyDisplay utility (`src/utils/CurrencyDisplay.ts`) provides consistent icon+text formatting across all UI.
 - **Target Style (Future)**: Full pixel art assets for all entities, tabletop RPG aesthetic (dice rolling, grid-based), dark fantasy atmosphere (Void corruption theme), inspired by Heroes of Might and Magic and Final Fantasy combat presentation.
 
 ### Technical Implementations

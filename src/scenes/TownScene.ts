@@ -8,6 +8,8 @@ import { PlayerEquipment, InventoryItem } from '../types/GameTypes';
 import { ShopData } from '../config/ShopData';
 import { BuffManager } from '../systems/BuffManager';
 import { ForgingSystem } from '../systems/ForgingSystem';
+import { CurrencyDisplay } from '../utils/CurrencyDisplay';
+import { FONTS } from '../config/fonts';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -18,6 +20,11 @@ export class TownScene extends Phaser.Scene {
 
   constructor() {
     super('TownScene');
+  }
+
+  preload() {
+    this.load.image('coin-aa', '/assets/ui/currency/arcane-ash-coin.png');
+    this.load.image('coin-ca', '/assets/ui/currency/crystalline-animus-coin.png');
   }
 
   create() {
@@ -761,11 +768,17 @@ export class TownScene extends Phaser.Scene {
       }).setOrigin(0.5);
       uiElements.push(title);
 
-      const currencyText = this.add.text(width / 2, height / 2 - 210, `Arcane Ash: ${player.arcaneAsh} AA  |  Crystalline Animus: ${player.crystallineAnimus.toFixed(1)} CA`, {
-        fontSize: '14px',
-        color: '#66cc66',
-      }).setOrigin(0.5);
-      uiElements.push(currencyText);
+      const currencyDisplay = CurrencyDisplay.createInlineCurrency(
+        this,
+        width / 2,
+        height / 2 - 210,
+        player.arcaneAsh,
+        player.crystallineAnimus,
+        'small'
+      );
+      currencyDisplay.setScrollFactor(0);
+      currencyDisplay.x -= currencyDisplay.getBounds().width / 2;
+      uiElements.push(currencyDisplay);
 
       const tabY = height / 2 - 170;
       const tabSpacing = 120;
@@ -925,11 +938,17 @@ export class TownScene extends Phaser.Scene {
     }).setOrigin(0.5);
     uiElements.push(title);
 
-    const balanceText = this.add.text(width / 2, height / 2 - 210, `${player.arcaneAsh} AA | ${player.crystallineAnimus.toFixed(1)} CA`, {
-      fontSize: '14px',
-      color: '#88ff88',
-    }).setOrigin(0.5);
-    uiElements.push(balanceText);
+    const balanceDisplay = CurrencyDisplay.createInlineCurrency(
+      this,
+      width / 2,
+      height / 2 - 210,
+      player.arcaneAsh,
+      player.crystallineAnimus,
+      'small'
+    );
+    balanceDisplay.setScrollFactor(0);
+    balanceDisplay.x -= balanceDisplay.getBounds().width / 2;
+    uiElements.push(balanceDisplay);
 
     const destroyAll = () => {
       uiElements.forEach(el => el.destroy());
@@ -1170,18 +1189,24 @@ export class TownScene extends Phaser.Scene {
 
   private attemptRepair(item: InventoryItem): void {
     const player = this.gameState.getPlayer();
-    const result = ForgingSystem.repairItem(item, player.arcaneAsh, player.crystallineAnimus);
+    const cost = ForgingSystem.getRepairCost(item);
     
-    if (result.success) {
-      const cost = ForgingSystem.getRepairCost(item);
-      if (cost) {
-        player.arcaneAsh -= cost.aa;
-        player.crystallineAnimus -= cost.ca;
-      }
-      this.gameState.updatePlayer(player);
+    if (cost.aa === 0 && cost.ca === 0) {
+      this.showMessage('Item is already at full durability!');
+      return;
     }
     
-    this.showMessage(result.message);
+    if (player.arcaneAsh < cost.aa || player.crystallineAnimus < cost.ca) {
+      this.showMessage(`Insufficient funds! Need ${cost.aa} AA and ${cost.ca.toFixed(1)} CA`);
+      return;
+    }
+    
+    ForgingSystem.repairItem(item);
+    player.arcaneAsh -= cost.aa;
+    player.crystallineAnimus -= cost.ca;
+    this.gameState.updatePlayer(player);
+    
+    this.showMessage(`Item repaired for ${cost.aa} AA and ${cost.ca.toFixed(1)} CA!`);
     this.infoText.setText(this.getPlayerInfo());
   }
 
@@ -1255,12 +1280,23 @@ export class TownScene extends Phaser.Scene {
     }).setOrigin(0.5);
     uiElements.push(costText);
 
-    const balanceText = this.add.text(width / 2, height / 2 + 50, 
-      `Your Balance: ${player.arcaneAsh} AA`, {
-      fontSize: '14px',
-      color: player.arcaneAsh >= REST_COST ? '#88ff88' : '#ff8888',
-    }).setOrigin(0.5);
-    uiElements.push(balanceText);
+    const balanceDisplay = CurrencyDisplay.createCurrencyText(
+      this,
+      width / 2,
+      height / 2 + 50,
+      player.arcaneAsh,
+      'AA',
+      'small'
+    );
+    balanceDisplay.setScrollFactor(0);
+    balanceDisplay.x -= balanceDisplay.getBounds().width / 2;
+    balanceDisplay.list.forEach(child => {
+      if (child.type === 'Text') {
+        const text = child as Phaser.GameObjects.Text;
+        text.setColor(player.arcaneAsh >= REST_COST ? '#88ff88' : '#ff8888');
+      }
+    });
+    uiElements.push(balanceDisplay);
 
     const destroyAll = () => {
       uiElements.forEach(el => el.destroy());
