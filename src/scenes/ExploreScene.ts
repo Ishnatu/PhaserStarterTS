@@ -1165,9 +1165,17 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
-    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setDepth(999);
-    const panel = this.add.rectangle(width / 2, height / 2, 400, 300, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    uiElements.push(overlay, panel);
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
+      .setOrigin(0)
+      .setScrollFactor(0)
+      .setDepth(999);
+    uiElements.push(overlay);
+
+    const panel = this.add.rectangle(width / 2, height / 2, 400, 300, 0x2a2a3e)
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(1000);
+    uiElements.push(panel);
 
     const title = this.add.text(width / 2, height / 2 - 120, 'Menu', {
       fontFamily: FONTS.primary,
@@ -1186,27 +1194,60 @@ export class ExploreScene extends Phaser.Scene {
     this.currentMenuCloseFunction = destroyAll;
     this.menuState = 'main';
 
-    const inventoryBtn = this.createButton(width / 2, height / 2 - 50, 'Inventory', () => {
-      uiElements.forEach(el => el.destroy());
-      this.openInventory();
-    }).setScrollFactor(0).setDepth(1002);
+    // Simple text buttons (no containers)
+    const inventoryBtn = this.add.text(width / 2, height / 2 - 50, '[ Inventory ]', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10000)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#ffff00'); })
+      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#ffffff'); })
+      .on('pointerdown', () => {
+        destroyAll();
+        this.openInventory();
+      });
     uiElements.push(inventoryBtn);
 
-    const equipmentBtn = this.createButton(width / 2, height / 2, 'Equipment', () => {
-      uiElements.forEach(el => el.destroy());
-      this.openEquipment();
-    }).setScrollFactor(0).setDepth(1002);
+    const equipmentBtn = this.add.text(width / 2, height / 2, '[ Equipment ]', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10000)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#ffff00'); })
+      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#ffffff'); })
+      .on('pointerdown', () => {
+        destroyAll();
+        this.openEquipment();
+      });
     uiElements.push(equipmentBtn);
 
-    const exitBtn = this.createButton(width / 2, height / 2 + 50, 'Exit Game', () => {
-      destroyAll();
-      this.scene.start('MainMenuScene');
-    }).setScrollFactor(0).setDepth(1002);
+    const exitBtn = this.add.text(width / 2, height / 2 + 50, '[ Exit Game ]', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10000)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#ff6666'); })
+      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#ffffff'); })
+      .on('pointerdown', () => {
+        destroyAll();
+        this.scene.start('MainMenuScene');
+      });
     uiElements.push(exitBtn);
 
-    const closeBtn = this.createButton(width / 2, height / 2 + 100, 'Close Menu', () => {
-      destroyAll();
-    }).setScrollFactor(0).setDepth(1002);
+    const closeBtn = this.add.text(width / 2, height / 2 + 100, '[ Close Menu ]', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10000)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#00ff00'); })
+      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#ffffff'); })
+      .on('pointerdown', () => {
+        destroyAll();
+      });
     uiElements.push(closeBtn);
 
     this.isOverlayActive = true;
