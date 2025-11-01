@@ -84,7 +84,8 @@ export class ForgingSystem {
     const successRoll = Math.random();
     
     if (successRoll < tier.successChance) {
-      // On success: increase maxDurability by 10 and restore to full
+      // On success: increase enhancement level, maxDurability by 10, and restore to full
+      item.enhancementLevel = targetLevel;
       item.maxDurability = (item.maxDurability || 100) + 10;
       item.durability = item.maxDurability;
       
@@ -110,8 +111,9 @@ export class ForgingSystem {
 
     if (tier.failureResult === 'downgrade') {
       const newLevel = Math.max(0, currentLevel - 1);
-      // On downgrade: reduce maxDurability by 10 (if it went down a level)
+      // On downgrade: reduce enhancement level and maxDurability by 10 (if it went down a level)
       if (newLevel < currentLevel) {
+        item.enhancementLevel = newLevel;
         item.maxDurability = Math.max(100, (item.maxDurability || 100) - 10);
         item.durability = Math.min(item.durability || 100, item.maxDurability);
       }
