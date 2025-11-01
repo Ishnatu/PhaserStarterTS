@@ -15,6 +15,7 @@ export interface ForgingResult {
   downgraded: boolean;
   newLevel: number;
   message: string;
+  shinyCreated?: boolean;
 }
 
 export class ForgingSystem {
@@ -44,6 +45,17 @@ export class ForgingSystem {
     const tier = this.forgingTiers.get(targetLevel);
     if (!tier) return null;
     return { aa: tier.costAA, ca: tier.costCA };
+  }
+
+  static getShinyChance(targetLevel: number): number {
+    if (targetLevel <= 0 || targetLevel > 9) return 0;
+    if (targetLevel <= 4) return 0.005;
+    if (targetLevel === 5) return 0.0075;
+    if (targetLevel === 6) return 0.01;
+    if (targetLevel === 7) return 0.0125;
+    if (targetLevel === 8) return 0.015;
+    if (targetLevel === 9) return 0.0175;
+    return 0;
   }
 
   static attemptForging(item: InventoryItem, playerAA: number, playerCA: number): ForgingResult {
@@ -89,17 +101,29 @@ export class ForgingSystem {
       item.maxDurability = (item.maxDurability || 100) + 10;
       item.durability = item.maxDurability;
       
+      // Roll for shiny
+      const shinyRoll = Math.random();
+      const shinyChance = this.getShinyChance(targetLevel);
+      const shinyCreated = shinyRoll < shinyChance;
+      
+      if (shinyCreated) {
+        item.isShiny = true;
+      }
+      
       return {
         success: true,
         destroyed: false,
         downgraded: false,
         newLevel: targetLevel,
-        message: `SUCCESS! Item enhanced to +${targetLevel}!`
+        message: shinyCreated 
+          ? `★ SHINY! ★ Item enhanced to +${targetLevel} and glows with golden radiance!`
+          : `SUCCESS! Item enhanced to +${targetLevel}!`,
+        shinyCreated
       };
     }
 
     const destructionRoll = Math.random();
-    if (destructionRoll < tier.destructionChance) {
+    if (destructionRoll < tier.destructionChance && !item.isShiny) {
       return {
         success: false,
         destroyed: true,
@@ -118,12 +142,17 @@ export class ForgingSystem {
         item.durability = Math.min(item.durability || 100, item.maxDurability);
       }
       
+      // Shiny items can downgrade but never be destroyed
+      const message = item.isShiny 
+        ? `FAILED! Shiny item downgraded to +${newLevel} (protected from destruction)`
+        : `FAILED! Item downgraded to +${newLevel}`;
+      
       return {
         success: false,
         destroyed: false,
         downgraded: true,
         newLevel: newLevel,
-        message: `FAILED! Item downgraded to +${newLevel}`
+        message
       };
     }
 

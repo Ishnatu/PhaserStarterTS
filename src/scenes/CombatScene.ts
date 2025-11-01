@@ -9,6 +9,7 @@ import { Delve, DelveRoom, Enemy } from '../types/GameTypes';
 import { GameConfig } from '../config/GameConfig';
 import { DurabilityManager } from '../systems/DurabilityManager';
 import { FONTS } from '../config/fonts';
+import { ItemColorUtil } from '../utils/ItemColorUtil';
 
 export class CombatScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -315,10 +316,11 @@ export class CombatScene extends Phaser.Scene {
 
       const y = itemsStartY + displayedItems * itemHeight;
       
+      const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
       const itemLabel = this.add.text(width / 2 - 320, y, `${item.name} x${invItem.quantity}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
-        color: '#ffffff',
+        color: itemColor,
       });
       uiElements.push(itemLabel);
 
@@ -556,40 +558,106 @@ export class CombatScene extends Phaser.Scene {
       color: '#00ff00',
     }).setOrigin(0.5);
 
-    let rewardText = `Rewards:\n+${aa} AA\n+${ca.toFixed(1)} CA`;
+    const baseRewardText = `Rewards:\n+${aa} AA\n+${ca.toFixed(1)} CA`;
     
-    const itemsAdded: string[] = [];
-    const itemsFailed: string[] = [];
+    interface LootItemInfo {
+      name: string;
+      enhancementLevel?: number;
+      isShiny?: boolean;
+    }
+    
+    const itemsAdded: LootItemInfo[] = [];
+    const itemsFailed: LootItemInfo[] = [];
+    
+    const player = this.gameState.getPlayer();
     
     for (const itemId of loot) {
       const item = ItemDatabase.getItem(itemId);
       if (item) {
         if (this.gameState.addItemToInventory(itemId, 1)) {
-          itemsAdded.push(item.name);
+          const addedItem = player.inventory.find(invItem => invItem.itemId === itemId);
+          itemsAdded.push({
+            name: item.name,
+            enhancementLevel: addedItem?.enhancementLevel,
+            isShiny: addedItem?.isShiny
+          });
         } else {
-          itemsFailed.push(item.name);
+          itemsFailed.push({
+            name: item.name,
+            enhancementLevel: 0,
+            isShiny: false
+          });
         }
       }
     }
     
-    if (itemsAdded.length > 0) {
-      rewardText += '\n\nLoot:\n' + itemsAdded.map(name => `• ${name}`).join('\n');
-    }
+    let currentY = height / 2 - 20;
+    const lineHeight = 20;
     
-    if (itemsFailed.length > 0) {
-      rewardText += '\n\nInventory Full:\n' + itemsFailed.map(name => `• ${name}`).join('\n');
-    }
-    
-    if (durabilityMessages.length > 0) {
-      rewardText += '\n\n' + durabilityMessages.join('\n');
-    }
-
-    this.add.text(width / 2, height / 2 - 20, rewardText, {
+    this.add.text(width / 2, currentY, baseRewardText, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
       align: 'center',
     }).setOrigin(0.5);
+    
+    currentY += (baseRewardText.split('\n').length * lineHeight) + 10;
+    
+    if (itemsAdded.length > 0) {
+      this.add.text(width / 2, currentY, 'Loot:', {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: '#ffffff',
+        align: 'center',
+      }).setOrigin(0.5);
+      currentY += lineHeight;
+      
+      itemsAdded.forEach(lootItem => {
+        const itemColor = ItemColorUtil.getItemColor(lootItem.enhancementLevel, lootItem.isShiny);
+        this.add.text(width / 2, currentY, `• ${lootItem.name}`, {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.small,
+          color: itemColor,
+          align: 'center',
+        }).setOrigin(0.5);
+        currentY += lineHeight;
+      });
+      
+      currentY += 10;
+    }
+    
+    if (itemsFailed.length > 0) {
+      this.add.text(width / 2, currentY, 'Inventory Full:', {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: '#ffffff',
+        align: 'center',
+      }).setOrigin(0.5);
+      currentY += lineHeight;
+      
+      itemsFailed.forEach(lootItem => {
+        const itemColor = ItemColorUtil.getItemColor(lootItem.enhancementLevel, lootItem.isShiny);
+        this.add.text(width / 2, currentY, `• ${lootItem.name}`, {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.small,
+          color: itemColor,
+          align: 'center',
+        }).setOrigin(0.5);
+        currentY += lineHeight;
+      });
+      
+      currentY += 10;
+    }
+    
+    if (durabilityMessages.length > 0) {
+      const durabilityText = durabilityMessages.join('\n');
+      this.add.text(width / 2, currentY, durabilityText, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: '#ffffff',
+        align: 'center',
+      }).setOrigin(0.5);
+    }
 
     this.createMenuButton(width / 2, height / 2 + 120, 'Continue', () => {
       if (this.isWildEncounter) {

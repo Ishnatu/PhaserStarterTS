@@ -5,6 +5,7 @@ import { ItemDatabase } from '../config/ItemDatabase';
 import { DiceRoller } from '../utils/DiceRoller';
 import { Delve, DelveRoom } from '../types/GameTypes';
 import { FONTS } from '../config/fonts';
+import { ItemColorUtil } from '../utils/ItemColorUtil';
 
 export class DelveScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -463,10 +464,11 @@ export class DelveScene extends Phaser.Scene {
 
       const y = itemsStartY + displayedItems * itemHeight;
       
+      const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
       const itemLabel = this.add.text(width / 2 - 320, y, `${item.name} x${invItem.quantity}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
-        color: '#ffffff',
+        color: itemColor,
       }).setScrollFactor(0);
       uiElements.push(itemLabel);
 

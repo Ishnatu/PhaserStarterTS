@@ -51,6 +51,7 @@ export interface InventoryItem {
   enhancementLevel?: number;
   durability?: number;
   maxDurability?: number;
+  isShiny?: boolean;
 }
 
 export interface EquippedItem {
@@ -58,6 +59,7 @@ export interface EquippedItem {
   enhancementLevel?: number;
   durability?: number;
   maxDurability?: number;
+  isShiny?: boolean;
 }
 
 export interface PlayerEquipment {

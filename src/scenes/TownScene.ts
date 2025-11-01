@@ -10,6 +10,7 @@ import { BuffManager } from '../systems/BuffManager';
 import { ForgingSystem } from '../systems/ForgingSystem';
 import { CurrencyDisplay } from '../utils/CurrencyDisplay';
 import { FONTS } from '../config/fonts';
+import { ItemColorUtil } from '../utils/ItemColorUtil';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -275,10 +276,11 @@ export class TownScene extends Phaser.Scene {
       const weapon = ItemDatabase.getWeapon(invItem.itemId);
       const armor = ItemDatabase.getArmor(invItem.itemId);
       
+      const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
       const itemLabel = this.add.text(width / 2 - 320, y, displayName, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
-        color: '#ffffff',
+        color: itemColor,
       });
       uiElements.push(itemLabel);
       
@@ -524,10 +526,11 @@ export class TownScene extends Phaser.Scene {
       const displayIndex = i - footlockerStart;
       const y = itemsStartY + displayIndex * itemHeight;
       
+      const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
       const itemLabel = this.add.text(width / 2 - 400, y, `${item.name} x${invItem.quantity}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
-        color: '#ffffff',
+        color: itemColor,
       });
       uiElements.push(itemLabel);
 
@@ -595,10 +598,11 @@ export class TownScene extends Phaser.Scene {
       const displayIndex = i - inventoryStart;
       const y = itemsStartY + displayIndex * itemHeight;
       
+      const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
       const itemLabel = this.add.text(width / 2 + 100, y, `${item.name} x${invItem.quantity}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
-        color: '#ffffff',
+        color: itemColor,
       });
       uiElements.push(itemLabel);
 
@@ -708,10 +712,11 @@ export class TownScene extends Phaser.Scene {
       const item = equipped ? ItemDatabase.getItem(equipped.itemId) : null;
       const itemName = equipped ? ForgingSystem.getItemDisplayName({ itemId: equipped.itemId, quantity: 1, enhancementLevel: equipped.enhancementLevel }) : 'Empty';
 
+      const itemColor = equipped ? ItemColorUtil.getItemColor(equipped.enhancementLevel, equipped.isShiny) : '#666666';
       const itemLabel = this.add.text(width / 2 - 200, y, itemName, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
-        color: item ? '#ffffff' : '#666666',
+        color: itemColor,
       });
       uiElements.push(itemLabel);
       
@@ -877,10 +882,11 @@ export class TownScene extends Phaser.Scene {
 
         const y = itemsStartY + index * itemHeight;
 
+        const itemColor = ItemColorUtil.getItemColor(undefined, undefined);
         const itemLabel = this.add.text(width / 2 - 340, y, item.name, {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.small,
-          color: '#ffffff',
+          color: itemColor,
         });
         uiElements.push(itemLabel);
 
@@ -1079,10 +1085,11 @@ export class TownScene extends Phaser.Scene {
       const currentLevel = invItem.enhancementLevel || 0;
       const maxLevel = ForgingSystem.getMaxEnhancementLevel();
       
+      const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
       const itemText = this.add.text(width / 2 - 330, y, displayName, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
-        color: '#ffffff',
+        color: itemColor,
       });
       uiElements.push(itemText);
 
@@ -1189,10 +1196,11 @@ export class TownScene extends Phaser.Scene {
       else if (durabilityPercent <= 25) durabilityColor = '#ffaa00';
       else if (durabilityPercent <= 50) durabilityColor = '#ffff00';
       
+      const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
       const itemText = this.add.text(width / 2 - 330, y, displayName, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
-        color: '#ffffff',
+        color: itemColor,
       });
       uiElements.push(itemText);
 
