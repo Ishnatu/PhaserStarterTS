@@ -4,6 +4,7 @@ import { SceneManager } from '../systems/SceneManager';
 import { ItemDatabase } from '../config/ItemDatabase';
 import { DiceRoller } from '../utils/DiceRoller';
 import { Delve, DelveRoom } from '../types/GameTypes';
+import { FONTS } from '../config/fonts';
 
 export class DelveScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -31,7 +32,8 @@ export class DelveScene extends Phaser.Scene {
     this.add.rectangle(0, 0, width, height, 0x1a1a2e).setOrigin(0);
 
     this.add.text(width / 2, 30, `Delve - Tier ${this.currentDelve.tier}`, {
-      fontSize: '24px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
       color: '#ff8844',
     }).setOrigin(0.5);
 
@@ -97,7 +99,8 @@ export class DelveScene extends Phaser.Scene {
       }
 
       const label = this.add.text(x, y + 35, this.getRoomLabel(room), {
-        fontSize: '10px',
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
         color: '#cccccc',
       }).setOrigin(0.5);
 
@@ -128,7 +131,8 @@ export class DelveScene extends Phaser.Scene {
     this.add.rectangle(width / 2, roomY + 100, 600, 200, 0x2a2a4e, 0.5).setOrigin(0.5);
 
     this.add.text(width / 2, roomY, this.getRoomDescription(currentRoom), {
-      fontSize: '16px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#ffffff',
       align: 'center',
       wordWrap: { width: 500 },
@@ -152,7 +156,8 @@ export class DelveScene extends Phaser.Scene {
       }
     } else {
       this.add.text(width / 2, btnY, '✓ Room Cleared', {
-        fontSize: '16px',
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
         color: '#00ff00',
       }).setOrigin(0.5);
     }
@@ -170,13 +175,15 @@ export class DelveScene extends Phaser.Scene {
     this.add.rectangle(width / 2, height / 2, 700, 300, 0x2a2a4e, 0.9).setOrigin(0.5);
 
     this.add.text(width / 2, height / 2 - 80, 'Congratulations!', {
-      fontSize: '32px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.xlarge,
       color: '#ffaa00',
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
     this.add.text(width / 2, height / 2 - 20, `You have cleared the Tier ${this.currentDelve.tier} Delve!`, {
-      fontSize: '20px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
       color: '#ffffff',
     }).setOrigin(0.5);
 
@@ -292,7 +299,8 @@ export class DelveScene extends Phaser.Scene {
       .on('pointerdown', callback);
 
     const label = this.add.text(0, 0, text, {
-      fontSize: '14px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#ffffff',
     }).setOrigin(0.5);
 
@@ -307,7 +315,8 @@ export class DelveScene extends Phaser.Scene {
 
   private showMessage(message: string): void {
     const msg = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, message, {
-      fontSize: '18px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
       color: '#00ff00',
       backgroundColor: '#000000',
       padding: { x: 20, y: 10 },
@@ -332,7 +341,8 @@ export class DelveScene extends Phaser.Scene {
     uiElements.push(overlay, panel);
 
     const title = this.add.text(width / 2, height / 2 - 100, 'Quit Game?', {
-      fontSize: '28px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
       color: '#ff6666',
     }).setOrigin(0.5).setScrollFactor(0);
     uiElements.push(title);
@@ -370,7 +380,8 @@ export class DelveScene extends Phaser.Scene {
     uiElements.push(overlay, panel);
 
     const title = this.add.text(width / 2, height / 2 - 150, 'Menu', {
-      fontSize: '28px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
       color: '#f0a020',
     }).setOrigin(0.5).setScrollFactor(0);
     uiElements.push(title);
@@ -423,7 +434,8 @@ export class DelveScene extends Phaser.Scene {
     uiElements.push(overlay, panel);
 
     const title = this.add.text(width / 2, height / 2 - 220, `Inventory (${player.inventory.reduce((sum, item) => sum + item.quantity, 0)}/${player.inventorySlots})`, {
-      fontSize: '24px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
       color: '#f0a020',
     }).setOrigin(0.5).setScrollFactor(0);
     uiElements.push(title);
@@ -452,7 +464,8 @@ export class DelveScene extends Phaser.Scene {
       const y = itemsStartY + displayedItems * itemHeight;
       
       const itemLabel = this.add.text(width / 2 - 320, y, `${item.name} x${invItem.quantity}`, {
-        fontSize: '14px',
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
         color: '#ffffff',
       }).setScrollFactor(0);
       uiElements.push(itemLabel);
@@ -461,7 +474,8 @@ export class DelveScene extends Phaser.Scene {
 
       if (isPotion) {
         const useBtn = this.add.text(width / 2 + 120, y, '[Use]', {
-          fontSize: '13px',
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.small,
           color: '#8888ff',
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {

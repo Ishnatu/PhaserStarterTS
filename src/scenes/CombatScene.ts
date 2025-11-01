@@ -8,6 +8,7 @@ import { DiceRoller } from '../utils/DiceRoller';
 import { Delve, DelveRoom, Enemy } from '../types/GameTypes';
 import { GameConfig } from '../config/GameConfig';
 import { DurabilityManager } from '../systems/DurabilityManager';
+import { FONTS } from '../config/fonts';
 
 export class CombatScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -60,7 +61,8 @@ export class CombatScene extends Phaser.Scene {
     this.add.rectangle(0, 0, width, height, 0x0f0f1f).setOrigin(0);
 
     const titleText = this.add.text(width / 2, height / 2, this.currentRoom.type === 'boss' ? 'BOSS BATTLE!' : 'Combat Begins!', {
-      fontSize: '36px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.xlarge,
       color: this.currentRoom.type === 'boss' ? '#ff0000' : '#ff8844',
     }).setOrigin(0.5);
 
@@ -127,25 +129,29 @@ export class CombatScene extends Phaser.Scene {
     const playerInfoBg = this.add.rectangle(60, plateY, 440, 60, 0x2a2a3e, 0.9).setOrigin(0);
     
     this.add.text(80, plateY + 10, 'YOU', {
-      fontSize: '16px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#ffffff',
       fontStyle: 'bold',
     });
 
     this.add.text(80, plateY + 35, `Lv ${player.level}`, {
-      fontSize: '14px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#ffcc00',
     });
 
     this.playerHealthText = this.add.text(200, plateY + 10, 
       `HP: ${player.health}/${player.maxHealth}`, {
-      fontSize: '14px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#00ff00',
     });
 
     this.playerStaminaText = this.add.text(200, plateY + 35, 
       `SP: ${player.stamina}/${player.maxStamina}`, {
-      fontSize: '14px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#ffcc00',
     });
   }
@@ -168,14 +174,16 @@ export class CombatScene extends Phaser.Scene {
       const enemyInfoBg = this.add.rectangle(x - 90, plateY, 180, 60, 0x2a2a3e, 0.9).setOrigin(0);
       
       const nameText = this.add.text(x, plateY + 10, enemy.name, {
-        fontSize: '14px',
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
         color: '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0.5, 0);
 
       const healthText = this.add.text(x, plateY + 35, 
         `HP: ${enemy.health}/${enemy.maxHealth}`, {
-        fontSize: '12px',
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
         color: '#ff8888',
       }).setOrigin(0.5, 0);
 
@@ -208,7 +216,8 @@ export class CombatScene extends Phaser.Scene {
     this.add.rectangle(logX, logY, 480, 120, 0x1a1a2e, 0.8).setOrigin(0);
     
     this.logText = this.add.text(logX + 10, logY + 10, 'Combat begins!', {
-      fontSize: '12px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#ffffff',
       align: 'left',
       wordWrap: { width: 460 },
@@ -255,7 +264,8 @@ export class CombatScene extends Phaser.Scene {
       });
 
     const label = this.add.text(0, 0, text, {
-      fontSize: '16px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#ffffff',
     }).setOrigin(0.5);
 
@@ -272,7 +282,8 @@ export class CombatScene extends Phaser.Scene {
     uiElements.push(overlay, panel);
 
     const title = this.add.text(width / 2, height / 2 - 220, `Inventory (${player.inventory.reduce((sum, item) => sum + item.quantity, 0)}/${player.inventorySlots})`, {
-      fontSize: '24px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
       color: '#f0a020',
     }).setOrigin(0.5);
     uiElements.push(title);
@@ -298,7 +309,8 @@ export class CombatScene extends Phaser.Scene {
       const y = itemsStartY + displayedItems * itemHeight;
       
       const itemLabel = this.add.text(width / 2 - 320, y, `${item.name} x${invItem.quantity}`, {
-        fontSize: '14px',
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
         color: '#ffffff',
       });
       uiElements.push(itemLabel);
@@ -307,7 +319,8 @@ export class CombatScene extends Phaser.Scene {
 
       if (isPotion) {
         const useBtn = this.add.text(width / 2 + 120, y, '[Use]', {
-          fontSize: '13px',
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.small,
           color: '#8888ff',
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
@@ -531,7 +544,8 @@ export class CombatScene extends Phaser.Scene {
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
     
     this.add.text(width / 2, height / 2 - 100, 'VICTORY!', {
-      fontSize: '36px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.xlarge,
       color: '#00ff00',
     }).setOrigin(0.5);
 
@@ -564,7 +578,8 @@ export class CombatScene extends Phaser.Scene {
     }
 
     this.add.text(width / 2, height / 2 - 20, rewardText, {
-      fontSize: '16px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#ffffff',
       align: 'center',
     }).setOrigin(0.5);
@@ -584,12 +599,14 @@ export class CombatScene extends Phaser.Scene {
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
     
     this.add.text(width / 2, height / 2 - 40, 'DEFEATED', {
-      fontSize: '36px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.xlarge,
       color: '#ff0000',
     }).setOrigin(0.5);
 
     this.add.text(width / 2, height / 2 + 20, 'Your soul returns to Roboka...', {
-      fontSize: '16px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#cccccc',
     }).setOrigin(0.5);
 
@@ -616,7 +633,8 @@ export class CombatScene extends Phaser.Scene {
       .on('pointerdown', callback);
 
     const label = this.add.text(0, 0, text, {
-      fontSize: '16px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#ffffff',
     }).setOrigin(0.5);
 
@@ -625,7 +643,8 @@ export class CombatScene extends Phaser.Scene {
 
   private showMessage(message: string): void {
     const msg = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY - 100, message, {
-      fontSize: '18px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
       color: '#ffcc00',
       backgroundColor: '#000000',
       padding: { x: 20, y: 10 },

@@ -17,7 +17,8 @@ export class CurrencyDisplay {
     icon.setScale(0.035);
     icon.setOrigin(0, 0.5);
     
-    const text = scene.add.text(28, 0, `${amount}${currencyType === 'CA' ? amount.toFixed(1) : ''}`, {
+    const displayAmount = currencyType === 'CA' ? amount.toFixed(1) : amount.toString();
+    const text = scene.add.text(28, 0, displayAmount, {
       fontSize: FONTS.size[fontSize],
       color: '#ffffff',
       fontFamily: FONTS.primary,

@@ -14,6 +14,7 @@ import { ForgingSystem } from '../systems/ForgingSystem';
 import { TerrainGenerator } from '../utils/TerrainGenerator';
 import { DurabilityManager } from '../systems/DurabilityManager';
 import { CurrencyDisplay } from '../utils/CurrencyDisplay';
+import { FONTS } from '../config/fonts';
 
 export class ExploreScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -118,7 +119,8 @@ export class ExploreScene extends Phaser.Scene {
     this.createHealthAndStaminaBars();
 
     this.add.text(20, height - 40, 'Arrow keys to move • Approach markers to interact', {
-      fontSize: '12px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#cccccc',
     }).setScrollFactor(0).setDepth(100);
   }
@@ -262,7 +264,8 @@ export class ExploreScene extends Phaser.Scene {
     citySprite.setOrigin(0.5, 0.65);
     
     const label = this.add.text(0, -140, 'Roboka', {
-      fontSize: '16px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#ffcc66',
       fontStyle: 'bold',
       stroke: '#000000',
@@ -280,7 +283,8 @@ export class ExploreScene extends Phaser.Scene {
     
     const glow = this.add.circle(0, 0, 32, 0x8844ff, 0.2);
     const label = this.add.text(0, -60, `Delve T${tier}`, {
-      fontSize: '14px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#aa88ff',
       fontStyle: 'bold',
     }).setOrigin(0.5);
@@ -465,10 +469,16 @@ export class ExploreScene extends Phaser.Scene {
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x000000, 0.9)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 100, 'Random Encounter!', {
-      fontSize: '24px', color: '#ff8844',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#ff8844',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     const descText = this.add.text(width / 2, height / 2 - 30, encounterType.description, {
-      fontSize: '16px', color: '#ffffff', align: 'center', wordWrap: { width: 400 },
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: 400 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     uiElements.push(overlay, titleText, descText);
@@ -487,10 +497,16 @@ export class ExploreScene extends Phaser.Scene {
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x000000, 0.9)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 100, 'Treasure Found!', {
-      fontSize: '24px', color: '#ffcc00',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#ffcc00',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     const descText = this.add.text(width / 2, height / 2 - 30, encounterType.description, {
-      fontSize: '16px', color: '#ffffff', align: 'center', wordWrap: { width: 400 },
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: 400 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     const loot = encounterType.loot;
@@ -498,7 +514,9 @@ export class ExploreScene extends Phaser.Scene {
     this.gameState.addCrystallineAnimus(loot.ca);
 
     const lootText = this.add.text(width / 2, height / 2 + 40, `+${loot.aa} AA, +${loot.ca.toFixed(1)} CA`, {
-      fontSize: '18px', color: '#ffcc00',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffcc00',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     uiElements.push(overlay, titleText, descText, lootText);
@@ -518,13 +536,21 @@ export class ExploreScene extends Phaser.Scene {
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 350, 0x2a0a2a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 130, 'Shrine to the Faceless Old God', {
-      fontSize: '24px', color: '#aa44ff',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#aa44ff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     const descText = this.add.text(width / 2, height / 2 - 70, encounterType.description, {
-      fontSize: '16px', color: '#ffffff', align: 'center', wordWrap: { width: 450 },
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: 450 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     const choiceText = this.add.text(width / 2, height / 2, 'Offer 50 Arcane Ash?', {
-      fontSize: '18px', color: '#ffcc88',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffcc88',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     uiElements.push(overlay, titleText, descText, choiceText);
@@ -596,7 +622,9 @@ export class ExploreScene extends Phaser.Scene {
     });
 
     const yesBtnLabel = this.add.text(width / 2 - 70, height / 2 + 60, 'Offer (50 AA)', {
-      fontSize: '12px', color: '#ffffff',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
 
     const noBtnBg = this.add.rectangle(width / 2 + 70, height / 2 + 60, 140, 30, 0x444466)
@@ -613,7 +641,9 @@ export class ExploreScene extends Phaser.Scene {
       });
 
     const noBtnLabel = this.add.text(width / 2 + 70, height / 2 + 60, 'Decline', {
-      fontSize: '12px', color: '#ffffff',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
   }
 
@@ -624,13 +654,22 @@ export class ExploreScene extends Phaser.Scene {
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 350, 0x1a0a2a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 130, 'Void Corruption Pocket', {
-      fontSize: '24px', color: '#8844ff',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#8844ff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     const descText = this.add.text(width / 2, height / 2 - 70, encounterType.description, {
-      fontSize: '16px', color: '#ffffff', align: 'center', wordWrap: { width: 450 },
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: 450 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     const choiceText = this.add.text(width / 2, height / 2, 'Enter the corruption?\nFace an elite enemy for 2x loot!', {
-      fontSize: '16px', color: '#ffcc88', align: 'center',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffcc88',
+      align: 'center',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     uiElements.push(overlay, titleText, descText, choiceText);
@@ -652,7 +691,9 @@ export class ExploreScene extends Phaser.Scene {
       });
 
     const enterBtnLabel = this.add.text(width / 2 - 70, height / 2 + 70, 'Enter', {
-      fontSize: '12px', color: '#ffffff',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
 
     const fleeBtnBg = this.add.rectangle(width / 2 + 70, height / 2 + 70, 140, 30, 0x444466)
@@ -669,7 +710,9 @@ export class ExploreScene extends Phaser.Scene {
       });
 
     const fleeBtnLabel = this.add.text(width / 2 + 70, height / 2 + 70, 'Flee', {
-      fontSize: '12px', color: '#ffffff',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
   }
 
@@ -681,10 +724,16 @@ export class ExploreScene extends Phaser.Scene {
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x2a1a0a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 100, 'Trapped Chest!', {
-      fontSize: '24px', color: '#ff8844',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#ff8844',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     const descText = this.add.text(width / 2, height / 2 - 50, encounterType.description + '\nAttempting to open...', {
-      fontSize: '16px', color: '#ffffff', align: 'center', wordWrap: { width: 450 },
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: 450 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     uiElements.push(overlay, titleText, descText);
@@ -701,7 +750,10 @@ export class ExploreScene extends Phaser.Scene {
 
         const resultText = this.add.text(width / 2, height / 2 + 20, 
           `Success! Disarmed the trap!\n+${aa} AA, +${ca.toFixed(1)} CA`, {
-          fontSize: '18px', color: '#44ff44', align: 'center',
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.medium,
+          color: '#44ff44',
+          align: 'center',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
         uiElements.push(resultText);
       } else {
@@ -711,7 +763,10 @@ export class ExploreScene extends Phaser.Scene {
 
         const resultText = this.add.text(width / 2, height / 2 + 20, 
           `Failed! The trap triggers!\nTook ${damage} damage!`, {
-          fontSize: '18px', color: '#ff4444', align: 'center',
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.medium,
+          color: '#ff4444',
+          align: 'center',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
         uiElements.push(resultText);
       }
@@ -731,10 +786,16 @@ export class ExploreScene extends Phaser.Scene {
     const overlay = this.add.rectangle(width / 2, height / 2, 600, 450, 0x1a1a2a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     const titleText = this.add.text(width / 2, height / 2 - 200, 'Wandering Merchant', {
-      fontSize: '24px', color: '#ffaa44',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#ffaa44',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     const descText = this.add.text(width / 2, height / 2 - 160, encounterType.description, {
-      fontSize: '16px', color: '#ffffff', align: 'center', wordWrap: { width: 550 },
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: 550 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     uiElements.push(overlay, titleText, descText);
@@ -752,7 +813,9 @@ export class ExploreScene extends Phaser.Scene {
       
       const itemText = this.add.text(width / 2 - 220, yPos, 
         `${itemData?.name || shopItem.itemId} - ${price} ${shopItem.currency}`, {
-        fontSize: '14px', color: '#ffffff',
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: '#ffffff',
       }).setScrollFactor(0).setDepth(1001);
       
       const buyBtn = this.createButton(width / 2 + 150, yPos, 'Buy', () => {
@@ -871,7 +934,8 @@ export class ExploreScene extends Phaser.Scene {
       this.cameras.main.height / 2 - 40,
       'Resting...',
       {
-        fontSize: '24px',
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.large,
         color: '#ffffff',
       }
     ).setOrigin(0.5).setScrollFactor(0);
@@ -934,7 +998,8 @@ export class ExploreScene extends Phaser.Scene {
       .setDepth(101);
 
     this.healthTooltip = this.add.text(startX + barWidth / 2, startY + barHeight / 2, '', {
-      fontSize: '14px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#ffffff',
       backgroundColor: '#000000cc',
       padding: { x: 8, y: 4 },
@@ -953,7 +1018,8 @@ export class ExploreScene extends Phaser.Scene {
       .setDepth(101);
 
     this.staminaTooltip = this.add.text(startX + barWidth / 2, startY + barHeight + 10 + barHeight / 2, '', {
-      fontSize: '14px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#ffffff',
       backgroundColor: '#000000cc',
       padding: { x: 8, y: 4 },
@@ -1096,7 +1162,8 @@ export class ExploreScene extends Phaser.Scene {
     uiElements.push(overlay, panel);
 
     const title = this.add.text(width / 2, height / 2 - 120, 'Menu', {
-      fontSize: '28px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
       color: '#f0a020',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     uiElements.push(title);
@@ -1146,7 +1213,8 @@ export class ExploreScene extends Phaser.Scene {
     uiElements.push(overlay, panel);
 
     const title = this.add.text(width / 2, height / 2 - 100, 'Quit Game?', {
-      fontSize: '28px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
       color: '#ff6666',
     }).setOrigin(0.5).setScrollFactor(0);
     uiElements.push(title);
@@ -1185,7 +1253,8 @@ export class ExploreScene extends Phaser.Scene {
     uiElements.push(overlay, panel);
 
     const title = this.add.text(width / 2, height / 2 - 220, `Inventory (${player.inventory.reduce((sum, item) => sum + item.quantity, 0)}/${player.inventorySlots})`, {
-      fontSize: '24px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
       color: '#f0a020',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     uiElements.push(title);
@@ -1214,7 +1283,8 @@ export class ExploreScene extends Phaser.Scene {
       const y = itemsStartY + displayedItems * itemHeight;
       
       const itemLabel = this.add.text(width / 2 - 320, y, `${item.name} x${invItem.quantity}`, {
-        fontSize: '14px',
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
         color: '#ffffff',
       }).setScrollFactor(0).setDepth(1001);
       uiElements.push(itemLabel);
@@ -1226,7 +1296,8 @@ export class ExploreScene extends Phaser.Scene {
       if (weapon) {
         if (weapon.twoHanded) {
           const equipBtn = this.add.text(width / 2 + 70, y, '[Equip]', {
-            fontSize: '12px',
+            fontFamily: FONTS.primary,
+            fontSize: FONTS.size.small,
             color: '#88ff88',
           }).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => {
@@ -1237,7 +1308,8 @@ export class ExploreScene extends Phaser.Scene {
           uiElements.push(equipBtn);
         } else {
           const equipMHBtn = this.add.text(width / 2 + 40, y, '[Equip MH]', {
-            fontSize: '11px',
+            fontFamily: FONTS.primary,
+            fontSize: FONTS.size.small,
             color: '#88ff88',
           }).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => {
@@ -1248,7 +1320,8 @@ export class ExploreScene extends Phaser.Scene {
           uiElements.push(equipMHBtn);
 
           const equipOHBtn = this.add.text(width / 2 + 115, y, '[Equip OH]', {
-            fontSize: '11px',
+            fontFamily: FONTS.primary,
+            fontSize: FONTS.size.small,
             color: '#88ff88',
           }).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => {
@@ -1260,7 +1333,8 @@ export class ExploreScene extends Phaser.Scene {
         }
       } else if (armor) {
         const equipBtn = this.add.text(width / 2 + 70, y, '[Equip]', {
-          fontSize: '12px',
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.small,
           color: '#88ff88',
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
@@ -1273,7 +1347,8 @@ export class ExploreScene extends Phaser.Scene {
 
       if (isPotion) {
         const useBtn = this.add.text(width / 2 + 140, y, '[Use]', {
-          fontSize: '12px',
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.small,
           color: '#8888ff',
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
@@ -1355,7 +1430,8 @@ export class ExploreScene extends Phaser.Scene {
     uiElements.push(overlay, panel);
 
     const title = this.add.text(width / 2, height / 2 - 250, 'Equipment', {
-      fontSize: '24px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
       color: '#f0a020',
     }).setOrigin(0.5).setScrollFactor(0);
     uiElements.push(title);
@@ -1388,7 +1464,8 @@ export class ExploreScene extends Phaser.Scene {
       const y = startY + index * slotHeight;
       
       const slotLabel = this.add.text(width / 2 - 320, y, `${slot.label}:`, {
-        fontSize: '14px',
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
         color: '#aaaaaa',
       }).setScrollFactor(0);
       uiElements.push(slotLabel);
@@ -1398,14 +1475,16 @@ export class ExploreScene extends Phaser.Scene {
       const itemName = equipped ? ForgingSystem.getItemDisplayName({ itemId: equipped.itemId, quantity: 1, enhancementLevel: equipped.enhancementLevel }) : 'Empty';
 
       const itemLabel = this.add.text(width / 2 - 200, y, itemName, {
-        fontSize: '14px',
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
         color: item ? '#ffffff' : '#666666',
       }).setScrollFactor(0);
       uiElements.push(itemLabel);
     });
 
     const statsTitle = this.add.text(width / 2 - 320, height / 2 + 100, 'Stats:', {
-      fontSize: '16px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#ffaa00',
     }).setScrollFactor(0);
     uiElements.push(statsTitle);
@@ -1414,7 +1493,8 @@ export class ExploreScene extends Phaser.Scene {
       `Evasion: ${player.stats.calculatedEvasion}`,
       `Damage Reduction: ${Math.floor(player.stats.damageReduction * 100)}%`,
     ].join('  |  '), {
-      fontSize: '14px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#88ccff',
     }).setScrollFactor(0);
     uiElements.push(statsText);
@@ -1430,7 +1510,8 @@ export class ExploreScene extends Phaser.Scene {
   private showMessage(message: string): void {
     const { width, height } = this.cameras.main;
     const messageText = this.add.text(width / 2, height - 100, message, {
-      fontSize: '16px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#ffff00',
       backgroundColor: '#000000',
       padding: { x: 10, y: 5 },
@@ -1462,7 +1543,8 @@ export class ExploreScene extends Phaser.Scene {
       .setDepth(1002);
 
     const label = this.add.text(0, 0, text, {
-      fontSize: '12px',
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
       color: '#ffffff',
     }).setOrigin(0.5).setDepth(1002);
 
