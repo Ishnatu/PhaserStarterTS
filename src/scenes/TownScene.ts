@@ -869,6 +869,7 @@ export class TownScene extends Phaser.Scene {
     const player = this.gameState.getPlayer();
     const uiElements: Phaser.GameObjects.GameObject[] = [];
     let selectedItem: InventoryItem | null = null;
+    let mode: 'enhance' | 'repair' = 'enhance';
 
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setInteractive();
     const panel = this.add.rectangle(width / 2, height / 2, 750, 550, 0x2a2a3e).setOrigin(0.5);
@@ -899,106 +900,39 @@ export class TownScene extends Phaser.Scene {
       uiElements.slice(4).forEach(el => el.destroy());
       uiElements.splice(4);
 
-      const forgeableItems = player.inventory.filter(item => ForgingSystem.canForgeItem(item));
-
-      if (forgeableItems.length === 0) {
-        const noItemsText = this.add.text(width / 2, height / 2, 'No forgeable items in inventory.\n(Weapons and armor can be enhanced)', {
-          fontSize: '16px',
-          color: '#cccccc',
-          align: 'center',
-        }).setOrigin(0.5);
-        uiElements.push(noItemsText);
-      } else {
-        const itemsStartY = height / 2 - 160;
-        const itemHeight = 35;
-        const maxDisplay = 8;
-
-        forgeableItems.slice(0, maxDisplay).forEach((invItem, index) => {
-          const y = itemsStartY + index * itemHeight;
-          const displayName = ForgingSystem.getItemDisplayName(invItem);
-          const currentLevel = invItem.enhancementLevel || 0;
-          const maxLevel = ForgingSystem.getMaxEnhancementLevel();
-          
-          const itemText = this.add.text(width / 2 - 330, y, displayName, {
-            fontSize: '14px',
-            color: '#ffffff',
-          });
-          uiElements.push(itemText);
-
-          const levelText = this.add.text(width / 2 + 80, y, currentLevel === maxLevel ? 'MAX' : `+${currentLevel}`, {
-            fontSize: '14px',
-            color: currentLevel === maxLevel ? '#ff8800' : '#88ff88',
-          });
-          uiElements.push(levelText);
-
-          if (currentLevel < maxLevel) {
-            const selectBtn = this.add.text(width / 2 + 150, y, '[Select]', {
-              fontSize: '13px',
-              color: selectedItem === invItem ? '#ff8800' : '#8888ff',
-            }).setInteractive({ useHandCursor: true })
-              .on('pointerdown', () => {
-                selectedItem = invItem;
-                renderForge();
-              });
-            uiElements.push(selectBtn);
-          }
+      // Tab buttons
+      const enhanceTab = this.add.text(width / 2 - 120, height / 2 - 175, '[Enhance]', {
+        fontSize: '16px',
+        color: mode === 'enhance' ? '#f0a020' : '#888888',
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          mode = 'enhance';
+          selectedItem = null;
+          renderForge();
         });
+      uiElements.push(enhanceTab);
 
-        if (selectedItem) {
-          const detailY = height / 2 + 50;
-          const currentLevel = selectedItem.enhancementLevel || 0;
-          const targetLevel = currentLevel + 1;
-          const cost = ForgingSystem.getForgingCost(targetLevel);
+      const repairTab = this.add.text(width / 2 + 120, height / 2 - 175, '[Repair]', {
+        fontSize: '16px',
+        color: mode === 'repair' ? '#f0a020' : '#888888',
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          mode = 'repair';
+          selectedItem = null;
+          renderForge();
+        });
+      uiElements.push(repairTab);
 
-          if (cost) {
-            const detailPanel = this.add.rectangle(width / 2, detailY + 30, 700, 140, 0x1a1a2e).setOrigin(0.5);
-            uiElements.push(detailPanel);
-
-            const detailTitle = this.add.text(width / 2, detailY - 20, `Enhance to +${targetLevel}`, {
-              fontSize: '18px',
-              color: '#f0a020',
-            }).setOrigin(0.5);
-            uiElements.push(detailTitle);
-
-            const tierData = [
-              { tier: 1, success: '95%', fail: 'No change', destroy: 'None' },
-              { tier: 2, success: '85%', fail: 'No change', destroy: 'None' },
-              { tier: 3, success: '70%', fail: 'Downgrade', destroy: 'None' },
-              { tier: 4, success: '60%', fail: 'Downgrade', destroy: 'None' },
-              { tier: 5, success: '45%', fail: 'Downgrade', destroy: '10%' },
-              { tier: 6, success: '35%', fail: 'Downgrade', destroy: '15%' },
-              { tier: 7, success: '25%', fail: 'Downgrade', destroy: '25%' },
-              { tier: 8, success: '15%', fail: 'Downgrade', destroy: '35%' },
-              { tier: 9, success: '10%', fail: 'Downgrade', destroy: '50%' },
-            ][targetLevel - 1];
-
-            const detailsText = this.add.text(width / 2 - 320, detailY + 10, 
-              `Success: ${tierData.success}  |  Failure: ${tierData.fail}  |  Destroy: ${tierData.destroy}\nCost: ${cost.aa} AA + ${cost.ca} CA`, {
-              fontSize: '13px',
-              color: '#ffffff',
-            });
-            uiElements.push(detailsText);
-
-            const weapon = ItemDatabase.getWeapon(selectedItem.itemId);
-            if (weapon) {
-              const baseDmg = `${weapon.damage.numDice}d${weapon.damage.dieSize}+${weapon.damage.modifier}`;
-              const enhanced = ForgingSystem.calculateEnhancedDamage(weapon, targetLevel);
-              const newDmg = `${enhanced.numDice}d${enhanced.dieSize}+${enhanced.modifier}`;
-              const dmgText = this.add.text(width / 2 - 320, detailY + 50, `Damage: ${baseDmg} → ${newDmg}`, {
-                fontSize: '13px',
-                color: '#88ff88',
-              });
-              uiElements.push(dmgText);
-            }
-
-            const forgeBtn = this.createButton(width / 2, detailY + 90, 'Forge Item', () => {
-              this.attemptForging(selectedItem!);
-              selectedItem = null;
-              renderForge();
-            });
-            uiElements.push(forgeBtn);
-          }
-        }
+      if (mode === 'enhance') {
+        this.renderEnhanceMode(uiElements, selectedItem, (item) => {
+          selectedItem = item;
+          renderForge();
+        });
+      } else {
+        this.renderRepairMode(uiElements, selectedItem, (item) => {
+          selectedItem = item;
+          renderForge();
+        });
       }
 
       const closeBtn = this.createButton(width / 2, height / 2 + 230, 'Close', () => {
@@ -1008,6 +942,203 @@ export class TownScene extends Phaser.Scene {
     };
 
     renderForge();
+  }
+
+  private renderEnhanceMode(uiElements: Phaser.GameObjects.GameObject[], selectedItem: InventoryItem | null, onSelect: (item: InventoryItem | null) => void): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    const forgeableItems = player.inventory.filter(item => ForgingSystem.canForgeItem(item));
+
+    if (forgeableItems.length === 0) {
+      const noItemsText = this.add.text(width / 2, height / 2, 'No forgeable items in inventory.\n(Weapons and armor can be enhanced)', {
+        fontSize: '16px',
+        color: '#cccccc',
+        align: 'center',
+      }).setOrigin(0.5);
+      uiElements.push(noItemsText);
+      return;
+    }
+
+    const itemsStartY = height / 2 - 140;
+    const itemHeight = 35;
+    const maxDisplay = 7;
+
+    forgeableItems.slice(0, maxDisplay).forEach((invItem, index) => {
+      const y = itemsStartY + index * itemHeight;
+      const displayName = ForgingSystem.getItemDisplayName(invItem);
+      const currentLevel = invItem.enhancementLevel || 0;
+      const maxLevel = ForgingSystem.getMaxEnhancementLevel();
+      
+      const itemText = this.add.text(width / 2 - 330, y, displayName, {
+        fontSize: '14px',
+        color: '#ffffff',
+      });
+      uiElements.push(itemText);
+
+      const levelText = this.add.text(width / 2 + 80, y, currentLevel === maxLevel ? 'MAX' : `+${currentLevel}`, {
+        fontSize: '14px',
+        color: currentLevel === maxLevel ? '#ff8800' : '#88ff88',
+      });
+      uiElements.push(levelText);
+
+      if (currentLevel < maxLevel) {
+        const selectBtn = this.add.text(width / 2 + 150, y, '[Select]', {
+          fontSize: '13px',
+          color: selectedItem === invItem ? '#ff8800' : '#8888ff',
+        }).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => onSelect(invItem));
+        uiElements.push(selectBtn);
+      }
+    });
+
+    if (selectedItem) {
+      const detailY = height / 2 + 80;
+      const currentLevel = selectedItem.enhancementLevel || 0;
+      const targetLevel = currentLevel + 1;
+      const cost = ForgingSystem.getForgingCost(targetLevel);
+
+      if (cost) {
+        const detailPanel = this.add.rectangle(width / 2, detailY, 700, 100, 0x1a1a2e).setOrigin(0.5);
+        uiElements.push(detailPanel);
+
+        const detailTitle = this.add.text(width / 2, detailY - 40, `Enhance to +${targetLevel}`, {
+          fontSize: '18px',
+          color: '#f0a020',
+        }).setOrigin(0.5);
+        uiElements.push(detailTitle);
+
+        const tierData = [
+          { success: '95%', fail: 'No change', destroy: 'None' },
+          { success: '85%', fail: 'No change', destroy: 'None' },
+          { success: '70%', fail: 'Downgrade', destroy: 'None' },
+          { success: '60%', fail: 'Downgrade', destroy: 'None' },
+          { success: '45%', fail: 'Downgrade', destroy: '10%' },
+          { success: '35%', fail: 'Downgrade', destroy: '15%' },
+          { success: '25%', fail: 'Downgrade', destroy: '25%' },
+          { success: '15%', fail: 'Downgrade', destroy: '35%' },
+          { success: '10%', fail: 'Downgrade', destroy: '50%' },
+        ][targetLevel - 1];
+
+        const detailsText = this.add.text(width / 2, detailY - 10, 
+          `Success: ${tierData.success}  |  Fail: ${tierData.fail}  |  Destroy: ${tierData.destroy}\nCost: ${cost.aa} AA + ${cost.ca} CA`, {
+          fontSize: '12px',
+          color: '#ffffff',
+          align: 'center',
+        }).setOrigin(0.5);
+        uiElements.push(detailsText);
+
+        const forgeBtn = this.createButton(width / 2, detailY + 35, 'Forge Item', () => {
+          this.attemptForging(selectedItem!);
+          onSelect(null);
+        });
+        uiElements.push(forgeBtn);
+      }
+    }
+  }
+
+  private renderRepairMode(uiElements: Phaser.GameObjects.GameObject[], selectedItem: InventoryItem | null, onSelect: (item: InventoryItem | null) => void): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    
+    // Get all items that need repair (durability < max) or can be repaired
+    const repairableItems = player.inventory.filter(item => {
+      const currentDurability = item.durability ?? 100;
+      const maxDurability = item.maxDurability ?? 100;
+      return (ItemDatabase.getWeapon(item.itemId) || ItemDatabase.getArmor(item.itemId)) && currentDurability < maxDurability;
+    });
+
+    if (repairableItems.length === 0) {
+      const noItemsText = this.add.text(width / 2, height / 2, 'No items need repair!\nAll your equipment is in perfect condition.', {
+        fontSize: '16px',
+        color: '#cccccc',
+        align: 'center',
+      }).setOrigin(0.5);
+      uiElements.push(noItemsText);
+      return;
+    }
+
+    const itemsStartY = height / 2 - 140;
+    const itemHeight = 35;
+    const maxDisplay = 7;
+
+    repairableItems.slice(0, maxDisplay).forEach((invItem, index) => {
+      const y = itemsStartY + index * itemHeight;
+      const displayName = ForgingSystem.getItemDisplayName(invItem);
+      const currentDurability = invItem.durability ?? 100;
+      const maxDurability = invItem.maxDurability ?? 100;
+      const durabilityPercent = (currentDurability / maxDurability) * 100;
+      
+      let durabilityColor = '#88ff88';
+      if (durabilityPercent <= 0) durabilityColor = '#ff4444';
+      else if (durabilityPercent <= 25) durabilityColor = '#ffaa00';
+      else if (durabilityPercent <= 50) durabilityColor = '#ffff00';
+      
+      const itemText = this.add.text(width / 2 - 330, y, displayName, {
+        fontSize: '14px',
+        color: '#ffffff',
+      });
+      uiElements.push(itemText);
+
+      const durabilityText = this.add.text(width / 2 + 80, y, `${Math.floor(currentDurability)}/${maxDurability}`, {
+        fontSize: '13px',
+        color: durabilityColor,
+      });
+      uiElements.push(durabilityText);
+
+      const selectBtn = this.add.text(width / 2 + 200, y, '[Select]', {
+        fontSize: '13px',
+        color: selectedItem === invItem ? '#ff8800' : '#8888ff',
+      }).setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => onSelect(invItem));
+      uiElements.push(selectBtn);
+    });
+
+    if (selectedItem) {
+      const detailY = height / 2 + 80;
+      const result = ForgingSystem.getRepairCost(selectedItem);
+
+      if (result) {
+        const detailPanel = this.add.rectangle(width / 2, detailY, 700, 100, 0x1a1a2e).setOrigin(0.5);
+        uiElements.push(detailPanel);
+
+        const detailTitle = this.add.text(width / 2, detailY - 40, `Repair ${ForgingSystem.getItemDisplayName(selectedItem)}`, {
+          fontSize: '18px',
+          color: '#f0a020',
+        }).setOrigin(0.5);
+        uiElements.push(detailTitle);
+
+        const detailsText = this.add.text(width / 2, detailY - 10, 
+          `Durability: ${Math.floor(selectedItem.durability ?? 100)}/${selectedItem.maxDurability ?? 100} → ${selectedItem.maxDurability ?? 100}/${selectedItem.maxDurability ?? 100}\nCost: ${result.aa} AA + ${result.ca.toFixed(1)} CA`, {
+          fontSize: '12px',
+          color: '#ffffff',
+          align: 'center',
+        }).setOrigin(0.5);
+        uiElements.push(detailsText);
+
+        const repairBtn = this.createButton(width / 2, detailY + 35, 'Repair Item', () => {
+          this.attemptRepair(selectedItem!);
+          onSelect(null);
+        });
+        uiElements.push(repairBtn);
+      }
+    }
+  }
+
+  private attemptRepair(item: InventoryItem): void {
+    const player = this.gameState.getPlayer();
+    const result = ForgingSystem.repairItem(item, player.arcaneAsh, player.crystallineAnimus);
+    
+    if (result.success) {
+      const cost = ForgingSystem.getRepairCost(item);
+      if (cost) {
+        player.arcaneAsh -= cost.aa;
+        player.crystallineAnimus -= cost.ca;
+      }
+      this.gameState.updatePlayer(player);
+    }
+    
+    this.showMessage(result.message);
+    this.infoText.setText(this.getPlayerInfo());
   }
 
   private attemptForging(item: InventoryItem): void {
