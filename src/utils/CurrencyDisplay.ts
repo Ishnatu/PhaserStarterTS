@@ -39,8 +39,6 @@ export class CurrencyDisplay {
   ): Phaser.GameObjects.Container {
     const container = scene.add.container(x, y);
     
-    const lineHeight = 22;
-    
     const aaIcon = scene.add.image(0, 0, 'coin-aa');
     aaIcon.setScale(0.035);
     aaIcon.setOrigin(0, 0.5);
@@ -52,11 +50,14 @@ export class CurrencyDisplay {
     });
     aaText.setOrigin(0, 0.5);
     
-    const caIcon = scene.add.image(0, lineHeight, 'coin-ca');
+    const spacing = 20;
+    const caXOffset = 28 + aaText.width + spacing;
+    
+    const caIcon = scene.add.image(caXOffset, 0, 'coin-ca');
     caIcon.setScale(0.035);
     caIcon.setOrigin(0, 0.5);
     
-    const caText = scene.add.text(28, lineHeight, `${caAmount.toFixed(1)}`, {
+    const caText = scene.add.text(caXOffset + 28, 0, `${caAmount.toFixed(1)}`, {
       fontSize: FONTS.size[fontSize],
       color: '#ffffff',
       fontFamily: FONTS.primary,

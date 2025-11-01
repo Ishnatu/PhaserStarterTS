@@ -107,18 +107,26 @@ export class ExploreScene extends Phaser.Scene {
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    const mKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.M);
     
     this.escKey.on('down', () => {
       this.handleEscapeKey();
+    });
+    
+    mKey.on('down', () => {
+      if (!this.isOverlayActive) {
+        this.openMenu();
+      }
     });
 
     const menuBtn = this.createButton(width - 120, 20, 'Menu', () => {
       this.openMenu();
     });
+    menuBtn.setDepth(2000); // Ensure menu button is above everything else
 
     this.createHealthAndStaminaBars();
 
-    this.add.text(20, height - 40, 'Arrow keys to move • Approach markers to interact', {
+    this.add.text(20, height - 40, 'Arrow keys to move • Approach markers to interact • M to open menu', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#cccccc',
