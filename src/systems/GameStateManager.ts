@@ -2,6 +2,7 @@ import { GameState, PlayerData, GameScene } from '../types/GameTypes';
 import { GameConfig } from '../config/GameConfig';
 import { EquipmentManager } from './EquipmentManager';
 import { ApiClient } from '../utils/ApiClient';
+import { ItemDatabase } from '../config/ItemDatabase';
 
 export class GameStateManager {
   private static instance: GameStateManager;
@@ -21,6 +22,55 @@ export class GameStateManager {
 
   private exploredTilesSet: Set<string> = new Set();
 
+  private migrateDurabilitySystem(): void {
+    const player = this.gameState.player;
+    
+    // Migrate inventory items
+    player.inventory.forEach(item => {
+      if (item.durability === undefined) {
+        const weapon = ItemDatabase.getWeapon(item.itemId);
+        const armor = ItemDatabase.getArmor(item.itemId);
+        
+        if (weapon || armor) {
+          const enhancementLevel = item.enhancementLevel || 0;
+          const maxDurability = 100 + (enhancementLevel * 10);
+          item.durability = maxDurability;
+          item.maxDurability = maxDurability;
+        }
+      }
+    });
+    
+    // Migrate footlocker items
+    player.footlocker.forEach(item => {
+      if (item.durability === undefined) {
+        const weapon = ItemDatabase.getWeapon(item.itemId);
+        const armor = ItemDatabase.getArmor(item.itemId);
+        
+        if (weapon || armor) {
+          const enhancementLevel = item.enhancementLevel || 0;
+          const maxDurability = 100 + (enhancementLevel * 10);
+          item.durability = maxDurability;
+          item.maxDurability = maxDurability;
+        }
+      }
+    });
+    
+    // Migrate equipped items
+    const equipmentSlots: Array<keyof typeof player.equipment> = [
+      'mainHand', 'offHand', 'helmet', 'chest', 'legs', 'boots', 'shoulders', 'cape'
+    ];
+    
+    equipmentSlots.forEach(slot => {
+      const equipped = player.equipment[slot];
+      if (equipped && equipped.durability === undefined) {
+        const enhancementLevel = equipped.enhancementLevel || 0;
+        const maxDurability = 100 + (enhancementLevel * 10);
+        equipped.durability = maxDurability;
+        equipped.maxDurability = maxDurability;
+      }
+    });
+  }
+
   private createInitialState(): GameState {
     const player: PlayerData = {
       health: GameConfig.PLAYER.STARTING_HEALTH,
@@ -29,8 +79,8 @@ export class GameStateManager {
       maxStamina: GameConfig.PLAYER.STARTING_STAMINA,
       position: { x: 0, y: 0 },
       inventory: [
-        { itemId: 'shortsword_basic', quantity: 1 },
-        { itemId: 'chest_leather', quantity: 1 },
+        { itemId: 'shortsword_basic', quantity: 1, enhancementLevel: 0, durability: 100, maxDurability: 100 },
+        { itemId: 'chest_leather', quantity: 1, enhancementLevel: 0, durability: 100, maxDurability: 100 },
         { itemId: 'potion_health', quantity: 3 },
         { itemId: 'potion_stamina', quantity: 3 },
       ],
@@ -124,6 +174,7 @@ export class GameStateManager {
         if (!this.gameState.player.completedDelves) {
           this.gameState.player.completedDelves = [];
         }
+        this.migrateDurabilitySystem();
         return true;
       } catch (e) {
         console.error('Failed to load save data:', e);
@@ -140,6 +191,7 @@ export class GameStateManager {
     if (!this.gameState.player.completedDelves) {
       this.gameState.player.completedDelves = [];
     }
+    this.migrateDurabilitySystem();
   }
 
   async saveToServer(): Promise<boolean> {
@@ -174,18 +226,35 @@ export class GameStateManager {
     this.disableAutoSave();
   }
 
-  addItemToInventory(itemId: string, quantity: number = 1): boolean {
+  addItemToInventory(itemId: string, quantity: number = 1, enhancementLevel?: number): boolean {
     const totalItems = this.gameState.player.inventory.reduce((sum, item) => sum + item.quantity, 0);
     if (totalItems + quantity > this.gameState.player.inventorySlots) {
       return false;
     }
 
-    const existing = this.gameState.player.inventory.find(item => item.itemId === itemId);
-    if (existing) {
-      existing.quantity += quantity;
-    } else {
-      this.gameState.player.inventory.push({ itemId, quantity });
+    // Check if item is a potion (stackable)
+    const potion = ItemDatabase.getPotion(itemId);
+    if (potion) {
+      const existing = this.gameState.player.inventory.find(item => item.itemId === itemId);
+      if (existing) {
+        existing.quantity += quantity;
+      } else {
+        this.gameState.player.inventory.push({ itemId, quantity });
+      }
+      return true;
     }
+
+    // For weapons/armor, each item gets its own durability
+    const finalEnhancementLevel = enhancementLevel || 0;
+    const maxDurability = 100 + (finalEnhancementLevel * 10);
+    
+    this.gameState.player.inventory.push({ 
+      itemId, 
+      quantity, 
+      enhancementLevel: finalEnhancementLevel,
+      durability: maxDurability,
+      maxDurability: maxDurability
+    });
     return true;
   }
 
