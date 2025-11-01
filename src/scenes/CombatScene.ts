@@ -40,6 +40,13 @@ export class CombatScene extends Phaser.Scene {
     });
     
     this.currentDelve = data.delve;
+    
+    // Fix missing tier (happens when delve is serialized between scenes)
+    if (this.currentDelve && this.currentDelve.tier === undefined) {
+      console.error('CombatScene: currentDelve or tier is undefined!', this.currentDelve);
+      this.currentDelve.tier = 1; // Default to tier 1
+    }
+    
     this.currentRoom = data.room;
     this.isWildEncounter = data.wildEncounter || false;
     this.wildEnemies = data.wildEnemies;
