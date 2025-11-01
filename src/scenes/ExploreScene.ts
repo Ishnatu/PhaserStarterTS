@@ -1165,7 +1165,7 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
-    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setDepth(999).setInteractive();
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setDepth(999);
     const panel = this.add.rectangle(width / 2, height / 2, 400, 300, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     uiElements.push(overlay, panel);
 
@@ -1216,7 +1216,7 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
-    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setInteractive();
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0);
     const panel = this.add.rectangle(width / 2, height / 2, 400, 250, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0);
     uiElements.push(overlay, panel);
 
@@ -1256,7 +1256,7 @@ export class ExploreScene extends Phaser.Scene {
     const player = this.gameState.getPlayer();
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
-    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setInteractive().setDepth(999);
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setDepth(999);
     const panel = this.add.rectangle(width / 2, height / 2, 700, 500, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     uiElements.push(overlay, panel);
 
@@ -1433,7 +1433,7 @@ export class ExploreScene extends Phaser.Scene {
     const player = this.gameState.getPlayer();
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
-    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setInteractive();
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0);
     const panel = this.add.rectangle(width / 2, height / 2, 700, 550, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0);
     uiElements.push(overlay, panel);
 
