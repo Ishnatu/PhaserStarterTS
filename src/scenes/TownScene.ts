@@ -250,14 +250,40 @@ export class TownScene extends Phaser.Scene {
 
       const y = itemsStartY + displayedItems * itemHeight;
       
-      const itemLabel = this.add.text(width / 2 - 320, y, `${item.name} x${invItem.quantity}`, {
+      // Build item label with durability for equipment
+      let displayName = item.name;
+      if (invItem.enhancementLevel && invItem.enhancementLevel > 0) {
+        displayName += ` +${invItem.enhancementLevel}`;
+      }
+      displayName += ` x${invItem.quantity}`;
+      
+      const weapon = ItemDatabase.getWeapon(invItem.itemId);
+      const armor = ItemDatabase.getArmor(invItem.itemId);
+      
+      const itemLabel = this.add.text(width / 2 - 320, y, displayName, {
         fontSize: '14px',
         color: '#ffffff',
       });
       uiElements.push(itemLabel);
+      
+      // Show durability for weapons and armor
+      if (weapon || armor) {
+        const currentDurability = invItem.durability ?? 100;
+        const maxDurability = invItem.maxDurability ?? 100;
+        const durabilityPercent = (currentDurability / maxDurability) * 100;
+        
+        let durabilityColor = '#88ff88';
+        if (durabilityPercent <= 0) durabilityColor = '#ff4444';
+        else if (durabilityPercent <= 25) durabilityColor = '#ffaa00';
+        else if (durabilityPercent <= 50) durabilityColor = '#ffff00';
+        
+        const durabilityLabel = this.add.text(width / 2 - 100, y, `[${Math.floor(currentDurability)}/${maxDurability}]`, {
+          fontSize: '12px',
+          color: durabilityColor,
+        });
+        uiElements.push(durabilityLabel);
+      }
 
-      const weapon = ItemDatabase.getWeapon(invItem.itemId);
-      const armor = ItemDatabase.getArmor(invItem.itemId);
       const isPotion = ItemDatabase.getPotion(invItem.itemId);
 
       if (weapon) {
@@ -649,6 +675,24 @@ export class TownScene extends Phaser.Scene {
         color: item ? '#ffffff' : '#666666',
       });
       uiElements.push(itemLabel);
+      
+      // Show durability for equipped items
+      if (equipped && item) {
+        const currentDurability = equipped.durability ?? 100;
+        const maxDurability = equipped.maxDurability ?? 100;
+        const durabilityPercent = (currentDurability / maxDurability) * 100;
+        
+        let durabilityColor = '#88ff88';
+        if (durabilityPercent <= 0) durabilityColor = '#ff4444';
+        else if (durabilityPercent <= 25) durabilityColor = '#ffaa00';
+        else if (durabilityPercent <= 50) durabilityColor = '#ffff00';
+        
+        const durabilityLabel = this.add.text(width / 2 + 50, y, `[${Math.floor(currentDurability)}/${maxDurability}]`, {
+          fontSize: '12px',
+          color: durabilityColor,
+        });
+        uiElements.push(durabilityLabel);
+      }
 
       if (equipped) {
         const unequipBtn = this.add.text(width / 2 + 180, y, '[Unequip]', {
