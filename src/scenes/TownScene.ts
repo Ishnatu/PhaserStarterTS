@@ -716,12 +716,21 @@ export class TownScene extends Phaser.Scene {
     let selectedSlot: { key: keyof PlayerEquipment; x: number; y: number } | null = null;
     let infoElements: Phaser.GameObjects.GameObject[] = [];
 
+    const getEquippableItemsForSlot = (slot: keyof PlayerEquipment): InventoryItem[] => {
+      return player.inventory.filter(invItem => {
+        const check = EquipmentManager.canEquip(player, invItem.itemId, slot);
+        return check.canEquip;
+      });
+    };
+
     const updateInfoDisplay = () => {
       infoElements.forEach(el => el.destroy());
       infoElements = [];
 
       if (selectedSlot) {
         const equipped = player.equipment[selectedSlot.key];
+        const equippableItems = getEquippableItemsForSlot(selectedSlot.key);
+
         if (equipped) {
           const itemName = ForgingSystem.getItemDisplayName({ 
             itemId: equipped.itemId, 
@@ -740,24 +749,24 @@ export class TownScene extends Phaser.Scene {
 
           const itemColor = ItemColorUtil.getItemColor(equipped.enhancementLevel, equipped.isShiny);
 
-          const infoBg = this.add.rectangle(width / 2, infoAreaY + 20, 350, 65, 0x1a1a2e, 0.95).setOrigin(0.5);
+          const infoBg = this.add.rectangle(width / 2, infoAreaY + 20, 350, 90, 0x1a1a2e, 0.95).setOrigin(0.5);
           infoElements.push(infoBg);
 
-          const nameLabel = this.add.text(width / 2, infoAreaY, itemName, {
+          const nameLabel = this.add.text(width / 2, infoAreaY - 10, itemName, {
             fontFamily: FONTS.primary,
             fontSize: FONTS.size.small,
             color: itemColor,
           }).setOrigin(0.5);
           infoElements.push(nameLabel);
 
-          const durabilityLabel = this.add.text(width / 2, infoAreaY + 20, `Durability: ${Math.floor(currentDurability)}/${maxDurability}`, {
+          const durabilityLabel = this.add.text(width / 2, infoAreaY + 10, `Durability: ${Math.floor(currentDurability)}/${maxDurability}`, {
             fontFamily: FONTS.primary,
             fontSize: '11px',
             color: durabilityColor,
           }).setOrigin(0.5);
           infoElements.push(durabilityLabel);
 
-          const unequipBtn = this.add.text(width / 2, infoAreaY + 40, '[Unequip]', {
+          const unequipBtn = this.add.text(width / 2 - 60, infoAreaY + 35, '[Unequip]', {
             fontFamily: FONTS.primary,
             fontSize: '11px',
             color: '#ff8888',
@@ -776,7 +785,49 @@ export class TownScene extends Phaser.Scene {
             });
           infoElements.push(unequipBtn);
 
+          if (equippableItems.length > 0) {
+            const changeBtn = this.add.text(width / 2 + 60, infoAreaY + 35, '[Change]', {
+              fontFamily: FONTS.primary,
+              fontSize: '11px',
+              color: '#88ff88',
+              backgroundColor: '#2a2a3e',
+              padding: { x: 8, y: 4 },
+            }).setOrigin(0.5)
+              .setInteractive({ useHandCursor: true })
+              .on('pointerdown', () => {
+                this.showEquipDropdown(selectedSlot!.key, equippableItems, destroyAll);
+              });
+            infoElements.push(changeBtn);
+          }
+
           infoElements.forEach(el => uiElements.push(el));
+        } else {
+          if (equippableItems.length > 0) {
+            const infoBg = this.add.rectangle(width / 2, infoAreaY + 10, 350, 50, 0x1a1a2e, 0.95).setOrigin(0.5);
+            infoElements.push(infoBg);
+
+            const emptyLabel = this.add.text(width / 2, infoAreaY, 'Slot is empty', {
+              fontFamily: FONTS.primary,
+              fontSize: FONTS.size.small,
+              color: '#888888',
+            }).setOrigin(0.5);
+            infoElements.push(emptyLabel);
+
+            const equipBtn = this.add.text(width / 2, infoAreaY + 25, '[Equip Item]', {
+              fontFamily: FONTS.primary,
+              fontSize: '11px',
+              color: '#88ff88',
+              backgroundColor: '#2a2a3e',
+              padding: { x: 8, y: 4 },
+            }).setOrigin(0.5)
+              .setInteractive({ useHandCursor: true })
+              .on('pointerdown', () => {
+                this.showEquipDropdown(selectedSlot!.key, equippableItems, destroyAll);
+              });
+            infoElements.push(equipBtn);
+
+            infoElements.forEach(el => uiElements.push(el));
+          }
         }
       }
     };
@@ -863,6 +914,96 @@ export class TownScene extends Phaser.Scene {
     const closeBtn = this.createButton(width / 2, statsY + 70, 'Close', () => {
       destroyAll();
       this.infoText.setText(this.getPlayerInfo());
+    });
+    uiElements.push(closeBtn);
+  }
+
+  private showEquipDropdown(slot: keyof PlayerEquipment, items: InventoryItem[], onClose: () => void): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.9).setOrigin(0);
+    uiElements.push(overlay);
+
+    const panelWidth = 400;
+    const panelHeight = Math.min(450, 150 + items.length * 40);
+    const panel = this.add.rectangle(width / 2, height / 2, panelWidth, panelHeight, 0x2a2a3e).setOrigin(0.5);
+    uiElements.push(panel);
+
+    const slotNames: Record<keyof PlayerEquipment, string> = {
+      helmet: 'Helmet',
+      shoulders: 'Shoulders',
+      chest: 'Chest',
+      cape: 'Cape',
+      mainHand: 'Main Hand',
+      offHand: 'Off Hand',
+      legs: 'Legs',
+      boots: 'Boots'
+    };
+
+    const title = this.add.text(width / 2, height / 2 - panelHeight / 2 + 30, `Equip to ${slotNames[slot]}`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#f0a020',
+    }).setOrigin(0.5);
+    uiElements.push(title);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+    };
+
+    const itemStartY = height / 2 - panelHeight / 2 + 70;
+    const itemHeight = 35;
+    const maxDisplay = 10;
+
+    items.slice(0, maxDisplay).forEach((invItem, index) => {
+      const y = itemStartY + index * itemHeight;
+      const displayName = ForgingSystem.getItemDisplayName(invItem);
+      const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
+
+      const itemText = this.add.text(width / 2 - 150, y, displayName, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: itemColor,
+      });
+      uiElements.push(itemText);
+
+      const durability = invItem.durability ?? 100;
+      const maxDurability = invItem.maxDurability ?? 100;
+      const durabilityPercent = (durability / maxDurability) * 100;
+      let durabilityColor = '#88ff88';
+      if (durabilityPercent <= 0) durabilityColor = '#ff4444';
+      else if (durabilityPercent <= 25) durabilityColor = '#ffaa00';
+      else if (durabilityPercent <= 50) durabilityColor = '#ffff00';
+
+      const durabilityText = this.add.text(width / 2 + 20, y, `${Math.floor(durability)}/${maxDurability}`, {
+        fontFamily: FONTS.primary,
+        fontSize: '11px',
+        color: durabilityColor,
+      });
+      uiElements.push(durabilityText);
+
+      const equipBtn = this.add.text(width / 2 + 120, y, '[Equip]', {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: '#88ff88',
+      }).setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          const result = EquipmentManager.equipItem(player, invItem.itemId, slot);
+          this.showMessage(result.message);
+          if (result.success) {
+            this.gameState.updatePlayer(player);
+          }
+          destroyAll();
+          onClose();
+          this.openEquipment();
+        });
+      uiElements.push(equipBtn);
+    });
+
+    const closeBtn = this.createButton(width / 2, height / 2 + panelHeight / 2 - 30, 'Cancel', () => {
+      destroyAll();
     });
     uiElements.push(closeBtn);
   }
@@ -1053,7 +1194,7 @@ export class TownScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
     const uiElements: Phaser.GameObjects.GameObject[] = [];
-    let selectedItem: InventoryItem | null = null;
+    let selectedItem: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null } | null = null;
     let mode: 'enhance' | 'repair' = 'enhance';
 
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
@@ -1138,13 +1279,24 @@ export class TownScene extends Phaser.Scene {
     renderForge();
   }
 
-  private renderEnhanceMode(uiElements: Phaser.GameObjects.GameObject[], selectedItem: InventoryItem | null, onSelect: (item: InventoryItem | null) => void): void {
+  private renderEnhanceMode(uiElements: Phaser.GameObjects.GameObject[], selectedItem: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null } | null, onSelect: (item: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null } | null) => void): void {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
-    const forgeableItems = player.inventory.filter(item => ForgingSystem.canForgeItem(item));
+    
+    const forgeableItems: Array<{ item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }> = [];
+    
+    player.inventory.filter(item => ForgingSystem.canForgeItem(item)).forEach(item => {
+      forgeableItems.push({ item, equippedSlot: null });
+    });
+    
+    Object.entries(player.equipment).forEach(([slot, equipped]) => {
+      if (equipped && ForgingSystem.canForgeItem(equipped)) {
+        forgeableItems.push({ item: equipped, equippedSlot: slot as keyof PlayerEquipment });
+      }
+    });
 
     if (forgeableItems.length === 0) {
-      const noItemsText = this.add.text(width / 2, height / 2, 'No forgeable items in inventory.\n(Weapons and armor can be enhanced)', {
+      const noItemsText = this.add.text(width / 2, height / 2, 'No forgeable items in inventory or equipped.\n(Weapons and armor can be enhanced)', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: '#cccccc',
@@ -1158,14 +1310,20 @@ export class TownScene extends Phaser.Scene {
     const itemHeight = 35;
     const maxDisplay = 7;
 
-    forgeableItems.slice(0, maxDisplay).forEach((invItem, index) => {
+    forgeableItems.slice(0, maxDisplay).forEach((itemData, index) => {
       const y = itemsStartY + index * itemHeight;
-      const displayName = ForgingSystem.getItemDisplayName(invItem);
-      const currentLevel = invItem.enhancementLevel || 0;
+      const displayName = ForgingSystem.getItemDisplayName(itemData.item);
+      const currentLevel = itemData.item.enhancementLevel || 0;
       const maxLevel = ForgingSystem.getMaxEnhancementLevel();
       
-      const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
-      const itemText = this.add.text(width / 2 - 330, y, displayName, {
+      const itemColor = ItemColorUtil.getItemColor(itemData.item.enhancementLevel, itemData.item.isShiny);
+      
+      let itemNameText = displayName;
+      if (itemData.equippedSlot) {
+        itemNameText += ' [E]';
+      }
+      
+      const itemText = this.add.text(width / 2 - 330, y, itemNameText, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: itemColor,
@@ -1183,16 +1341,16 @@ export class TownScene extends Phaser.Scene {
         const selectBtn = this.add.text(width / 2 + 150, y, '[Select]', {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.small,
-          color: selectedItem === invItem ? '#ff8800' : '#8888ff',
+          color: selectedItem === itemData ? '#ff8800' : '#8888ff',
         }).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => onSelect(invItem));
+          .on('pointerdown', () => onSelect(itemData));
         uiElements.push(selectBtn);
       }
     });
 
     if (selectedItem) {
       const detailY = height / 2 + 80;
-      const currentLevel = selectedItem.enhancementLevel || 0;
+      const currentLevel = selectedItem.item.enhancementLevel || 0;
       const targetLevel = currentLevel + 1;
       const cost = ForgingSystem.getForgingCost(targetLevel);
 
@@ -1237,15 +1395,28 @@ export class TownScene extends Phaser.Scene {
     }
   }
 
-  private renderRepairMode(uiElements: Phaser.GameObjects.GameObject[], selectedItem: InventoryItem | null, onSelect: (item: InventoryItem | null) => void): void {
-    const { width, height } = this.cameras.main;
+  private renderRepairMode(uiElements: Phaser.GameObjects.GameObject[], selectedItem: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null } | null, onSelect: (item: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null } | null) => void): void {
+    const { width, height} = this.cameras.main;
     const player = this.gameState.getPlayer();
     
-    // Get all items that need repair (durability < max) or can be repaired
-    const repairableItems = player.inventory.filter(item => {
+    const repairableItems: Array<{ item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }> = [];
+    
+    player.inventory.forEach(item => {
       const currentDurability = item.durability ?? 100;
       const maxDurability = item.maxDurability ?? 100;
-      return (ItemDatabase.getWeapon(item.itemId) || ItemDatabase.getArmor(item.itemId)) && currentDurability < maxDurability;
+      if ((ItemDatabase.getWeapon(item.itemId) || ItemDatabase.getArmor(item.itemId)) && currentDurability < maxDurability) {
+        repairableItems.push({ item, equippedSlot: null });
+      }
+    });
+    
+    Object.entries(player.equipment).forEach(([slot, equipped]) => {
+      if (equipped) {
+        const currentDurability = equipped.durability ?? 100;
+        const maxDurability = equipped.maxDurability ?? 100;
+        if ((ItemDatabase.getWeapon(equipped.itemId) || ItemDatabase.getArmor(equipped.itemId)) && currentDurability < maxDurability) {
+          repairableItems.push({ item: equipped, equippedSlot: slot as keyof PlayerEquipment });
+        }
+      }
     });
 
     if (repairableItems.length === 0) {
@@ -1263,11 +1434,11 @@ export class TownScene extends Phaser.Scene {
     const itemHeight = 35;
     const maxDisplay = 7;
 
-    repairableItems.slice(0, maxDisplay).forEach((invItem, index) => {
+    repairableItems.slice(0, maxDisplay).forEach((itemData, index) => {
       const y = itemsStartY + index * itemHeight;
-      const displayName = ForgingSystem.getItemDisplayName(invItem);
-      const currentDurability = invItem.durability ?? 100;
-      const maxDurability = invItem.maxDurability ?? 100;
+      const displayName = ForgingSystem.getItemDisplayName(itemData.item);
+      const currentDurability = itemData.item.durability ?? 100;
+      const maxDurability = itemData.item.maxDurability ?? 100;
       const durabilityPercent = (currentDurability / maxDurability) * 100;
       
       let durabilityColor = '#88ff88';
@@ -1275,8 +1446,14 @@ export class TownScene extends Phaser.Scene {
       else if (durabilityPercent <= 25) durabilityColor = '#ffaa00';
       else if (durabilityPercent <= 50) durabilityColor = '#ffff00';
       
-      const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
-      const itemText = this.add.text(width / 2 - 330, y, displayName, {
+      const itemColor = ItemColorUtil.getItemColor(itemData.item.enhancementLevel, itemData.item.isShiny);
+      
+      let itemNameText = displayName;
+      if (itemData.equippedSlot) {
+        itemNameText += ' [E]';
+      }
+      
+      const itemText = this.add.text(width / 2 - 330, y, itemNameText, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: itemColor,
@@ -1293,21 +1470,21 @@ export class TownScene extends Phaser.Scene {
       const selectBtn = this.add.text(width / 2 + 200, y, '[Select]', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
-        color: selectedItem === invItem ? '#ff8800' : '#8888ff',
+        color: selectedItem === itemData ? '#ff8800' : '#8888ff',
       }).setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => onSelect(invItem));
+        .on('pointerdown', () => onSelect(itemData));
       uiElements.push(selectBtn);
     });
 
     if (selectedItem) {
       const detailY = height / 2 + 80;
-      const result = ForgingSystem.getRepairCost(selectedItem);
+      const result = ForgingSystem.getRepairCost(selectedItem.item);
 
       if (result) {
         const detailPanel = this.add.rectangle(width / 2, detailY, 700, 100, 0x1a1a2e).setOrigin(0.5);
         uiElements.push(detailPanel);
 
-        const detailTitle = this.add.text(width / 2, detailY - 40, `Repair ${ForgingSystem.getItemDisplayName(selectedItem)}`, {
+        const detailTitle = this.add.text(width / 2, detailY - 40, `Repair ${ForgingSystem.getItemDisplayName(selectedItem.item)}`, {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.medium,
           color: '#f0a020',
@@ -1315,7 +1492,7 @@ export class TownScene extends Phaser.Scene {
         uiElements.push(detailTitle);
 
         const detailsText = this.add.text(width / 2, detailY - 10, 
-          `Durability: ${Math.floor(selectedItem.durability ?? 100)}/${selectedItem.maxDurability ?? 100} → ${selectedItem.maxDurability ?? 100}/${selectedItem.maxDurability ?? 100}\nCost: ${result.aa} AA + ${result.ca.toFixed(1)} CA`, {
+          `Durability: ${Math.floor(selectedItem.item.durability ?? 100)}/${selectedItem.item.maxDurability ?? 100} → ${selectedItem.item.maxDurability ?? 100}/${selectedItem.item.maxDurability ?? 100}\nCost: ${result.aa} AA + ${result.ca.toFixed(1)} CA`, {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.small,
           color: '#ffffff',
@@ -1332,9 +1509,9 @@ export class TownScene extends Phaser.Scene {
     }
   }
 
-  private attemptRepair(item: InventoryItem): void {
+  private attemptRepair(itemData: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }): void {
     const player = this.gameState.getPlayer();
-    const cost = ForgingSystem.getRepairCost(item);
+    const cost = ForgingSystem.getRepairCost(itemData.item);
     
     if (cost.aa === 0 && cost.ca === 0) {
       this.showMessage('Item is already at full durability!');
@@ -1346,22 +1523,32 @@ export class TownScene extends Phaser.Scene {
       return;
     }
     
-    ForgingSystem.repairItem(item);
+    ForgingSystem.repairItem(itemData.item);
     player.arcaneAsh -= cost.aa;
     player.crystallineAnimus -= cost.ca;
+    
+    if (itemData.equippedSlot) {
+      player.equipment[itemData.equippedSlot] = itemData.item;
+    }
+    
     this.gameState.updatePlayer(player);
     
     this.showMessage(`Item repaired for ${cost.aa} AA and ${cost.ca.toFixed(1)} CA!`);
     this.infoText.setText(this.getPlayerInfo());
   }
 
-  private attemptForging(item: InventoryItem): void {
+  private attemptForging(itemData: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }): void {
     const player = this.gameState.getPlayer();
-    const result = ForgingSystem.attemptForging(item, player.arcaneAsh, player.crystallineAnimus);
+    const result = ForgingSystem.attemptForging(itemData.item, player.arcaneAsh, player.crystallineAnimus);
 
     if (!result.success && result.destroyed) {
-      this.gameState.removeItemFromInventory(item.itemId, 1);
+      if (itemData.equippedSlot) {
+        player.equipment[itemData.equippedSlot] = undefined;
+      } else {
+        this.gameState.removeItemFromInventory(itemData.item.itemId, 1);
+      }
       this.showMessage(result.message);
+      this.gameState.updatePlayer(player);
       this.infoText.setText(this.getPlayerInfo());
       return;
     }
@@ -1371,7 +1558,7 @@ export class TownScene extends Phaser.Scene {
       return;
     }
 
-    const targetLevel = (item.enhancementLevel || 0) + 1;
+    const targetLevel = (itemData.item.enhancementLevel || 0) + 1;
     const cost = ForgingSystem.getForgingCost(targetLevel);
     
     if (cost) {
@@ -1379,7 +1566,12 @@ export class TownScene extends Phaser.Scene {
       player.crystallineAnimus -= cost.ca;
     }
 
-    item.enhancementLevel = result.newLevel;
+    itemData.item.enhancementLevel = result.newLevel;
+    
+    if (itemData.equippedSlot) {
+      player.equipment[itemData.equippedSlot] = itemData.item;
+    }
+    
     this.gameState.updatePlayer(player);
     this.showMessage(result.message);
     this.infoText.setText(this.getPlayerInfo());
