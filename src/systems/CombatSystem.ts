@@ -360,7 +360,6 @@ export class CombatSystem {
 
     const allEnemiesDead = this.combatState.enemies.every(e => e.health <= 0);
     const playerDead = this.combatState.player.health <= 0;
-    const playerExhausted = this.combatState.player.stamina <= 0;
 
     if (allEnemiesDead) {
       this.combatState.isComplete = true;
@@ -370,10 +369,6 @@ export class CombatSystem {
       this.combatState.isComplete = true;
       this.combatState.playerVictory = false;
       this.combatState.combatLog.push('You have been defeated...');
-    } else if (playerExhausted) {
-      this.combatState.isComplete = true;
-      this.combatState.playerVictory = false;
-      this.combatState.combatLog.push('You are too exhausted to continue fighting and must flee!');
     }
   }
 
