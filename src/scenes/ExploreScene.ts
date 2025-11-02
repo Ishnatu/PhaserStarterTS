@@ -1163,11 +1163,14 @@ export class ExploreScene extends Phaser.Scene {
   }
 
   private handleEscapeKey(): void {
-    if (this.menuState === 'inventory' || this.menuState === 'equipment') {
+    if (this.menuState === 'inventory') {
       if (this.currentMenuCloseFunction) {
         this.currentMenuCloseFunction();
       }
-      this.openMenu();
+    } else if (this.menuState === 'equipment') {
+      if (this.currentMenuCloseFunction) {
+        this.currentMenuCloseFunction();
+      }
     } else if (this.menuState === 'main') {
       if (this.currentMenuCloseFunction) {
         this.currentMenuCloseFunction();
@@ -1657,11 +1660,7 @@ export class ExploreScene extends Phaser.Scene {
     text: string,
     callback: () => void
   ): Phaser.GameObjects.Container {
-    const bg = this.add.rectangle(0, 0, 140, 30, 0x444466)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => bg.setFillStyle(0x555577))
-      .on('pointerout', () => bg.setFillStyle(0x444466))
-      .on('pointerdown', callback);
+    const bg = this.add.rectangle(0, 0, 140, 30, 0x444466);
 
     const label = this.add.text(0, 0, text, {
       fontFamily: FONTS.primary,
@@ -1670,6 +1669,11 @@ export class ExploreScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     const container = this.add.container(x, y, [bg, label]);
+    container.setSize(140, 30);
+    container.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => bg.setFillStyle(0x555577))
+      .on('pointerout', () => bg.setFillStyle(0x444466))
+      .on('pointerdown', callback);
     container.setScrollFactor(0).setDepth(1002);
     
     return container;
