@@ -405,8 +405,16 @@ export class DelveScene extends Phaser.Scene {
 
     const abandonBtn = this.createButton(width / 2, height / 2 - 10, 'Abandon Delve', () => {
       destroyAll();
+      
+      if (this.currentDelve.location) {
+        this.gameState.markDelveCompleted(this.currentDelve.location.x, this.currentDelve.location.y);
+      }
+      
+      const spawnX = this.currentDelve.location ? this.currentDelve.location.x - 100 : 1500;
+      const spawnY = this.currentDelve.location ? this.currentDelve.location.y - 100 : 1500;
+      
       SceneManager.getInstance().transitionTo('explore', { 
-        returnToLocation: this.currentDelve.location 
+        returnToLocation: { x: spawnX, y: spawnY }
       });
     }, true);
     uiElements.push(abandonBtn);
