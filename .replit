@@ -27,7 +27,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "bash -c 'npm run server & npm run dev & wait'"
+args = "./start-servers.sh"
 waitForPort = 5000
 
 [[ports]]
@@ -39,16 +39,8 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 33705
-externalPort = 6000
-
-[[ports]]
-localPort = 37419
-externalPort = 3003
-
-[[ports]]
-localPort = 38255
-externalPort = 3001
+localPort = 39705
+externalPort = 3000
 
 [[ports]]
 localPort = 40269
