@@ -1539,7 +1539,23 @@ export class TownScene extends Phaser.Scene {
 
   private attemptForging(itemData: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }): void {
     const player = this.gameState.getPlayer();
+    const targetLevel = (itemData.item.enhancementLevel || 0) + 1;
+    const cost = ForgingSystem.getForgingCost(targetLevel);
+    
+    if (!cost) {
+      this.showMessage('Invalid forging level!');
+      return;
+    }
+    
+    if (player.arcaneAsh < cost.aa || player.crystallineAnimus < cost.ca) {
+      this.showMessage(`Insufficient funds! Need ${cost.aa} AA and ${cost.ca.toFixed(1)} CA`);
+      return;
+    }
+    
     const result = ForgingSystem.attemptForging(itemData.item, player.arcaneAsh, player.crystallineAnimus);
+
+    player.arcaneAsh -= cost.aa;
+    player.crystallineAnimus -= cost.ca;
 
     if (!result.success && result.destroyed) {
       if (itemData.equippedSlot) {
@@ -1547,23 +1563,10 @@ export class TownScene extends Phaser.Scene {
       } else {
         this.gameState.removeItemFromInventory(itemData.item.itemId, 1);
       }
-      this.showMessage(result.message);
       this.gameState.updatePlayer(player);
+      this.showMessage(result.message);
       this.infoText.setText(this.getPlayerInfo());
       return;
-    }
-
-    if (!result.success && !result.downgraded) {
-      this.showMessage(result.message);
-      return;
-    }
-
-    const targetLevel = (itemData.item.enhancementLevel || 0) + 1;
-    const cost = ForgingSystem.getForgingCost(targetLevel);
-    
-    if (cost) {
-      player.arcaneAsh -= cost.aa;
-      player.crystallineAnimus -= cost.ca;
     }
 
     itemData.item.enhancementLevel = result.newLevel;

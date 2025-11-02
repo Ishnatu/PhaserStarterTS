@@ -50,6 +50,18 @@ export class CombatSystem {
     }
 
     const staminaCost = GameConfig.COMBAT.STAMINA_COST_PER_ATTACK;
+    
+    if (this.combatState.player.stamina < staminaCost) {
+      return {
+        hit: false,
+        critical: false,
+        attackRoll: 0,
+        damage: 0,
+        damageBeforeReduction: 0,
+        message: 'Not enough stamina to attack!',
+      };
+    }
+    
     this.combatState.player.stamina = Math.max(0, this.combatState.player.stamina - staminaCost);
 
     const isDualWielding = EquipmentManager.isDualWielding(this.combatState.player);

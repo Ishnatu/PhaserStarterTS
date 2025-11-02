@@ -1166,7 +1166,7 @@ export class ExploreScene extends Phaser.Scene {
       .setDepth(999);
     uiElements.push(overlay);
 
-    const panel = this.add.rectangle(width / 2, height / 2, 400, 300, 0x2a2a3e)
+    const panel = this.add.rectangle(width / 2, height / 2, 400, 350, 0x2a2a3e)
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(1000);
@@ -1218,7 +1218,21 @@ export class ExploreScene extends Phaser.Scene {
       });
     uiElements.push(equipmentBtn);
 
-    const exitBtn = this.add.text(width / 2, height / 2 + 50, '[ Exit Game ]', {
+    const shortRestBtn = this.add.text(width / 2, height / 2 + 50, '[ Short Rest ]', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10000)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#88ff88'); })
+      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#ffffff'); })
+      .on('pointerdown', () => {
+        destroyAll();
+        this.attemptShortRest();
+      });
+    uiElements.push(shortRestBtn);
+
+    const exitBtn = this.add.text(width / 2, height / 2 + 100, '[ Exit Game ]', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.medium,
       color: '#ffffff',
@@ -1232,7 +1246,7 @@ export class ExploreScene extends Phaser.Scene {
       });
     uiElements.push(exitBtn);
 
-    const closeBtn = this.add.text(width / 2, height / 2 + 100, '[ Close Menu ]', {
+    const closeBtn = this.add.text(width / 2, height / 2 + 150, '[ Close Menu ]', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.medium,
       color: '#ffffff',
@@ -1462,6 +1476,38 @@ export class ExploreScene extends Phaser.Scene {
 
     this.gameState.removeItemFromInventory(itemId, 1);
     this.gameState.updatePlayer(player);
+  }
+
+  private attemptShortRest(): void {
+    const player = this.gameState.getPlayer();
+    
+    if (player.health >= player.maxHealth && player.stamina >= player.maxStamina) {
+      this.showMessage('You are already fully rested!');
+      return;
+    }
+
+    const recoveryPercent = GameConfig.STAMINA.REST_RECOVERY_PERCENT;
+    const healthRecovered = Math.floor(player.maxHealth * recoveryPercent);
+    const staminaRecovered = Math.floor(player.maxStamina * recoveryPercent);
+    
+    player.health = Math.min(player.maxHealth, player.health + healthRecovered);
+    player.stamina = Math.min(player.maxStamina, player.stamina + staminaRecovered);
+    
+    this.gameState.updatePlayer(player);
+    
+    this.showMessage(`Resting... Recovered ${healthRecovered} HP and ${staminaRecovered} Stamina`);
+    
+    const encounterChance = GameConfig.STAMINA.WILDERNESS_ENCOUNTER_CHANCE_WHILE_RESTING;
+    const encounterRoll = Math.random();
+    
+    if (encounterRoll < encounterChance) {
+      this.time.delayedCall(1500, () => {
+        this.showMessage('Your rest was interrupted by an enemy!');
+        this.time.delayedCall(1000, () => {
+          this.triggerEncounter();
+        });
+      });
+    }
   }
 
   private openEquipment(): void {
