@@ -1584,7 +1584,7 @@ export class TownScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
     const uiElements: Phaser.GameObjects.GameObject[] = [];
-    const REST_COST = 50;
+    const REST_COST = 0; // Free for testing
 
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
     const panel = this.add.rectangle(width / 2, height / 2, 600, 400, 0x2a2a3e).setOrigin(0.5);
@@ -1617,30 +1617,12 @@ export class TownScene extends Phaser.Scene {
     uiElements.push(playerStatusText);
 
     const costText = this.add.text(width / 2, height / 2 + 20, 
-      `Rest Cost: ${REST_COST} Arcane Ash`, {
+      `Rest Cost: FREE (Testing Mode)`, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
-      color: '#ffcc66',
+      color: '#88ff88',
     }).setOrigin(0.5);
     uiElements.push(costText);
-
-    const balanceDisplay = CurrencyDisplay.createCurrencyText(
-      this,
-      width / 2,
-      height / 2 + 50,
-      player.arcaneAsh,
-      'AA',
-      'small'
-    );
-    balanceDisplay.setScrollFactor(0);
-    balanceDisplay.x -= balanceDisplay.getBounds().width / 2;
-    balanceDisplay.list.forEach(child => {
-      if (child.type === 'Text') {
-        const text = child as Phaser.GameObjects.Text;
-        text.setColor(player.arcaneAsh >= REST_COST ? '#88ff88' : '#ff8888');
-      }
-    });
-    uiElements.push(balanceDisplay);
 
     const destroyAll = () => {
       uiElements.forEach(el => el.destroy());
@@ -1652,7 +1634,6 @@ export class TownScene extends Phaser.Scene {
     this.menuState = 'inn';
 
     const isFullyRested = player.health >= player.maxHealth && player.stamina >= player.maxStamina;
-    const canAfford = player.arcaneAsh >= REST_COST;
 
     if (isFullyRested) {
       const restBtn = this.createButton(width / 2, height / 2 + 100, 'Already Fully Rested', () => {});
@@ -1660,15 +1641,8 @@ export class TownScene extends Phaser.Scene {
       btnBg.setFillStyle(0x666666);
       btnBg.disableInteractive();
       uiElements.push(restBtn);
-    } else if (!canAfford) {
-      const restBtn = this.createButton(width / 2, height / 2 + 100, 'Not Enough Arcane Ash', () => {});
-      const btnBg = restBtn.getAt(0) as Phaser.GameObjects.Rectangle;
-      btnBg.setFillStyle(0x883333);
-      btnBg.disableInteractive();
-      uiElements.push(restBtn);
     } else {
-      const restBtn = this.createButton(width / 2, height / 2 + 100, 'Rest and Restore', () => {
-        player.arcaneAsh -= REST_COST;
+      const restBtn = this.createButton(width / 2, height / 2 + 100, 'Rest and Restore (FREE)', () => {
         player.health = player.maxHealth;
         player.stamina = player.maxStamina;
         this.gameState.updatePlayer(player);
