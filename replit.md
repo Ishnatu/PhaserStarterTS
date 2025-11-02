@@ -17,9 +17,10 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Current Visual Assets**: Pixel art city sprite for Roboka, pixel art delve entrance markers and trees, 370×510px equipment panel graphic, item sprites (shortsword). Player and NPCs are colored rectangles.
 - **Typography**: VT323 monospace font (Google Fonts) for all UI text and menus, configured in `src/config/fonts.ts` with standardized sizes.
 - **Currency Icons**: Pixel art coin sprites for Arcane Ash (AA) and Crystalline Animus (CA), displayed using the `CurrencyDisplay` utility.
-- **Equipment Panel**: Custom pixel art 3×4 grid panel (370×510px) displaying equipped items with interactive slots. Items render as sprites scaled to 70px max dimension while preserving aspect ratio.
+- **Equipment Panel**: Custom pixel art 3×4 grid panel (370×510px) displaying equipped items with interactive slots. Items render as sprites scaled to 70px max dimension while preserving aspect ratio. Click-to-equip functionality: clicking a slot shows a dropdown menu of equippable items with durability info and "[Equip]" buttons.
 - **Item Sprite System**: Configurable sprite mapping via `ItemSprites` class, dynamic loading in preload, supports any sprite dimensions with automatic scaling.
 - **Enhancement Color Coding**: Items display with color-coded names based on enhancement level: white (base), green (+1-3), blue (+4-6), purple (+7-8), red (+9), golden yellow (shiny).
+- **Equipped Item Indicators**: Items currently equipped display "[E]" marker in forge UI, allowing enhancement and repair while maintaining equipped status.
 - **Target Style (Future)**: Full pixel art assets, tabletop RPG aesthetic (dice rolling, grid-based), dark fantasy atmosphere (Void corruption theme), inspired by Heroes of Might and Magic and Final Fantasy.
 
 ### Technical Implementations
