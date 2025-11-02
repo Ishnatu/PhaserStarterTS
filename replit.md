@@ -3,6 +3,15 @@
 ## Overview
 Gemforge Chronicles is an ambitious web3 RPG game, drawing inspiration from classic turn-based games like Pokemon, Final Fantasy, and Heroes of Might and Magic, and incorporating tabletop RPG mechanics and a rich economy system. Built on Phaser 3 with TypeScript, the project aims to integrate with blockchain (Ronin network) for NFT support. The game features a core loop of town interaction, wilderness exploration, procedurally generated delves, and D20-style turn-based combat.
 
+## Recent Changes
+- **Fixed wilderness encounter UI bugs**: All interactive encounter screens (Wandering Merchant, Shrine, Void Corruption) now support ESC key to close and have fully clickable buttons
+- **Fixed delve abandonment**: Abandoned delves are now properly removed from the map and spawn location moved 100px away from entrance to prevent re-triggering
+- **Fixed town exit spawn**: Exiting town now spawns at (1550, 1550) to prevent immediate re-entry trigger
+- Fixed critical currency exploit: forging now validates funds upfront and deducts immediately, preventing negative balances
+- Fixed zero stamina attack bug: added defensive stamina validation in CombatSystem to block attacks when stamina insufficient
+- Implemented short rest system: wilderness menu (M key) now includes short rest option with 50% HP/stamina recovery and 30% encounter chance
+- Made innkeeper free (0 AA) for testing purposes to help recover from currency exploit
+
 ## User Preferences
 This is a long-term solo project built collaboratively with an AI assistant. The approach:
 1. User provides design vision and whitepaper

@@ -36,7 +36,7 @@ export class ExploreScene extends Phaser.Scene {
   private readonly TILE_SIZE: number = 32;
   private readonly WORLD_SIZE: number = 3000;
   private readonly CHUNK_SIZE: number = 800;
-  private menuState: 'none' | 'main' | 'inventory' | 'equipment' | 'quit' = 'none';
+  private menuState: 'none' | 'main' | 'inventory' | 'equipment' | 'quit' | 'encounter' = 'none';
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
   private terrainContainer!: Phaser.GameObjects.Container;
@@ -557,6 +557,29 @@ export class ExploreScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     uiElements.push(overlay, titleText, descText, choiceText);
+    
+    let buttonsDestroyed = false;
+    const destroyButtons = () => {
+      if (!buttonsDestroyed) {
+        yesBtnBg.destroy();
+        yesBtnLabel.destroy();
+        noBtnBg.destroy();
+        noBtnLabel.destroy();
+        buttonsDestroyed = true;
+      }
+    };
+    
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      destroyButtons();
+      this.encounterCooldown = false;
+      this.isOverlayActive = false;
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'encounter';
 
     const yesBtnBg = this.add.rectangle(width / 2 - 70, height / 2 + 60, 140, 30, 0x444466)
       .setScrollFactor(0).setDepth(1002)
@@ -565,22 +588,13 @@ export class ExploreScene extends Phaser.Scene {
       if (player.arcaneAsh < 50) {
         choiceText.setText('Not enough Arcane Ash!').setColor('#ff4444');
         this.time.delayedCall(2000, () => {
-          uiElements.forEach(el => el.destroy());
-          yesBtnBg.destroy();
-          yesBtnLabel.destroy();
-          noBtnBg.destroy();
-          noBtnLabel.destroy();
-          this.encounterCooldown = false;
-          this.isOverlayActive = false;
+          destroyAll();
         });
         return;
       }
 
       this.gameState.addArcaneAsh(-50);
-      yesBtnBg.destroy();
-      yesBtnLabel.destroy();
-      noBtnBg.destroy();
-      noBtnLabel.destroy();
+      destroyButtons();
 
       const roll = Math.random();
       if (roll < 0.70) {
@@ -634,13 +648,7 @@ export class ExploreScene extends Phaser.Scene {
       .setScrollFactor(0).setDepth(1002)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
-        uiElements.forEach(el => el.destroy());
-        yesBtnBg.destroy();
-        yesBtnLabel.destroy();
-        noBtnBg.destroy();
-        noBtnLabel.destroy();
-        this.encounterCooldown = false;
-        this.isOverlayActive = false;
+        destroyAll();
       });
 
     const noBtnLabel = this.add.text(width / 2 + 70, height / 2 + 60, 'Decline', {
@@ -676,18 +684,35 @@ export class ExploreScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     uiElements.push(overlay, titleText, descText, choiceText);
+    
+    let buttonsDestroyed = false;
+    const destroyButtons = () => {
+      if (!buttonsDestroyed) {
+        enterBtnBg.destroy();
+        enterBtnLabel.destroy();
+        fleeBtnBg.destroy();
+        fleeBtnLabel.destroy();
+        buttonsDestroyed = true;
+      }
+    };
+    
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      destroyButtons();
+      this.encounterCooldown = false;
+      this.isOverlayActive = false;
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'encounter';
 
     const enterBtnBg = this.add.rectangle(width / 2 - 70, height / 2 + 70, 140, 30, 0x444466)
       .setScrollFactor(0).setDepth(1002)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
-        uiElements.forEach(el => el.destroy());
-        enterBtnBg.destroy();
-        enterBtnLabel.destroy();
-        fleeBtnBg.destroy();
-        fleeBtnLabel.destroy();
-        this.isOverlayActive = false;
-
+        destroyAll();
         const eliteEnemy = EnemyFactory.createEnemy(2, false);
         eliteEnemy.lootTable.forEach(item => item.dropChance *= 2);
         this.startWildCombat([eliteEnemy]);
@@ -703,13 +728,7 @@ export class ExploreScene extends Phaser.Scene {
       .setScrollFactor(0).setDepth(1002)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
-        uiElements.forEach(el => el.destroy());
-        enterBtnBg.destroy();
-        enterBtnLabel.destroy();
-        fleeBtnBg.destroy();
-        fleeBtnLabel.destroy();
-        this.encounterCooldown = false;
-        this.isOverlayActive = false;
+        destroyAll();
       });
 
     const fleeBtnLabel = this.add.text(width / 2 + 70, height / 2 + 70, 'Flee', {
@@ -802,6 +821,17 @@ export class ExploreScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     uiElements.push(overlay, titleText, descText);
+    
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.encounterCooldown = false;
+      this.isOverlayActive = false;
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'encounter';
 
     const allItems = ShopData.getAllShopItems();
     const randomItems = [];
@@ -851,11 +881,9 @@ export class ExploreScene extends Phaser.Scene {
     });
 
     const closeBtn = this.createButton(width / 2, height / 2 + 180, 'Leave', () => {
-      uiElements.forEach(el => el.destroy());
-      closeBtn.destroy();
-      this.encounterCooldown = false;
-      this.isOverlayActive = false;
+      destroyAll();
     }).setScrollFactor(0).setDepth(1002);
+    uiElements.push(closeBtn);
   }
 
   private generateRandomEncounter(): any {
@@ -1145,6 +1173,10 @@ export class ExploreScene extends Phaser.Scene {
         this.currentMenuCloseFunction();
       }
     } else if (this.menuState === 'quit') {
+      if (this.currentMenuCloseFunction) {
+        this.currentMenuCloseFunction();
+      }
+    } else if (this.menuState === 'encounter') {
       if (this.currentMenuCloseFunction) {
         this.currentMenuCloseFunction();
       }
