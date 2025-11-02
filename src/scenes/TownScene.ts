@@ -801,7 +801,9 @@ export class TownScene extends Phaser.Scene {
         const spriteKey = ItemSprites.getSpriteKey(equipped.itemId);
         
         if (spriteKey) {
-          const itemSprite = this.add.image(slotX, slotY, equipped.itemId);
+          const spriteOffsetX = 3;
+          const spriteOffsetY = 4;
+          const itemSprite = this.add.image(slotX + spriteOffsetX, slotY + spriteOffsetY, equipped.itemId);
           itemSprite.setOrigin(0.5);
           
           const maxSize = 70;
