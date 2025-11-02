@@ -14,9 +14,12 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 ## System Architecture
 
 ### UI/UX Decisions
-- **Current Visual Assets**: Pixel art city sprite for Roboka, pixel art delve entrance markers and trees. Player and NPCs are colored rectangles.
+- **Current Visual Assets**: Pixel art city sprite for Roboka, pixel art delve entrance markers and trees, 370×510px equipment panel graphic, item sprites (shortsword). Player and NPCs are colored rectangles.
 - **Typography**: VT323 monospace font (Google Fonts) for all UI text and menus, configured in `src/config/fonts.ts` with standardized sizes.
 - **Currency Icons**: Pixel art coin sprites for Arcane Ash (AA) and Crystalline Animus (CA), displayed using the `CurrencyDisplay` utility.
+- **Equipment Panel**: Custom pixel art 3×4 grid panel (370×510px) displaying equipped items with interactive slots. Items render as sprites scaled to 70px max dimension while preserving aspect ratio.
+- **Item Sprite System**: Configurable sprite mapping via `ItemSprites` class, dynamic loading in preload, supports any sprite dimensions with automatic scaling.
+- **Enhancement Color Coding**: Items display with color-coded names based on enhancement level: white (base), green (+1-3), blue (+4-6), purple (+7-8), red (+9), golden yellow (shiny).
 - **Target Style (Future)**: Full pixel art assets, tabletop RPG aesthetic (dice rolling, grid-based), dark fantasy atmosphere (Void corruption theme), inspired by Heroes of Might and Magic and Final Fantasy.
 
 ### Technical Implementations
@@ -57,6 +60,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Merchant System**: Shop in Roboka selling base items, with real-time balance tracking. Wandering Merchant encounters offer discounts.
 - **Item Durability System**: Weapons and armor have durability that decays with use. Items become unusable at 0 durability and can be repaired at the blacksmith. Durability is color-coded.
 - **Forging & Enhancement System**: Blacksmith offers +1 to +9 weapon/armor enhancements with varying success rates, costs, and failure penalties (downgrade or destruction). Enhancements provide damage, durability, evasion, or damage reduction bonuses.
+- **Shiny System**: Rare variant items with golden nameplate that can occur during successful forging (0.5%-1.75% chance based on tier). Shiny items are immune to destruction but can still be downgraded on failure. Provides aspirational prestige goals.
 
 ## External Dependencies
 
