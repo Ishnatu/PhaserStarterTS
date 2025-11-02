@@ -11,6 +11,7 @@ import { ForgingSystem } from '../systems/ForgingSystem';
 import { CurrencyDisplay } from '../utils/CurrencyDisplay';
 import { FONTS } from '../config/fonts';
 import { ItemColorUtil } from '../utils/ItemColorUtil';
+import { ItemSprites } from '../config/ItemSprites';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -27,6 +28,11 @@ export class TownScene extends Phaser.Scene {
     this.load.image('coin-aa', '/assets/ui/currency/arcane-ash-coin.png');
     this.load.image('coin-ca', '/assets/ui/currency/crystalline-animus-coin.png');
     this.load.image('equipment-panel', '/assets/ui/equipment-panel.png');
+    
+    const itemSprites = ItemSprites.getAllSpritePaths();
+    itemSprites.forEach(({ itemId, path }) => {
+      this.load.image(itemId, path);
+    });
   }
 
   create() {
@@ -792,21 +798,34 @@ export class TownScene extends Phaser.Scene {
       const equipped = player.equipment[gridSlot.key];
       
       if (equipped) {
-        const itemName = ForgingSystem.getItemDisplayName({ 
-          itemId: equipped.itemId, 
-          quantity: 1, 
-          enhancementLevel: equipped.enhancementLevel 
-        });
+        const spriteKey = ItemSprites.getSpriteKey(equipped.itemId);
+        
+        if (spriteKey) {
+          const itemSprite = this.add.image(slotX, slotY, equipped.itemId);
+          itemSprite.setOrigin(0.5);
+          
+          const maxSize = 70;
+          const scale = Math.min(maxSize / itemSprite.width, maxSize / itemSprite.height);
+          itemSprite.setScale(scale);
+          
+          uiElements.push(itemSprite);
+        } else {
+          const itemName = ForgingSystem.getItemDisplayName({ 
+            itemId: equipped.itemId, 
+            quantity: 1, 
+            enhancementLevel: equipped.enhancementLevel 
+          });
 
-        const itemColor = ItemColorUtil.getItemColor(equipped.enhancementLevel, equipped.isShiny);
-        const itemLabel = this.add.text(slotX, slotY, itemName, {
-          fontFamily: FONTS.primary,
-          fontSize: '10px',
-          color: itemColor,
-          wordWrap: { width: 80 },
-          align: 'center',
-        }).setOrigin(0.5);
-        uiElements.push(itemLabel);
+          const itemColor = ItemColorUtil.getItemColor(equipped.enhancementLevel, equipped.isShiny);
+          const itemLabel = this.add.text(slotX, slotY, itemName, {
+            fontFamily: FONTS.primary,
+            fontSize: '10px',
+            color: itemColor,
+            wordWrap: { width: 80 },
+            align: 'center',
+          }).setOrigin(0.5);
+          uiElements.push(itemLabel);
+        }
       } else {
         const emptyLabel = this.add.text(slotX, slotY, 'Empty', {
           fontFamily: FONTS.primary,
