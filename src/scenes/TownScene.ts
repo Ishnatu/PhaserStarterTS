@@ -26,6 +26,7 @@ export class TownScene extends Phaser.Scene {
   preload() {
     this.load.image('coin-aa', '/assets/ui/currency/arcane-ash-coin.png');
     this.load.image('coin-ca', '/assets/ui/currency/crystalline-animus-coin.png');
+    this.load.image('equipment-panel', '/assets/ui/equipment-panel.png');
   }
 
   create() {
@@ -665,15 +666,15 @@ export class TownScene extends Phaser.Scene {
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
-    const panel = this.add.rectangle(width / 2, height / 2, 700, 550, 0x2a2a3e).setOrigin(0.5);
-    uiElements.push(overlay, panel);
+    uiElements.push(overlay);
 
-    const title = this.add.text(width / 2, height / 2 - 250, 'Equipment', {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.large,
-      color: '#f0a020',
-    }).setOrigin(0.5);
-    uiElements.push(title);
+    const panelWidth = 370;
+    const panelHeight = 510;
+    const panelX = width / 2;
+    const panelY = height / 2 - 30;
+
+    const panel = this.add.image(panelX, panelY, 'equipment-panel').setOrigin(0.5);
+    uiElements.push(panel);
 
     const destroyAll = () => {
       uiElements.forEach(el => el.destroy());
@@ -684,82 +685,140 @@ export class TownScene extends Phaser.Scene {
     this.currentMenuCloseFunction = destroyAll;
     this.menuState = 'equipment';
 
-    const slots: Array<{ key: keyof PlayerEquipment; label: string }> = [
-      { key: 'mainHand', label: 'Main Hand' },
-      { key: 'offHand', label: 'Off Hand' },
-      { key: 'helmet', label: 'Helmet' },
-      { key: 'chest', label: 'Chest' },
-      { key: 'legs', label: 'Legs' },
-      { key: 'boots', label: 'Boots' },
-      { key: 'shoulders', label: 'Shoulders' },
-      { key: 'cape', label: 'Cape' },
+    const gridCellWidth = 110;
+    const gridCellHeight = 105;
+    const hitAreaSize = 85;
+    const gridStartX = panelX - 110;
+    const gridStartY = panelY - 132;
+
+    const gridSlots: Array<{ key: keyof PlayerEquipment | null; row: number; col: number }> = [
+      { key: null, row: 0, col: 0 },
+      { key: 'helmet', row: 0, col: 1 },
+      { key: null, row: 0, col: 2 },
+      { key: 'shoulders', row: 1, col: 0 },
+      { key: 'chest', row: 1, col: 1 },
+      { key: 'cape', row: 1, col: 2 },
+      { key: 'mainHand', row: 2, col: 0 },
+      { key: 'legs', row: 2, col: 1 },
+      { key: 'offHand', row: 2, col: 2 },
+      { key: null, row: 3, col: 0 },
+      { key: 'boots', row: 3, col: 1 },
+      { key: null, row: 3, col: 2 },
     ];
 
-    const startY = height / 2 - 200;
-    const slotHeight = 35;
+    const infoAreaY = panelY + panelHeight / 2 + 10;
+    let selectedSlot: { key: keyof PlayerEquipment; x: number; y: number } | null = null;
+    let infoElements: Phaser.GameObjects.GameObject[] = [];
 
-    slots.forEach((slot, index) => {
-      const y = startY + index * slotHeight;
-      
-      const slotLabel = this.add.text(width / 2 - 320, y, `${slot.label}:`, {
-        fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
-        color: '#aaaaaa',
-      });
-      uiElements.push(slotLabel);
+    const updateInfoDisplay = () => {
+      infoElements.forEach(el => el.destroy());
+      infoElements = [];
 
-      const equipped = player.equipment[slot.key];
-      const item = equipped ? ItemDatabase.getItem(equipped.itemId) : null;
-      const itemName = equipped ? ForgingSystem.getItemDisplayName({ itemId: equipped.itemId, quantity: 1, enhancementLevel: equipped.enhancementLevel }) : 'Empty';
-
-      const itemColor = equipped ? ItemColorUtil.getItemColor(equipped.enhancementLevel, equipped.isShiny) : '#666666';
-      const itemLabel = this.add.text(width / 2 - 200, y, itemName, {
-        fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
-        color: itemColor,
-      });
-      uiElements.push(itemLabel);
-      
-      // Show durability for equipped items
-      if (equipped && item) {
-        const currentDurability = equipped.durability ?? 100;
-        const maxDurability = equipped.maxDurability ?? 100;
-        const durabilityPercent = (currentDurability / maxDurability) * 100;
-        
-        let durabilityColor = '#88ff88';
-        if (durabilityPercent <= 0) durabilityColor = '#ff4444';
-        else if (durabilityPercent <= 25) durabilityColor = '#ffaa00';
-        else if (durabilityPercent <= 50) durabilityColor = '#ffff00';
-        
-        const durabilityLabel = this.add.text(width / 2 + 50, y, `[${Math.floor(currentDurability)}/${maxDurability}]`, {
-          fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
-          color: durabilityColor,
-        });
-        uiElements.push(durabilityLabel);
-      }
-
-      if (equipped) {
-        const unequipBtn = this.add.text(width / 2 + 180, y, '[Unequip]', {
-          fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
-          color: '#ff8888',
-        }).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => {
-            const result = EquipmentManager.unequipItem(player, slot.key);
-            this.showMessage(result.message);
-            if (result.success) {
-              this.gameState.updatePlayer(player);
-            }
-            destroyAll();
-            this.openEquipment();
+      if (selectedSlot) {
+        const equipped = player.equipment[selectedSlot.key];
+        if (equipped) {
+          const itemName = ForgingSystem.getItemDisplayName({ 
+            itemId: equipped.itemId, 
+            quantity: 1, 
+            enhancementLevel: equipped.enhancementLevel 
           });
-        uiElements.push(unequipBtn);
+
+          const currentDurability = equipped.durability ?? 100;
+          const maxDurability = equipped.maxDurability ?? 100;
+          const durabilityPercent = (currentDurability / maxDurability) * 100;
+          
+          let durabilityColor = '#88ff88';
+          if (durabilityPercent <= 0) durabilityColor = '#ff4444';
+          else if (durabilityPercent <= 25) durabilityColor = '#ffaa00';
+          else if (durabilityPercent <= 50) durabilityColor = '#ffff00';
+
+          const itemColor = ItemColorUtil.getItemColor(equipped.enhancementLevel, equipped.isShiny);
+
+          const infoBg = this.add.rectangle(width / 2, infoAreaY + 20, 350, 65, 0x1a1a2e, 0.95).setOrigin(0.5);
+          infoElements.push(infoBg);
+
+          const nameLabel = this.add.text(width / 2, infoAreaY, itemName, {
+            fontFamily: FONTS.primary,
+            fontSize: FONTS.size.small,
+            color: itemColor,
+          }).setOrigin(0.5);
+          infoElements.push(nameLabel);
+
+          const durabilityLabel = this.add.text(width / 2, infoAreaY + 20, `Durability: ${Math.floor(currentDurability)}/${maxDurability}`, {
+            fontFamily: FONTS.primary,
+            fontSize: '11px',
+            color: durabilityColor,
+          }).setOrigin(0.5);
+          infoElements.push(durabilityLabel);
+
+          const unequipBtn = this.add.text(width / 2, infoAreaY + 40, '[Unequip]', {
+            fontFamily: FONTS.primary,
+            fontSize: '11px',
+            color: '#ff8888',
+            backgroundColor: '#2a2a3e',
+            padding: { x: 8, y: 4 },
+          }).setOrigin(0.5)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => {
+              const result = EquipmentManager.unequipItem(player, selectedSlot!.key);
+              this.showMessage(result.message);
+              if (result.success) {
+                this.gameState.updatePlayer(player);
+              }
+              destroyAll();
+              this.openEquipment();
+            });
+          infoElements.push(unequipBtn);
+
+          infoElements.forEach(el => uiElements.push(el));
+        }
+      }
+    };
+
+    gridSlots.forEach((gridSlot) => {
+      if (!gridSlot.key) return;
+
+      const slotX = gridStartX + gridSlot.col * gridCellWidth;
+      const slotY = gridStartY + gridSlot.row * gridCellHeight;
+
+      const slotHitArea = this.add.rectangle(slotX, slotY, hitAreaSize, hitAreaSize, 0x000000, 0)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          selectedSlot = { key: gridSlot.key!, x: slotX, y: slotY };
+          updateInfoDisplay();
+        });
+      uiElements.push(slotHitArea);
+
+      const equipped = player.equipment[gridSlot.key];
+      
+      if (equipped) {
+        const itemName = ForgingSystem.getItemDisplayName({ 
+          itemId: equipped.itemId, 
+          quantity: 1, 
+          enhancementLevel: equipped.enhancementLevel 
+        });
+
+        const itemColor = ItemColorUtil.getItemColor(equipped.enhancementLevel, equipped.isShiny);
+        const itemLabel = this.add.text(slotX, slotY, itemName, {
+          fontFamily: FONTS.primary,
+          fontSize: '10px',
+          color: itemColor,
+          wordWrap: { width: 80 },
+          align: 'center',
+        }).setOrigin(0.5);
+        uiElements.push(itemLabel);
+      } else {
+        const emptyLabel = this.add.text(slotX, slotY, 'Empty', {
+          fontFamily: FONTS.primary,
+          fontSize: '10px',
+          color: '#666666',
+        }).setOrigin(0.5);
+        uiElements.push(emptyLabel);
       }
     });
 
-    const statsY = height / 2 + 100;
-    const statsTitle = this.add.text(width / 2 - 320, statsY, 'Combat Stats:', {
+    const statsY = infoAreaY + 80;
+    const statsTitle = this.add.text(width / 2 - 150, statsY, 'Combat Stats:', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#f0a020',
@@ -771,17 +830,16 @@ export class TownScene extends Phaser.Scene {
       `Damage Reduction: ${Math.floor(player.stats.damageReduction * 100)}%`,
       `Attack Bonus: +${player.stats.attackBonus}`,
       `Damage Bonus: +${player.stats.damageBonus}`,
-    ].join('\n');
+    ].join('  |  ');
 
-    const statsDisplay = this.add.text(width / 2 - 320, statsY + 25, statsText, {
+    const statsDisplay = this.add.text(width / 2, statsY + 25, statsText, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
-      lineSpacing: 5,
-    });
+    }).setOrigin(0.5);
     uiElements.push(statsDisplay);
 
-    const closeBtn = this.createButton(width / 2, height / 2 + 240, 'Close', () => {
+    const closeBtn = this.createButton(width / 2, statsY + 70, 'Close', () => {
       destroyAll();
       this.infoText.setText(this.getPlayerInfo());
     });
