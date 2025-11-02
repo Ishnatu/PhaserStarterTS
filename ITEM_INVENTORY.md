@@ -117,12 +117,37 @@ All weapons and armor can be enhanced from **+0 to +9** using the Blacksmith's F
 
 ## Item Sprites
 
-Currently implemented sprites:
-- **shortsword_basic**: Pixel art shortsword (768×768px, auto-scaled to 70px display)
+**19 out of 26 items** now have pixel art sprites!
 
-**Recommended sprite size for future items**: 64×64 pixels (optimal for file size and retro aesthetic)
+### Weapons with Sprites (11):
+- Iron Dagger (dagger_basic)
+- Steel Shortsword (shortsword_basic)
+- Dueling Rapier (rapier_basic)
+- Longsword (longsword_basic)
+- Battle Axe (battleaxe_basic)
+- Steel Mace (mace_basic)
+- Warhammer (warhammer_basic)
+- Great Axe (greataxe_basic)
+- Quarterstaff (staff_basic)
+- Wooden Shield (shield_wooden)
+- Steel Shield (shield_steel)
 
-All sprites automatically scale to fit 70×70px display area while maintaining aspect ratio.
+### Armor with Sprites (8):
+- Leather Cap (helmet_leather)
+- Iron Helmet (helmet_heavy)
+- Leather Armor (chest_leather)
+- Plate Armor (chest_heavy)
+- Leather Pants (legs_leather)
+- Plate Greaves (legs_heavy)
+- Leather Boots (boots_leather)
+- Steel Boots (boots_heavy)
+
+### Items Still Needing Sprites (7):
+- Spear, Greatsword (weapons)
+- Leather Pauldrons, Steel Pauldrons, Traveler's Cloak (armor)
+- Health Potion, Stamina Potion
+
+**Sprite Details**: All sprites auto-scale to fit 70×70px display area while maintaining aspect ratio. Stored in `/public/assets/items/weapons/` and `/public/assets/items/armor/`.
 
 ---
 
