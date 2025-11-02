@@ -70,8 +70,8 @@ export class TownScene extends Phaser.Scene {
     this.createNPCs();
 
     const exploreBtn = this.createButton(width / 2, height - 100, 'Venture Into the Wilds', () => {
-      const robokaX = 1650;
-      const robokaY = 1500;
+      const robokaX = 1550;
+      const robokaY = 1550;
       SceneManager.getInstance().transitionTo('explore', { 
         returnToLocation: { x: robokaX, y: robokaY } 
       });
