@@ -33,7 +33,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **State Management**: Server-side PostgreSQL saves with 30-second auto-save, LocalStorage fallback for offline play.
 - **Core Gameplay Loop**: Main Menu -> Town (Roboka) -> Explore Map -> Delve (3-5 Rooms) -> Combat -> Back to Town.
 - **D20 Combat System**: Turn-based combat with d20 attack rolls, critical hits, weapon damage dice, and armor damage reduction. Stamina is a key resource. Combat UI is Pokemon-style with action menus (Attack, Inventory, Run). Stamina emergency system automatically consumes potions if available.
-- **Stamina Management**: Drains per tile moved and per attack. Short rests restore health/stamina but risk encounters.
+- **Stamina Management**: Drains per tile moved (0.33/sec) and per attack (5 stamina). Short rests in wilderness (M menu) restore 50% health/stamina with 30% encounter risk. Combat system validates stamina before allowing attacks.
 - **Delve Generation**: Procedurally generated 3-5 room dungeons with varied room types and tier-based difficulty. Completed delves are removed from the map.
 - **Economy**: Uses Arcane Ash (AA) for common transactions and Crystalline Animus (CA) for rare items.
 - **Inventory & Equipment**: 8-slot equipment system, 15-slot active inventory, and 80-slot footlocker. Supports dual-wielding of 1-handed weapons.
@@ -60,7 +60,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Potion Mechanics**: Restore health/stamina.
 - **Merchant System**: Shop in Roboka selling base items, with real-time balance tracking. Wandering Merchant encounters offer discounts.
 - **Item Durability System**: Weapons and armor have durability that decays with use. Items become unusable at 0 durability and can be repaired at the blacksmith. Durability is color-coded.
-- **Forging & Enhancement System**: Blacksmith offers +1 to +9 weapon/armor enhancements with varying success rates, costs, and failure penalties (downgrade or destruction). Enhancements provide damage, durability, evasion, or damage reduction bonuses.
+- **Forging & Enhancement System**: Blacksmith offers +1 to +9 weapon/armor enhancements with varying success rates, costs, and failure penalties (downgrade or destruction). Enhancements provide damage, durability, evasion, or damage reduction bonuses. Currency validation prevents negative balances - funds checked before forging and deducted immediately after attempt.
 - **Shiny System**: Rare variant items with golden nameplate that can occur during successful forging (0.5%-1.75% chance based on tier). Shiny items are immune to destruction but can still be downgraded on failure. Provides aspirational prestige goals.
 
 ## External Dependencies
