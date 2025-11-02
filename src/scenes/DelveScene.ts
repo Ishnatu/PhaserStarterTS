@@ -83,6 +83,7 @@ export class DelveScene extends Phaser.Scene {
       const y = mapY;
 
       const isCurrent = roomId === this.currentDelve.currentRoomId;
+      const hasBeenVisited = room.completed || isCurrent;
       const color = this.getRoomColor(room, isCurrent);
 
       const roomIcon = this.add.circle(x, y, 20, color);
@@ -99,10 +100,10 @@ export class DelveScene extends Phaser.Scene {
         });
       }
 
-      const label = this.add.text(x, y + 35, this.getRoomLabel(room), {
+      const label = this.add.text(x, y + 35, hasBeenVisited ? this.getRoomLabel(room) : '???', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
-        color: '#cccccc',
+        color: hasBeenVisited ? '#cccccc' : '#666666',
       }).setOrigin(0.5);
 
       if (index < this.currentDelve.rooms.size - 1) {
@@ -149,6 +150,10 @@ export class DelveScene extends Phaser.Scene {
       } else if (currentRoom.type === 'treasure') {
         this.createButton(width / 2, btnY, 'Collect Treasure', () => {
           this.collectTreasure(currentRoom);
+        });
+      } else if (currentRoom.type === 'trap') {
+        this.createButton(width / 2, btnY, 'Investigate Trap', () => {
+          this.investigateTrap(currentRoom);
         });
       } else {
         this.createButton(width / 2, btnY, 'Solve Challenge', () => {
@@ -208,15 +213,7 @@ export class DelveScene extends Phaser.Scene {
   private getRoomColor(room: DelveRoom, isCurrent: boolean): number {
     if (isCurrent) return 0xffaa00;
     if (room.completed) return 0x00aa00;
-    
-    switch (room.type) {
-      case 'combat': return 0xff4444;
-      case 'boss': return 0x8b0000;
-      case 'treasure': return 0xffcc00;
-      case 'puzzle': return 0x4488ff;
-      case 'trap': return 0xff8800;
-      default: return 0x888888;
-    }
+    return 0x888888;
   }
 
   private getRoomLabel(room: DelveRoom): string {
@@ -272,6 +269,213 @@ export class DelveScene extends Phaser.Scene {
     room.completed = true;
     this.showMessage('Challenge overcome!');
     this.scene.restart({ delve: this.currentDelve });
+  }
+
+  private investigateTrap(room: DelveRoom): void {
+    if (room.completed) {
+      console.warn('Attempted to investigate already-completed trap');
+      return;
+    }
+
+    const { width, height } = this.cameras.main;
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setDepth(999);
+    const panel = this.add.rectangle(width / 2, height / 2, 600, 400, 0x2a2a3e).setOrigin(0.5).setDepth(1000);
+    uiElements.push(overlay, panel);
+
+    const title = this.add.text(width / 2, height / 2 - 160, 'Trapped Room!', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#ff8844',
+    }).setOrigin(0.5).setDepth(1001);
+    uiElements.push(title);
+
+    const desc = this.add.text(width / 2, height / 2 - 100, 
+      'You notice a suspicious mechanism near the door.\nAttempt to disarm it?', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+      align: 'center',
+    }).setOrigin(0.5).setDepth(1001);
+    uiElements.push(desc);
+
+    const disarmBtn = this.createButton(width / 2, height / 2, 'Attempt to Disarm', () => {
+      uiElements.forEach(el => el.destroy());
+      this.attemptTrapDisarm(room);
+    });
+    disarmBtn.setDepth(1002);
+    uiElements.push(disarmBtn);
+
+    const cancelBtn = this.createButton(width / 2, height / 2 + 60, 'Leave Room', () => {
+      uiElements.forEach(el => el.destroy());
+    });
+    cancelBtn.setDepth(1002);
+    uiElements.push(cancelBtn);
+  }
+
+  private attemptTrapDisarm(room: DelveRoom): void {
+    const { width, height } = this.cameras.main;
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setDepth(999);
+    const panel = this.add.rectangle(width / 2, height / 2, 600, 450, 0x2a2a3e).setOrigin(0.5).setDepth(1000);
+    uiElements.push(overlay, panel);
+
+    const dc = 8 + (this.currentDelve.tier - 1) * 2;
+    const roll = DiceRoller.rollD20();
+    const success = roll >= dc;
+
+    const rollText = this.add.text(width / 2, height / 2 - 150, 
+      `Rolling D20 to disarm... (DC ${dc})`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffaa44',
+      align: 'center',
+    }).setOrigin(0.5).setDepth(1001);
+    uiElements.push(rollText);
+
+    const resultText = this.add.text(width / 2, height / 2 - 100, 
+      `Rolled: ${roll}${roll === 20 ? ' (CRITICAL!)' : ''}`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: success ? '#44ff44' : '#ff4444',
+      align: 'center',
+    }).setOrigin(0.5).setDepth(1001);
+    uiElements.push(resultText);
+
+    if (success) {
+      const successMsg = this.add.text(width / 2, height / 2 - 30, 
+        'Success! You carefully disable the trap mechanism.', {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: '#44ff44',
+        align: 'center',
+        wordWrap: { width: 550 },
+      }).setOrigin(0.5).setDepth(1001);
+      uiElements.push(successMsg);
+
+      const continueBtn = this.createButton(width / 2, height / 2 + 80, 'Continue', () => {
+        room.completed = true;
+        this.scene.restart({ delve: this.currentDelve });
+      });
+      continueBtn.setDepth(1002);
+      uiElements.push(continueBtn);
+    } else {
+      this.handleTrapFailure(room, uiElements);
+    }
+  }
+
+  private handleTrapFailure(room: DelveRoom, uiElements: Phaser.GameObjects.GameObject[]): void {
+    const { width, height } = this.cameras.main;
+
+    const failureText = this.add.text(width / 2, height / 2 - 30, 
+      'You gently pull at a thin string, it breaks just before\nyou can release the lock, you hear a faint click\nbehind the wall.', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ff8844',
+      align: 'center',
+      wordWrap: { width: 550 },
+    }).setOrigin(0.5).setDepth(1001);
+    uiElements.push(failureText);
+
+    const choiceText = this.add.text(width / 2, height / 2 + 50, 
+      'Do you duck and hide or try and leap to safety?', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffcc88',
+      align: 'center',
+    }).setOrigin(0.5).setDepth(1001);
+    uiElements.push(choiceText);
+
+    const trapType = Math.random() < 0.5 ? 'spike' : 'dart';
+
+    const duckBtn = this.createButton(width / 2 - 100, height / 2 + 120, 'Duck and Hide', () => {
+      this.resolveTrapChoice('duck', trapType, room, uiElements);
+    });
+    duckBtn.setDepth(1002);
+    uiElements.push(duckBtn);
+
+    const leapBtn = this.createButton(width / 2 + 100, height / 2 + 120, 'Leap to Safety', () => {
+      this.resolveTrapChoice('leap', trapType, room, uiElements);
+    });
+    leapBtn.setDepth(1002);
+    uiElements.push(leapBtn);
+  }
+
+  private resolveTrapChoice(choice: 'duck' | 'leap', trapType: 'spike' | 'dart', room: DelveRoom, uiElements: Phaser.GameObjects.GameObject[]): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+
+    const hitByTrap = (choice === 'duck' && trapType === 'spike') || (choice === 'leap' && trapType === 'dart');
+
+    uiElements.forEach(el => el.destroy());
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setDepth(999);
+    const panel = this.add.rectangle(width / 2, height / 2, 600, 400, 0x2a2a3e).setOrigin(0.5).setDepth(1000);
+
+    if (hitByTrap) {
+      const damage = DiceRoller.rollDiceTotal({ numDice: 2, dieSize: 10, modifier: 4 }).total;
+      player.health = Math.max(0, player.health - damage);
+      this.gameState.updatePlayer(player);
+
+      const trapName = trapType === 'spike' ? 'floor spikes' : 'poison darts';
+      const resultText = this.add.text(width / 2, height / 2 - 80, 
+        `The trap triggers!\n${trapName.toUpperCase()} shoot out!`, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.medium,
+        color: '#ff4444',
+        align: 'center',
+      }).setOrigin(0.5).setDepth(1001);
+
+      const damageText = this.add.text(width / 2, height / 2, 
+        `You take ${damage} damage!`, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.large,
+        color: '#ff0000',
+      }).setOrigin(0.5).setDepth(1001);
+
+      const hpText = this.add.text(width / 2, height / 2 + 60, 
+        `HP: ${player.health}/${player.maxHealth}`, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.medium,
+        color: player.health < player.maxHealth * 0.3 ? '#ff4444' : '#88ff88',
+      }).setOrigin(0.5).setDepth(1001);
+
+      const continueBtn = this.createButton(width / 2, height / 2 + 130, 'Continue', () => {
+        if (player.health <= 0) {
+          SceneManager.getInstance().transitionTo('town');
+        } else {
+          room.completed = true;
+          this.scene.restart({ delve: this.currentDelve });
+        }
+      });
+      continueBtn.setDepth(1002);
+    } else {
+      const trapName = trapType === 'spike' ? 'deadly spikes' : 'poison darts';
+      const dodgeAction = choice === 'duck' ? 'Duck behind cover' : 'Leap out of the way';
+      
+      const resultText = this.add.text(width / 2, height / 2 - 60, 
+        `${dodgeAction}!\nYou narrowly avoid the ${trapName}!`, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.medium,
+        color: '#44ff44',
+        align: 'center',
+      }).setOrigin(0.5).setDepth(1001);
+
+      const successText = this.add.text(width / 2, height / 2 + 20, 
+        'You safely navigate past the trap.', {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: '#88ff88',
+      }).setOrigin(0.5).setDepth(1001);
+
+      const continueBtn = this.createButton(width / 2, height / 2 + 100, 'Continue', () => {
+        room.completed = true;
+        this.scene.restart({ delve: this.currentDelve });
+      });
+      continueBtn.setDepth(1002);
+    }
   }
 
   private moveToNextRoom(room: DelveRoom): void {
