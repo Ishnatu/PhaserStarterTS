@@ -4,17 +4,13 @@
 Gemforge Chronicles is an ambitious web3 RPG game, drawing inspiration from classic turn-based games like Pokemon, Final Fantasy, and Heroes of Might and Magic, and incorporating tabletop RPG mechanics and a rich economy system. Built on Phaser 3 with TypeScript, the project aims to integrate with blockchain (Ronin network) for NFT support. The game features a core loop of town interaction, wilderness exploration, procedurally generated delves, and D20-style turn-based combat.
 
 ## Recent Changes
+- **Soulbinding & Karma System**: Complete extraction game mechanics implemented - Garthek the Stitcher NPC allows binding up to 3 equipment slots to soul (soulbound items return on death). Karma system rewards players who return looted tombstone items via Halls of Virtue. Keeper of Virtue NPC shows leaderboard and unclaimed returns.
+- **Tombstone Encounters**: 5% random encounter chance to find other players' tombstones with lootable items. Full inventory overflow handling with item selection UI.
+- **Enhanced Wilderness Visuals**: Added pixel art bushes and grass tufts (2 variants) scattered procedurally across terrain for visual depth and atmosphere.
+- **ESC Key Universal Fix**: Simplified handleEscapeKey() to work with all overlays using currentMenuCloseFunction, fixing karma prompts and future UIs.
 - **Enhanced trap room system**: Interactive trap rooms with D20 disarm checks (DC scales with tier: T1=8, T2=10, etc.). Failed disarms trigger dramatic choice system (Duck vs Leap) against randomized trap types (spike/dart) with 2d10+4 damage for wrong choices.
 - **Mystery delve navigation**: Room types now hidden until entered - unvisited rooms display as '???' to maintain suspense and exploration tension.
 - **Potion usage in combat**: Using potions from inventory consumes player's turn (existing emergency stamina potion system preserved).
-- **CRITICAL FIX: Inventory/menu system fully functional**: Fixed major bug where buttons were unclickable and ESC key didn't work properly in wilderness. Restructured button interactivity to work on containers, fixed ESC key to properly close inventory without opening other menus.
-- **Fixed wilderness encounter UI bugs**: All interactive encounter screens (Wandering Merchant, Shrine, Void Corruption) now support ESC key to close and have fully clickable buttons
-- **Fixed delve abandonment**: Abandoned delves are now properly removed from the map and spawn location moved 100px away from entrance to prevent re-triggering
-- **Fixed town exit spawn**: Exiting town now spawns at (1550, 1550) to prevent immediate re-entry trigger
-- Fixed critical currency exploit: forging now validates funds upfront and deducts immediately, preventing negative balances
-- Fixed zero stamina attack bug: added defensive stamina validation in CombatSystem to block attacks when stamina insufficient
-- Implemented short rest system: wilderness menu (M key) now includes short rest option with 50% HP/stamina recovery and 30% encounter chance
-- Made innkeeper free (0 AA) for testing purposes to help recover from currency exploit
 
 ## User Preferences
 This is a long-term solo project built collaboratively with an AI assistant. The approach:
@@ -27,7 +23,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 ## System Architecture
 
 ### UI/UX Decisions
-- **Current Visual Assets**: Pixel art city sprite for Roboka, pixel art delve entrance markers and trees, 370×510px equipment panel graphic, item sprites (shortsword). Player and NPCs are colored rectangles.
+- **Current Visual Assets**: Pixel art city sprite for Roboka, pixel art delve entrance markers, trees, bushes, and grass tufts for wilderness decoration, 370×510px equipment panel graphic, item sprites (shortsword), tombstone sprite. Player and NPCs are colored rectangles.
 - **Typography**: VT323 monospace font (Google Fonts) for all UI text and menus, configured in `src/config/fonts.ts` with standardized sizes.
 - **Currency Icons**: Pixel art coin sprites for Arcane Ash (AA) and Crystalline Animus (CA), displayed using the `CurrencyDisplay` utility.
 - **Equipment Panel**: Custom pixel art 3×4 grid panel (370×510px) displaying equipped items with interactive slots. Items render as sprites scaled to 70px max dimension while preserving aspect ratio. Click-to-equip functionality: clicking a slot shows a dropdown menu of equippable items with durability info and "[Equip]" buttons.
@@ -55,7 +51,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Random Encounters**: Reduced frequency system (2.5% chance every 50 steps) with six types: Combat, Treasure, Shrine, Void Corruption, Trapped Chest, Wandering Merchant.
 - **Buff System**: Time-based temporary effects tracked via BuffManager, cleared upon returning to town.
 - **Expanded Wilderness**: 3000x3000 world with camera-follow, procedurally placed delve entrances, and Roboka city sprite for instant return.
-- **Terrain Generation**: Procedural terrain using seeded random, with grass, dirt paths, and pixel art trees. Delve exclusion zones.
+- **Terrain Generation**: Procedural terrain using seeded random, with grass (3 color variants), dirt paths, pixel art trees (3 variants), bushes, and grass tufts (2 variants) for enhanced visual depth. Y-sorted rendering for proper depth layering. Delve exclusion zones prevent decorations from blocking entrances.
 - **Fog of War**: Three-layer exploration system (unexplored, explored-out-of-view, visible) with 256-pixel visibility radius.
 - **UI System**: Viewport-locked overlays with interactive blocking. Hierarchical ESC key navigation.
 - **Overlay Mechanics**: Uses `isOverlayActive` flag to disable player movement while menus are open.

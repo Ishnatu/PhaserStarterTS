@@ -59,6 +59,7 @@ export class ExploreScene extends Phaser.Scene {
   private escKey!: Phaser.Input.Keyboard.Key;
   private terrainContainer!: Phaser.GameObjects.Container;
   private treeSprites: Phaser.GameObjects.Sprite[] = [];
+  private decorationSprites: Phaser.GameObjects.Sprite[] = [];
   private fogOfWarGraphics!: Phaser.GameObjects.Graphics;
   private unexploredGraphics!: Phaser.GameObjects.Graphics;
   private readonly VISIBILITY_RADIUS: number = 256;
@@ -71,6 +72,9 @@ export class ExploreScene extends Phaser.Scene {
     this.load.image('tree1', '/assets/terrain/tree1.png');
     this.load.image('tree2', '/assets/terrain/tree2.png');
     this.load.image('tree3', '/assets/terrain/tree3.png');
+    this.load.image('bush', '/assets/terrain/bush.png');
+    this.load.image('grass1', '/assets/terrain/grass1.png');
+    this.load.image('grass2', '/assets/terrain/grass2.png');
     this.load.image('delve-entrance', '/assets/terrain/delve-entrance.png');
     this.load.image('roboka-city', '/assets/terrain/roboka-city.png');
     this.load.image('tombstone', '/assets/tombstone.png');
@@ -554,6 +558,8 @@ export class ExploreScene extends Phaser.Scene {
     this.terrainContainer.removeAll(true);
     this.treeSprites.forEach(tree => tree.destroy());
     this.treeSprites = [];
+    this.decorationSprites.forEach(deco => deco.destroy());
+    this.decorationSprites = [];
     this.unexploredGraphics.clear();
     this.fogOfWarGraphics.clear();
     
@@ -612,6 +618,35 @@ export class ExploreScene extends Phaser.Scene {
       tree.setDepth(8 + y / 10000);
       
       this.treeSprites.push(tree);
+    } else if (terrainType === 'bush') {
+      const variant = TerrainGenerator.getGrassVariant(x, y);
+      const grassColors = [0x2d5016, 0x3a6319, 0x22401a];
+      color = grassColors[variant];
+      const grass = this.add.rectangle(x, y, this.TILE_SIZE, this.TILE_SIZE, color).setOrigin(0);
+      this.terrainContainer.add(grass);
+      
+      // Add bush sprite
+      const bush = this.add.sprite(x + 16, y + 16, 'bush');
+      bush.setScale(0.08);
+      bush.setOrigin(0.5, 0.7);
+      bush.setDepth(3 + y / 10000);
+      
+      this.decorationSprites.push(bush);
+    } else if (terrainType === 'grass_tuft') {
+      const variant = TerrainGenerator.getGrassVariant(x, y);
+      const grassColors = [0x2d5016, 0x3a6319, 0x22401a];
+      color = grassColors[variant];
+      const grass = this.add.rectangle(x, y, this.TILE_SIZE, this.TILE_SIZE, color).setOrigin(0);
+      this.terrainContainer.add(grass);
+      
+      // Add grass tuft sprite (grass1 or grass2)
+      const tuftVariation = TerrainGenerator.getGrassTuftVariant(x, y);
+      const tuft = this.add.sprite(x + 16, y + 16, `grass${tuftVariation}`);
+      tuft.setScale(0.04);
+      tuft.setOrigin(0.5, 0.7);
+      tuft.setDepth(2 + y / 10000);
+      
+      this.decorationSprites.push(tuft);
     }
   }
 

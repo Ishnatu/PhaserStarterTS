@@ -1,4 +1,4 @@
-export type TerrainType = 'grass' | 'path' | 'tree';
+export type TerrainType = 'grass' | 'path' | 'tree' | 'bush' | 'grass_tuft';
 
 export interface TerrainTile {
   x: number;
@@ -51,7 +51,13 @@ export class TerrainGenerator {
     // Don't spawn trees near delves
     if (rand < 0.05 && !this.isNearDelve(x, y)) return 'tree';
     
-    if (rand < 0.15) return 'path';
+    // Bushes - less common than trees
+    if (rand < 0.08 && !this.isNearDelve(x, y)) return 'bush';
+    
+    // Grass tufts - more common decoration
+    if (rand < 0.20) return 'grass_tuft';
+    
+    if (rand < 0.30) return 'path';
     
     return 'grass';
   }
@@ -63,5 +69,14 @@ export class TerrainGenerator {
     this.seed = tileX * 73856093 ^ tileY * 19349663 ^ 999;
     
     return Math.floor(this.seededRandom() * 3);
+  }
+
+  static getGrassTuftVariant(x: number, y: number): number {
+    const tileX = Math.floor(x / 32);
+    const tileY = Math.floor(y / 32);
+    
+    this.seed = tileX * 73856093 ^ tileY * 19349663 ^ 777;
+    
+    return Math.floor(this.seededRandom() * 2) + 1; // Returns 1 or 2
   }
 }
