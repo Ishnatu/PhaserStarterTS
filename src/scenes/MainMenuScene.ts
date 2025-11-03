@@ -29,7 +29,7 @@ export class MainMenuScene extends Phaser.Scene {
       fontFamily: FONTS.primary,
     }).setOrigin(0.5);
 
-    const startButton = this.add.sprite(width / 2, height / 2 + 20, 'start-button');
+    const startButton = this.add.sprite(width / 2, height / 2 + 150, 'start-button');
     startButton.setOrigin(0.5);
     startButton.setScale(0.4);
     startButton.setInteractive({ useHandCursor: true });
