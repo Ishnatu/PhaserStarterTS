@@ -75,6 +75,20 @@ export class ApiClient {
     }
   }
 
+  // Heartbeat for multi-instance detection
+  static async sendHeartbeat(sessionId: string): Promise<{ hasDuplicate: boolean; activeSessionCount: number }> {
+    try {
+      const response = await this.post('/api/game/heartbeat', { sessionId });
+      return {
+        hasDuplicate: response.hasDuplicate || false,
+        activeSessionCount: response.activeSessionCount || 1,
+      };
+    } catch (error) {
+      console.error('Failed to send heartbeat:', error);
+      return { hasDuplicate: false, activeSessionCount: 1 };
+    }
+  }
+
   // Soulbinding API methods
   static async getSoulboundSlots(): Promise<string[] | null> {
     try {
