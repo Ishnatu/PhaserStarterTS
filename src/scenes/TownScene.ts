@@ -4,7 +4,7 @@ import { SceneManager } from '../systems/SceneManager';
 import { ItemDatabase } from '../config/ItemDatabase';
 import { EquipmentManager } from '../systems/EquipmentManager';
 import { DiceRoller } from '../utils/DiceRoller';
-import { PlayerEquipment, InventoryItem } from '../types/GameTypes';
+import { PlayerEquipment, InventoryItem, PlayerData } from '../types/GameTypes';
 import { ShopData } from '../config/ShopData';
 import { BuffManager } from '../systems/BuffManager';
 import { ForgingSystem } from '../systems/ForgingSystem';
@@ -12,6 +12,7 @@ import { CurrencyDisplay } from '../utils/CurrencyDisplay';
 import { FONTS } from '../config/fonts';
 import { ItemColorUtil } from '../utils/ItemColorUtil';
 import { ItemSprites } from '../config/ItemSprites';
+import { ApiClient } from '../utils/ApiClient';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -110,6 +111,7 @@ export class TownScene extends Phaser.Scene {
       { name: 'Merchant', color: 0x66cc66, description: 'Buys and sells goods' },
       { name: 'Innkeeper', color: 0x6699ff, description: 'Provides rest and healing' },
       { name: 'Vault Keeper', color: 0x88ddff, description: 'Manages your storage footlocker' },
+      { name: 'Garthek', color: 0x9944cc, description: 'The Stitcher - Binds items to your soul' },
       { name: 'Quest Giver', color: 0xffcc33, description: 'Offers missions and lore' },
       { name: 'Gem Expert', color: 0xcc66ff, description: 'Soulbinds Voidtouched Gems' },
       { name: 'Marketplace', color: 0xff9966, description: 'Player trading hub' },
@@ -156,6 +158,11 @@ export class TownScene extends Phaser.Scene {
 
     if (name === 'Vault Keeper') {
       this.openFootlocker();
+      return;
+    }
+
+    if (name === 'Garthek') {
+      this.openSoulbinding();
       return;
     }
 
@@ -1658,6 +1665,136 @@ export class TownScene extends Phaser.Scene {
     }
 
     const closeBtn = this.createButton(width / 2, height / 2 + 160, 'Leave', () => {
+      destroyAll();
+    });
+    uiElements.push(closeBtn);
+  }
+
+  private async openSoulbinding(): Promise<void> {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    // Load current soulbound slots from server
+    const soulboundSlots = await ApiClient.getSoulboundSlots();
+    const selectedSlots = new Set<string>(soulboundSlots);
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
+    const panel = this.add.rectangle(width / 2, height / 2, 700, 550, 0x2a2a3e).setOrigin(0.5);
+    uiElements.push(overlay, panel);
+
+    const title = this.add.text(width / 2, height / 2 - 240, 'Garthek the Stitcher', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#9944cc',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+    uiElements.push(title);
+
+    const subtitle = this.add.text(width / 2, height / 2 - 200, 
+      '"I can bind your equipment to your very soul.\nSoulbound items will return to you upon death."', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#cccccc',
+      fontStyle: 'italic',
+      align: 'center',
+    }).setOrigin(0.5);
+    uiElements.push(subtitle);
+
+    const infoText = this.add.text(width / 2, height / 2 - 140, 
+      'Select equipment slots to bind (max 3 slots):', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+    }).setOrigin(0.5);
+    uiElements.push(infoText);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'soulbinding' as any;
+
+    // Define equipment slots
+    const slots = [
+      { key: 'mainHand' as keyof PlayerEquipment, label: 'Main Hand' },
+      { key: 'offHand' as keyof PlayerEquipment, label: 'Off Hand' },
+      { key: 'head' as keyof PlayerEquipment, label: 'Head' },
+      { key: 'chest' as keyof PlayerEquipment, label: 'Chest' },
+      { key: 'legs' as keyof PlayerEquipment, label: 'Legs' },
+      { key: 'feet' as keyof PlayerEquipment, label: 'Feet' },
+      { key: 'hands' as keyof PlayerEquipment, label: 'Hands' },
+      { key: 'accessory' as keyof PlayerEquipment, label: 'Accessory' },
+    ];
+
+    let startY = height / 2 - 100;
+    const slotCheckboxes: Map<string, Phaser.GameObjects.Container> = new Map();
+
+    slots.forEach((slot, index) => {
+      const slotKey = slot.key as keyof PlayerEquipment;
+      const x = width / 2 - 200;
+      const y = startY + (index % 4) * 40;
+      const col = Math.floor(index / 4);
+      const posX = x + col * 350;
+
+      const item = player.equipment[slotKey];
+      const isEquipped = !!item;
+      const isBound = selectedSlots.has(slotKey);
+
+      // Checkbox
+      const checkbox = this.add.rectangle(posX, y, 20, 20, isBound ? 0x44ff44 : 0x444444)
+        .setStrokeStyle(2, 0xffffff);
+
+      const slotText = this.add.text(posX + 15, y, 
+        `${slot.label}: ${isEquipped ? item!.name : '[Empty]'}`, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: isEquipped ? '#ffffff' : '#666666',
+      }).setOrigin(0, 0.5);
+
+      const container = this.add.container(0, 0, [checkbox, slotText]);
+      
+      if (isEquipped) {
+        container.setInteractive(
+          new Phaser.Geom.Rectangle(posX - 10, y - 10, 280, 30),
+          Phaser.Geom.Rectangle.Contains
+        );
+        container.on('pointerdown', () => {
+          if (selectedSlots.has(slotKey)) {
+            selectedSlots.delete(slotKey);
+            checkbox.setFillStyle(0x444444);
+          } else {
+            if (selectedSlots.size < 3) {
+              selectedSlots.add(slotKey);
+              checkbox.setFillStyle(0x44ff44);
+            } else {
+              this.showMessage('Maximum 3 slots can be soulbound');
+            }
+          }
+        });
+      }
+
+      slotCheckboxes.set(slotKey, container);
+      uiElements.push(container);
+    });
+
+    // Save button
+    const saveBtn = this.createButton(width / 2 - 100, height / 2 + 220, 'Save Bindings', async () => {
+      const success = await ApiClient.setSoulboundSlots(Array.from(selectedSlots));
+      if (success) {
+        this.showMessage('Soul bindings saved successfully');
+        destroyAll();
+      } else {
+        this.showMessage('Failed to save bindings');
+      }
+    });
+    uiElements.push(saveBtn);
+
+    // Close button
+    const closeBtn = this.createButton(width / 2 + 100, height / 2 + 220, 'Close', () => {
       destroyAll();
     });
     uiElements.push(closeBtn);

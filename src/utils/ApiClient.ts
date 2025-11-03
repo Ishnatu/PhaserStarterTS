@@ -74,4 +74,129 @@ export class ApiClient {
       return false;
     }
   }
+
+  // Soulbinding API methods
+  static async getSoulboundSlots(): Promise<string[]> {
+    try {
+      const response = await this.get('/api/soulbound/slots');
+      return response.slots || [];
+    } catch (error) {
+      console.error('Failed to get soulbound slots:', error);
+      return [];
+    }
+  }
+
+  static async setSoulboundSlots(slots: string[]): Promise<boolean> {
+    try {
+      await this.post('/api/soulbound/slots', { slots });
+      return true;
+    } catch (error) {
+      console.error('Failed to set soulbound slots:', error);
+      return false;
+    }
+  }
+
+  // Tombstone API methods
+  static async createTombstone(data: {
+    ownerName: string;
+    worldX: number;
+    worldY: number;
+    items: any[];
+    expiresInHours?: number;
+  }): Promise<any> {
+    try {
+      const response = await this.post('/api/tombstones/create', data);
+      return response.tombstone;
+    } catch (error) {
+      console.error('Failed to create tombstone:', error);
+      return null;
+    }
+  }
+
+  static async getMyTombstones(): Promise<any[]> {
+    try {
+      const response = await this.get('/api/tombstones/mine');
+      return response.tombstones || [];
+    } catch (error) {
+      console.error('Failed to get tombstones:', error);
+      return [];
+    }
+  }
+
+  static async getRandomTombstone(): Promise<any> {
+    try {
+      const response = await this.get('/api/tombstones/random');
+      return response.tombstone;
+    } catch (error) {
+      console.error('Failed to get random tombstone:', error);
+      return null;
+    }
+  }
+
+  static async lootTombstone(tombstoneId: string): Promise<{ success: boolean; items?: any[] }> {
+    try {
+      const response = await this.post(`/api/tombstones/${tombstoneId}/loot`, {});
+      return { success: true, items: response.items };
+    } catch (error) {
+      console.error('Failed to loot tombstone:', error);
+      return { success: false };
+    }
+  }
+
+  static async deleteTombstone(tombstoneId: string): Promise<boolean> {
+    try {
+      const response = await this.fetch(`/api/tombstones/${tombstoneId}`, {
+        method: 'DELETE',
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('Failed to delete tombstone:', error);
+      return false;
+    }
+  }
+
+  // Karma API methods
+  static async returnLoot(data: {
+    originalOwnerId: string;
+    returnerName: string;
+    items: any[];
+  }): Promise<boolean> {
+    try {
+      await this.post('/api/karma/return', data);
+      return true;
+    } catch (error) {
+      console.error('Failed to return loot:', error);
+      return false;
+    }
+  }
+
+  static async getPendingReturns(): Promise<any[]> {
+    try {
+      const response = await this.get('/api/karma/pending');
+      return response.pending || [];
+    } catch (error) {
+      console.error('Failed to get pending returns:', error);
+      return [];
+    }
+  }
+
+  static async claimReturnedLoot(lootId: string): Promise<any> {
+    try {
+      const response = await this.post(`/api/karma/claim/${lootId}`, {});
+      return response.claimed;
+    } catch (error) {
+      console.error('Failed to claim returned loot:', error);
+      return null;
+    }
+  }
+
+  static async getKarmaLeaderboard(limit: number = 10): Promise<{ playerName: string; totalItems: number }[]> {
+    try {
+      const response = await this.get(`/api/karma/leaderboard?limit=${limit}`);
+      return response.leaderboard || [];
+    } catch (error) {
+      console.error('Failed to get karma leaderboard:', error);
+      return [];
+    }
+  }
 }
