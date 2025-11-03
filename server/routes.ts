@@ -4,6 +4,29 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 
+// Session tracking for multi-instance detection
+interface SessionInfo {
+  playerId: string;
+  sessionId: string;
+  lastHeartbeat: number;
+}
+
+const activeSessions = new Map<string, SessionInfo[]>();
+const SESSION_TIMEOUT = 15000; // 15 seconds
+
+// Clean up stale sessions
+setInterval(() => {
+  const now = Date.now();
+  for (const [playerId, sessions] of activeSessions.entries()) {
+    const activeSessions_filtered = sessions.filter(s => now - s.lastHeartbeat < SESSION_TIMEOUT);
+    if (activeSessions_filtered.length === 0) {
+      activeSessions.delete(playerId);
+    } else {
+      activeSessions.set(playerId, activeSessions_filtered);
+    }
+  }
+}, 5000);
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication middleware
   await setupAuth(app);
@@ -100,6 +123,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const sessionId = req.headers['x-session-id'];
     return sessionId ? sessionId as string : null;
   };
+
+  // Heartbeat endpoint for multi-instance detection
+  app.post("/api/game/heartbeat", async (req: any, res) => {
+    try {
+      const playerId = getPlayerId(req);
+      const clientSessionId = req.body.sessionId;
+      
+      if (!playerId || !clientSessionId) {
+        return res.status(400).json({ message: "Player ID and session ID required" });
+      }
+
+      const now = Date.now();
+      
+      // Get or create session list for this player
+      let sessions = activeSessions.get(playerId) || [];
+      
+      // Find existing session or add new one
+      const existingSession = sessions.find(s => s.sessionId === clientSessionId);
+      if (existingSession) {
+        existingSession.lastHeartbeat = now;
+      } else {
+        sessions.push({ playerId, sessionId: clientSessionId, lastHeartbeat: now });
+      }
+      
+      // Filter out stale sessions
+      sessions = sessions.filter(s => now - s.lastHeartbeat < SESSION_TIMEOUT);
+      activeSessions.set(playerId, sessions);
+      
+      // Check for duplicates (more than one active session)
+      const hasDuplicate = sessions.length > 1;
+      
+      res.json({ 
+        success: true, 
+        hasDuplicate,
+        activeSessionCount: sessions.length 
+      });
+    } catch (error) {
+      console.error("Error processing heartbeat:", error);
+      res.status(500).json({ message: "Failed to process heartbeat" });
+    }
+  });
 
   // Soulbinding endpoints
   app.get("/api/soulbound/slots", async (req: any, res) => {
