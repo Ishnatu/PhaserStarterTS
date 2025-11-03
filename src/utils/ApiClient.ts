@@ -76,13 +76,13 @@ export class ApiClient {
   }
 
   // Soulbinding API methods
-  static async getSoulboundSlots(): Promise<string[]> {
+  static async getSoulboundSlots(): Promise<string[] | null> {
     try {
       const response = await this.get('/api/soulbound/slots');
       return response.slots || [];
     } catch (error) {
       console.error('Failed to get soulbound slots:', error);
-      return [];
+      return null;  // Return null on error to distinguish from "no bindings"
     }
   }
 

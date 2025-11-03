@@ -246,6 +246,7 @@ export class DelveScene extends Phaser.Scene {
     SceneManager.getInstance().transitionTo('combat', {
       delve: this.currentDelve,
       room: room,
+      returnToLocation: this.currentDelve.location || { x: 1500, y: 1500 },
     });
   }
 

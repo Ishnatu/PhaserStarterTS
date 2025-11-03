@@ -5,11 +5,12 @@ import { CombatSystem } from '../systems/CombatSystem';
 import { EnemyFactory } from '../systems/EnemyFactory';
 import { ItemDatabase } from '../config/ItemDatabase';
 import { DiceRoller } from '../utils/DiceRoller';
-import { Delve, DelveRoom, Enemy } from '../types/GameTypes';
+import { Delve, DelveRoom, Enemy, PlayerEquipment, InventoryItem } from '../types/GameTypes';
 import { GameConfig } from '../config/GameConfig';
 import { DurabilityManager } from '../systems/DurabilityManager';
 import { FONTS } from '../config/fonts';
 import { ItemColorUtil } from '../utils/ItemColorUtil';
+import { ApiClient } from '../utils/ApiClient';
 
 export class CombatScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -668,28 +669,96 @@ export class CombatScene extends Phaser.Scene {
     });
   }
 
-  private showDefeatScreen(): void {
+  private async showDefeatScreen(): Promise<void> {
     const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
     
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
     
-    this.add.text(width / 2, height / 2 - 40, 'DEFEATED', {
+    this.add.text(width / 2, height / 2 - 120, 'DEFEATED', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xlarge,
       color: '#ff0000',
     }).setOrigin(0.5);
 
-    this.add.text(width / 2, height / 2 + 20, 'Your soul returns to Roboka...', {
+    // Handle soulbound items - CRITICAL: null means API failure, [] means no bindings
+    const soulboundSlots = await ApiClient.getSoulboundSlots();
+    if (soulboundSlots === null) {
+      // API failure - preserve all equipment to prevent data loss
+      this.add.text(width / 2, height / 2 - 60, 
+        'Connection lost. All equipment preserved.\nYour soul returns to Roboka...', {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: '#cccccc',
+        align: 'center',
+      }).setOrigin(0.5);
+
+      this.createMenuButton(width / 2, height / 2 + 40, 'Return to Town', () => {
+        this.gameState.updatePlayer({ 
+          health: player.maxHealth,
+          stamina: player.maxStamina,
+        });
+        SceneManager.getInstance().transitionTo('town');
+      });
+      return;
+    }
+
+    const unboundItems: { slot: keyof PlayerEquipment; item: InventoryItem }[] = [];
+    
+    // Separate equipment into soulbound and unbound
+    const equipmentSlots: (keyof PlayerEquipment)[] = ['mainHand', 'offHand', 'helmet', 'chest', 'legs', 'boots', 'shoulders', 'cape'];
+    for (const slot of equipmentSlots) {
+      const equippedItem = player.equipment[slot];
+      if (equippedItem && !soulboundSlots.includes(slot)) {
+        // Convert EquippedItem to InventoryItem
+        const inventoryItem: InventoryItem = {
+          ...equippedItem,
+          quantity: 1
+        };
+        unboundItems.push({ slot, item: inventoryItem });
+      }
+    }
+
+    let statusMessage = '';
+    if (soulboundSlots.length > 0 && unboundItems.length === 0) {
+      statusMessage = 'All your equipment was soulbound.\nIt returns with your soul to Roboka.';
+    } else if (unboundItems.length > 0) {
+      statusMessage = `${unboundItems.length} unbound item(s) left at your corpse.\nSoulbound items return with you.`;
+    } else {
+      statusMessage = 'Your soul returns to Roboka...';
+    }
+
+    this.add.text(width / 2, height / 2 - 60, statusMessage, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#cccccc',
+      align: 'center',
     }).setOrigin(0.5);
 
-    this.createMenuButton(width / 2, height / 2 + 80, 'Return to Town', () => {
-      const player = this.gameState.getPlayer();
+    // Create tombstone if there are unbound items
+    if (unboundItems.length > 0) {
+      // Use stored return location for tombstone position
+      const deathLocation = this.returnToLocation || player.position || { x: 1500, y: 1500 };
+      
+      await ApiClient.createTombstone({
+        ownerName: 'Player',  // Use generic name for now
+        worldX: deathLocation.x,
+        worldY: deathLocation.y,
+        items: unboundItems.map(ui => ui.item),
+        expiresInHours: 24
+      });
+
+      // Remove unbound items from equipment
+      for (const { slot } of unboundItems) {
+        player.equipment[slot] = undefined;
+      }
+    }
+
+    this.createMenuButton(width / 2, height / 2 + 40, 'Return to Town', () => {
       this.gameState.updatePlayer({ 
         health: player.maxHealth,
         stamina: player.maxStamina,
+        equipment: player.equipment,
       });
       SceneManager.getInstance().transitionTo('town');
     });

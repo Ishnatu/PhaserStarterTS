@@ -15,12 +15,14 @@ import { TerrainGenerator } from '../utils/TerrainGenerator';
 import { DurabilityManager } from '../systems/DurabilityManager';
 import { CurrencyDisplay } from '../utils/CurrencyDisplay';
 import { FONTS } from '../config/fonts';
+import { ApiClient } from '../utils/ApiClient';
 
 export class ExploreScene extends Phaser.Scene {
   private gameState!: GameStateManager;
   private player!: Phaser.GameObjects.Rectangle;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private delveMarkers: Phaser.GameObjects.Container[] = [];
+  private tombstoneMarkers: Map<number, Phaser.GameObjects.Container> = new Map();
   private townPortal!: Phaser.GameObjects.Container;
   private healthBarFill!: Phaser.GameObjects.Rectangle;
   private healthBarBg!: Phaser.GameObjects.Rectangle;
@@ -162,6 +164,14 @@ export class ExploreScene extends Phaser.Scene {
     const speed = 3;
     let pixelsMoved = 0;
 
+    // Store player location for potential death/tombstone creation
+    this.data.set('playerLocation', { x: this.player.x, y: this.player.y });
+    
+    // Update player position in GameState as last known overworld location
+    if (playerData.position.x !== this.player.x || playerData.position.y !== this.player.y) {
+      this.gameState.updatePlayer({ position: { x: this.player.x, y: this.player.y } });
+    }
+
     const canMove = playerData.stamina > 0 && !this.isOverlayActive;
 
     if (canMove) {
@@ -190,6 +200,7 @@ export class ExploreScene extends Phaser.Scene {
           this.checkRandomEncounter();
         }
         this.checkDelveProximity();
+        this.checkTombstoneProximity();
         this.checkTownPortalProximity();
       }
     }
@@ -202,6 +213,7 @@ export class ExploreScene extends Phaser.Scene {
   private generateInitialWorld(): void {
     this.generateDelves();
     this.createTownPortal();
+    this.loadTombstones();
   }
 
   private generateDelves(): void {
@@ -308,6 +320,48 @@ export class ExploreScene extends Phaser.Scene {
     return container;
   }
 
+  private async loadTombstones(): Promise<void> {
+    try {
+      const tombstones = await ApiClient.getMyTombstones();
+      tombstones.forEach((tombstone: any) => {
+        const marker = this.createTombstoneMarker(tombstone.id, tombstone.world_x, tombstone.world_y);
+        this.tombstoneMarkers.set(tombstone.id, marker);
+      });
+    } catch (error) {
+      console.error('Failed to load tombstones:', error);
+    }
+  }
+
+  private createTombstoneMarker(id: number, x: number, y: number): Phaser.GameObjects.Container {
+    // TODO: Replace with actual tombstone sprite when available
+    // For now, use a gray rectangle as placeholder
+    const tombstone = this.add.rectangle(0, 0, 32, 48, 0x555555);
+    tombstone.setOrigin(0.5, 0.75);
+    
+    const glow = this.add.circle(0, 0, 32, 0xff4444, 0.2);
+    const label = this.add.text(0, -60, 'Your Corpse', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ff8888',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    this.tweens.add({
+      targets: glow,
+      scale: 1.4,
+      alpha: 0.05,
+      duration: 1500,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    const container = this.add.container(x, y, [glow, tombstone, label]);
+    container.setData('tombstoneId', id);
+    container.setDepth(7);
+
+    return container;
+  }
+
   private checkDelveProximity(): void {
     for (let i = this.delveMarkers.length - 1; i >= 0; i--) {
       const marker = this.delveMarkers[i];
@@ -330,7 +384,111 @@ export class ExploreScene extends Phaser.Scene {
     }
   }
 
-  private enterDelve(tier: number, x: number, y: number): void {
+  private checkTombstoneProximity(): void {
+    this.tombstoneMarkers.forEach((marker, tombstoneId) => {
+      const distance = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        marker.x,
+        marker.y
+      );
+
+      if (distance < 50) {
+        this.interactWithTombstone(tombstoneId);
+      }
+    });
+  }
+
+  private async interactWithTombstone(tombstoneId: number): Promise<void> {
+    // Prevent multiple interactions
+    if (this.isOverlayActive) return;
+    
+    this.isOverlayActive = true;
+    
+    try {
+      const tombstones = await ApiClient.getMyTombstones();
+      const tombstone = tombstones.find((t: any) => t.id === tombstoneId);
+      
+      if (!tombstone) {
+        this.showMessage('Tombstone has already been looted or expired');
+        this.isOverlayActive = false;
+        return;
+      }
+
+      // Show loot UI
+      this.showTombstoneLootUI(tombstone);
+    } catch (error) {
+      console.error('Failed to interact with tombstone:', error);
+      this.showMessage('Failed to access tombstone');
+      this.isOverlayActive = false;
+    }
+  }
+
+  private async showTombstoneLootUI(tombstone: any): Promise<void> {
+    const { width, height } = this.cameras.main;
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0);
+    const panel = this.add.rectangle(width / 2, height / 2, 600, 400, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0);
+    uiElements.push(overlay, panel);
+
+    const title = this.add.text(width / 2, height / 2 - 160, 'Your Corpse', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#ff8888',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0);
+    uiElements.push(title);
+
+    const itemsList = this.add.text(width / 2, height / 2 - 100, 
+      `Items: ${tombstone.items.length} items`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#cccccc',
+      align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0);
+    uiElements.push(itemsList);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.isOverlayActive = false;
+    };
+
+    // Loot All button
+    const lootBtn = this.createButton(width / 2, height / 2 + 80, 'Loot All Items', async () => {
+      const result = await ApiClient.lootTombstone(String(tombstone.id));
+      const success = result.success;
+      if (success) {
+        // Add items to inventory
+        tombstone.items.forEach((item: any) => {
+          this.gameState.addItemToInventory(item.itemId, item.quantity || 1);
+        });
+        
+        // Remove marker
+        const marker = this.tombstoneMarkers.get(tombstone.id);
+        if (marker) {
+          marker.destroy();
+          this.tombstoneMarkers.delete(tombstone.id);
+        }
+        
+        this.showMessage(`Recovered ${tombstone.items.length} items from your corpse`);
+        destroyAll();
+      } else {
+        this.showMessage('Failed to loot tombstone');
+      }
+    });
+    lootBtn.setScrollFactor(0);
+    uiElements.push(lootBtn);
+
+    // Leave button
+    const leaveBtn = this.createButton(width / 2, height / 2 + 140, 'Leave', () => {
+      destroyAll();
+    });
+    leaveBtn.setScrollFactor(0);
+    uiElements.push(leaveBtn);
+  }
+
+  private enterDelve(tier: number, x: number, y: number): void{
     const generator = new DelveGenerator();
     const delve = generator.generateDelve(tier);
     delve.location = { x, y };
