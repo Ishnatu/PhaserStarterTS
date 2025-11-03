@@ -91,13 +91,111 @@ export class TownScene extends Phaser.Scene {
     this.escKey.on('down', () => {
       this.handleEscapeKey();
     });
+
+    // Check for looted tombstones and prompt for karma return
+    this.checkKarmaPrompt();
   }
 
   private handleEscapeKey(): void {
-    if (this.menuState === 'inventory' || this.menuState === 'equipment' || this.menuState === 'shop' || this.menuState === 'footlocker') {
-      if (this.currentMenuCloseFunction) {
-        this.currentMenuCloseFunction();
+    if (this.currentMenuCloseFunction) {
+      this.currentMenuCloseFunction();
+    }
+  }
+
+  private async checkKarmaPrompt(): Promise<void> {
+    try {
+      const lootedTombstones = await ApiClient.getLootedTombstones();
+      
+      // Only show prompt if there are looted tombstones
+      if (lootedTombstones.length > 0) {
+        this.showKarmaReturnPrompt(lootedTombstones);
       }
+    } catch (error) {
+      console.error('Failed to check karma status:', error);
+    }
+  }
+
+  private showKarmaReturnPrompt(tombstones: any[]): void {
+    const { width, height } = this.cameras.main;
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    // Darken the screen
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.7)
+      .setOrigin(0).setDepth(2000);
+    uiElements.push(overlay);
+
+    // Main panel
+    const panel = this.add.rectangle(width / 2, height / 2, 600, 400, 0x1a1a2e, 1)
+      .setOrigin(0.5).setDepth(2001);
+    uiElements.push(panel);
+
+    // Title
+    const title = this.add.text(width / 2, height / 2 - 160, 'Halls of Virtue', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#ffd700',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(2002);
+    uiElements.push(title);
+
+    // Message
+    const totalItems = tombstones.reduce((sum, ts) => sum + (ts.items?.length || 0), 0);
+    const message = this.add.text(width / 2, height / 2 - 100, 
+      `You have looted ${totalItems} items from ${tombstones.length} fallen adventurer${tombstones.length > 1 ? 's' : ''}.\n\nThe Keeper of Virtue offers you a choice:\n\nReturn the items to their rightful owners\nand earn eternal karma...\n\n...or keep them for yourself.`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#cccccc',
+      align: 'center',
+      wordWrap: { width: 500 },
+      lineSpacing: 4,
+    }).setOrigin(0.5).setDepth(2002);
+    uiElements.push(message);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    // Return button
+    const returnBtn = this.createButton(width / 2 - 120, height / 2 + 140, 'Return Items', async () => {
+      destroyAll();
+      await this.returnAllLoot(tombstones);
+    }).setDepth(2002);
+    uiElements.push(returnBtn);
+
+    // Keep button  
+    const keepBtn = this.createButton(width / 2 + 120, height / 2 + 140, 'Keep Items', () => {
+      destroyAll();
+      this.showMessage('You have chosen to keep the looted items.');
+    }).setDepth(2002);
+    uiElements.push(keepBtn);
+
+    this.menuState = 'none'; // Special state
+    this.currentMenuCloseFunction = destroyAll;
+  }
+
+  private async returnAllLoot(tombstones: any[]): Promise<void> {
+    const player = this.gameState.getPlayer();
+    let totalKarma = 0;
+
+    for (const tombstone of tombstones) {
+      try {
+        // Map database field names (snake_case) to API (camelCase)
+        await ApiClient.returnLoot({
+          originalOwnerId: tombstone.owner_id || tombstone.ownerId,
+          returnerName: 'Player', // TODO: Get actual player name
+          items: tombstone.items,
+        });
+        
+        totalKarma += tombstone.items.length;
+      } catch (error) {
+        console.error('Failed to return loot:', error);
+      }
+    }
+
+    if (totalKarma > 0) {
+      this.showMessage(`Returned ${totalKarma} items! You earned karma points.`);
     }
   }
 
@@ -112,6 +210,7 @@ export class TownScene extends Phaser.Scene {
       { name: 'Innkeeper', color: 0x6699ff, description: 'Provides rest and healing' },
       { name: 'Vault Keeper', color: 0x88ddff, description: 'Manages your storage footlocker' },
       { name: 'Garthek', color: 0x9944cc, description: 'The Stitcher - Binds items to your soul' },
+      { name: 'Keeper of Virtue', color: 0xffd700, description: 'Reclaim returned items and view karma' },
       { name: 'Quest Giver', color: 0xffcc33, description: 'Offers missions and lore' },
       { name: 'Gem Expert', color: 0xcc66ff, description: 'Soulbinds Voidtouched Gems' },
       { name: 'Marketplace', color: 0xff9966, description: 'Player trading hub' },
@@ -163,6 +262,11 @@ export class TownScene extends Phaser.Scene {
 
     if (name === 'Garthek') {
       this.openSoulbinding();
+      return;
+    }
+
+    if (name === 'Keeper of Virtue') {
+      this.openHallsOfVirtue();
       return;
     }
 
@@ -1748,8 +1852,14 @@ export class TownScene extends Phaser.Scene {
       const checkbox = this.add.rectangle(posX, y, 20, 20, isBound ? 0x44ff44 : 0x444444)
         .setStrokeStyle(2, 0xffffff);
 
+      let displayName = '[Empty]';
+      if (isEquipped && item) {
+        const itemData = ItemDatabase.getItem(item.itemId);
+        displayName = itemData ? itemData.name : item.itemId;
+      }
+
       const slotText = this.add.text(posX + 15, y, 
-        `${slot.label}: ${isEquipped ? item!.name : '[Empty]'}`, {
+        `${slot.label}: ${displayName}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: isEquipped ? '#ffffff' : '#666666',
@@ -1798,5 +1908,123 @@ export class TownScene extends Phaser.Scene {
       destroyAll();
     });
     uiElements.push(closeBtn);
+  }
+
+  private async openHallsOfVirtue(): Promise<void> {
+    const { width, height } = this.cameras.main;
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    // Dark overlay
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
+      .setOrigin(0).setDepth(1000);
+    uiElements.push(overlay);
+
+    // Main panel
+    const panel = this.add.rectangle(width / 2, height / 2, 900, 600, 0x1a1a2e, 1)
+      .setOrigin(0.5).setDepth(1001);
+    uiElements.push(panel);
+
+    // Title
+    const title = this.add.text(width / 2, height / 2 - 270, 'Halls of Virtue', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.xlarge,
+      color: '#ffd700',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(1002);
+    uiElements.push(title);
+
+    // Divider
+    const divider = this.add.line(width / 2, height / 2, 0, -200, 0, 200, 0x444444, 1)
+      .setOrigin(0.5).setDepth(1002);
+    uiElements.push(divider);
+
+    // Left Panel - Returned Items
+    const leftTitle = this.add.text(width / 2 - 300, height / 2 - 200, 'Returned Items', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#44ff44',
+    }).setOrigin(0.5).setDepth(1002);
+    uiElements.push(leftTitle);
+
+    // Fetch returned items
+    const returnedItems = await ApiClient.getPendingReturns();
+    
+    if (returnedItems.length === 0) {
+      const noItems = this.add.text(width / 2 - 300, height / 2, 'No items to claim', {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: '#888888',
+      }).setOrigin(0.5).setDepth(1002);
+      uiElements.push(noItems);
+    } else {
+      let yPos = height / 2 - 150;
+      returnedItems.slice(0, 5).forEach((loot: any) => {
+        const itemCount = loot.items?.length || 0;
+        const text = this.add.text(width / 2 - 400, yPos, 
+          `${itemCount} items from ${loot.returner_name}`, {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.small,
+          color: '#cccccc',
+        }).setDepth(1002);
+        
+        const claimBtn = this.createButton(width / 2 - 220, yPos, 'Claim', async () => {
+          const result = await ApiClient.claimReturnedLoot(loot.id);
+          if (result) {
+            this.showMessage(`Claimed ${itemCount} items!`);
+            // Refresh the UI
+            uiElements.forEach(el => el.destroy());
+            this.openHallsOfVirtue();
+          }
+        }).setDepth(1002);
+        
+        uiElements.push(text, claimBtn);
+        yPos += 60;
+      });
+    }
+
+    // Right Panel - Karma Leaderboard
+    const rightTitle = this.add.text(width / 2 + 300, height / 2 - 200, 'Karma Leaderboard', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffd700',
+    }).setOrigin(0.5).setDepth(1002);
+    uiElements.push(rightTitle);
+
+    // Fetch leaderboard
+    const leaderboard = await ApiClient.getKarmaLeaderboard(10);
+    
+    let lbYPos = height / 2 - 150;
+    leaderboard.slice(0, 10).forEach((entry: any, index: number) => {
+      const rankColor = index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : '#cccccc';
+      const text = this.add.text(width / 2 + 150, lbYPos, 
+        `${index + 1}. ${entry.playerName || 'Anonymous'}: ${entry.totalItems} items`, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: rankColor,
+      }).setDepth(1002);
+      uiElements.push(text);
+      lbYPos += 35;
+    });
+
+    // Close button
+    const closeBtnHalls = this.createButton(width / 2, height / 2 + 260, 'Close', () => {
+      destroyAll();
+    }).setDepth(1002);
+    uiElements.push(closeBtnHalls);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    this.menuState = 'none';
+    this.currentMenuCloseFunction = destroyAll;
+
+    // ESC key support
+    const escHandler = () => {
+      destroyAll();
+    };
+    this.escKey.once('down', escHandler);
   }
 }

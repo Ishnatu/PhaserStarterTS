@@ -261,6 +261,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Karma/return endpoints
+  app.get("/api/karma/looted-tombstones", async (req: any, res) => {
+    try {
+      const playerId = getPlayerId(req);
+      if (!playerId) {
+        return res.status(401).json({ message: "Player ID required" });
+      }
+
+      const tombstones = await storage.getLootedTombstones(playerId);
+      res.json({ tombstones });
+    } catch (error) {
+      console.error("Error getting looted tombstones:", error);
+      res.status(500).json({ message: "Failed to get looted tombstones" });
+    }
+  });
+
   app.post("/api/karma/return", async (req: any, res) => {
     try {
       const playerId = getPlayerId(req);

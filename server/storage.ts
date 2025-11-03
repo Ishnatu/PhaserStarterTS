@@ -227,6 +227,19 @@ export class DatabaseStorage implements IStorage {
     return result.length;
   }
 
+  async getLootedTombstones(playerId: string): Promise<Tombstone[]> {
+    // Get tombstones looted by this player
+    return await db
+      .select()
+      .from(tombstones)
+      .where(
+        and(
+          eq(tombstones.lootedBy, playerId),
+          eq(tombstones.looted, true)
+        )
+      );
+  }
+
   // Karma/Return operations
   async createReturnedLoot(lootData: InsertReturnedLoot): Promise<ReturnedLoot> {
     const [loot] = await db

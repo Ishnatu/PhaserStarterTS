@@ -156,6 +156,16 @@ export class ApiClient {
   }
 
   // Karma API methods
+  static async getLootedTombstones(): Promise<any[]> {
+    try {
+      const response = await this.get('/api/karma/looted-tombstones');
+      return response.tombstones || [];
+    } catch (error) {
+      console.error('Failed to get looted tombstones:', error);
+      return [];
+    }
+  }
+
   static async returnLoot(data: {
     originalOwnerId: string;
     returnerName: string;

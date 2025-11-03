@@ -18,6 +18,22 @@ import { FONTS } from '../config/fonts';
 import { ApiClient } from '../utils/ApiClient';
 
 export class ExploreScene extends Phaser.Scene {
+  // Helper functions for item enhancement display
+  private static getEnhancementColor(enhancement: number, isShiny: boolean): string {
+    if (isShiny) return '#ffd700'; // Golden
+    if (enhancement >= 9) return '#ff0000'; // Red
+    if (enhancement >= 7) return '#aa00ff'; // Purple
+    if (enhancement >= 4) return '#0088ff'; // Blue
+    if (enhancement >= 1) return '#00ff00'; // Green
+    return '#ffffff'; // White
+  }
+
+  private static getEnhancedItemName(baseName: string, enhancement: number, isShiny: boolean): string {
+    const prefix = isShiny ? '★ ' : '';
+    const suffix = enhancement > 0 ? ` +${enhancement}` : '';
+    return `${prefix}${baseName}${suffix}`;
+  }
+
   private gameState!: GameStateManager;
   private player!: Phaser.GameObjects.Rectangle;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -1050,19 +1066,19 @@ export class ExploreScene extends Phaser.Scene {
     const uiElements: Phaser.GameObjects.GameObject[] = [];
     const { width, height } = this.cameras.main;
 
-    const overlay = this.add.rectangle(width / 2, height / 2, 600, 400, 0x1a1a2e, 0.95)
+    const overlay = this.add.rectangle(width / 2, height / 2, 700, 500, 0x1a1a2e, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    const titleText = this.add.text(width / 2, height / 2 - 150, 'Fallen Adventurer', {
+    const titleText = this.add.text(width / 2, height / 2 - 220, 'Fallen Adventurer', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#ff4444',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const descText = this.add.text(width / 2, height / 2 - 90, encounterType.description, {
+    const descText = this.add.text(width / 2, height / 2 - 170, encounterType.description, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
       align: 'center',
-      wordWrap: { width: 500 },
+      wordWrap: { width: 600 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     uiElements.push(overlay, titleText, descText);
@@ -1080,11 +1096,12 @@ export class ExploreScene extends Phaser.Scene {
 
     // Try to fetch a random tombstone from other players
     try {
-      const tombstones = await ApiClient.getRandomTombstones(1);
+      const tombstone = await ApiClient.getRandomTombstone();
+      const tombstones = tombstone ? [tombstone] : [];
       
       if (tombstones.length === 0) {
         // No tombstones available
-        const noLootText = this.add.text(width / 2, height / 2 - 20, 
+        const noLootText = this.add.text(width / 2, height / 2 - 50, 
           'The body has already been looted.\nNothing remains.', {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.small,
@@ -1093,7 +1110,7 @@ export class ExploreScene extends Phaser.Scene {
         }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
         uiElements.push(noLootText);
 
-        const continueBtn = this.createButton(width / 2, height / 2 + 140, 'Continue', () => {
+        const continueBtn = this.createButton(width / 2, height / 2 + 200, 'Continue', () => {
           destroyAll();
         }).setScrollFactor(0).setDepth(1002);
         uiElements.push(continueBtn);
@@ -1101,37 +1118,48 @@ export class ExploreScene extends Phaser.Scene {
         const tombstone = tombstones[0];
         
         // Show tombstone info
-        const ownerText = this.add.text(width / 2, height / 2 - 20, 
-          `Owner: ${tombstone.owner_name}`, {
+        const ownerText = this.add.text(width / 2, height / 2 - 120, 
+          `${tombstone.owner_name}'s remains`, {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.medium,
           color: '#cccccc',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-        
-        const itemCountText = this.add.text(width / 2, height / 2 + 20, 
-          `Items: ${tombstone.items.length}`, {
-          fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
-          color: '#ffcc00',
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+        uiElements.push(ownerText);
 
-        uiElements.push(ownerText, itemCountText);
+        // Display items
+        let yPos = height / 2 - 80;
+        tombstone.items.forEach((item: any, index: number) => {
+          const itemData = ItemDatabase.getItem(item.itemId);
+          if (!itemData) return;
 
-        // Loot button - will be fully implemented in task 7
-        const lootBtn = this.createButton(width / 2, height / 2 + 100, 'Loot (Coming Soon)', () => {
-          this.showMessage('Looting system coming soon!');
+          const itemColor = ExploreScene.getEnhancementColor(item.enhancement || 0, item.isShiny || false);
+          const itemName = ExploreScene.getEnhancedItemName(itemData.name, item.enhancement || 0, item.isShiny || false);
+          
+          const itemText = this.add.text(width / 2 - 280, yPos, itemName, {
+            fontFamily: FONTS.primary,
+            fontSize: FONTS.size.small,
+            color: itemColor,
+          }).setScrollFactor(0).setDepth(1001);
+          
+          uiElements.push(itemText);
+          yPos += 30;
+        });
+
+        // Take All button
+        const takeAllBtn = this.createButton(width / 2 - 100, height / 2 + 200, 'Take All', async () => {
+          await this.lootTombstone(tombstone, uiElements, destroyAll);
         }).setScrollFactor(0).setDepth(1002);
 
-        const leaveBtn = this.createButton(width / 2, height / 2 + 140, 'Leave', () => {
+        const leaveBtn = this.createButton(width / 2 + 100, height / 2 + 200, 'Leave', () => {
           destroyAll();
         }).setScrollFactor(0).setDepth(1002);
 
-        uiElements.push(lootBtn, leaveBtn);
+        uiElements.push(takeAllBtn, leaveBtn);
       }
     } catch (error) {
       console.error('Failed to fetch random tombstones:', error);
       
-      const errorText = this.add.text(width / 2, height / 2 - 20, 
+      const errorText = this.add.text(width / 2, height / 2 - 50, 
         'Failed to examine the remains.', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
@@ -1139,7 +1167,7 @@ export class ExploreScene extends Phaser.Scene {
       }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
       uiElements.push(errorText);
 
-      const closeBtn = this.createButton(width / 2, height / 2 + 140, 'Continue', () => {
+      const closeBtn = this.createButton(width / 2, height / 2 + 200, 'Continue', () => {
         destroyAll();
       }).setScrollFactor(0).setDepth(1002);
       uiElements.push(closeBtn);
@@ -1148,6 +1176,166 @@ export class ExploreScene extends Phaser.Scene {
     // ESC key support
     const escHandler = () => {
       destroyAll();
+    };
+    this.escKey.once('down', escHandler);
+  }
+
+  private async lootTombstone(tombstone: any, uiElements: Phaser.GameObjects.GameObject[], destroyAll: () => void): Promise<void> {
+    const player = this.gameState.getPlayer();
+    const availableSlots = 15 - player.inventory.length;
+    const itemsToLoot = tombstone.items;
+
+    // Check if inventory has space
+    if (itemsToLoot.length > availableSlots) {
+      // Show overflow UI
+      this.showInventoryOverflowUI(tombstone, itemsToLoot, availableSlots, uiElements, destroyAll);
+    } else {
+      // Can take everything
+      try {
+        await ApiClient.lootTombstone(tombstone.id);
+        
+        // Add items to inventory
+        itemsToLoot.forEach((item: any) => {
+          player.inventory.push(item);
+        });
+        this.gameState.updatePlayer(player);
+        
+        destroyAll();
+        this.showMessage(`Looted ${itemsToLoot.length} items from tombstone`);
+        
+        // Reload tombstones to update markers
+        this.tombstoneMarkers.clear();
+        await this.loadTombstones();
+      } catch (error) {
+        console.error('Failed to loot tombstone:', error);
+        this.showMessage('Failed to loot tombstone');
+      }
+    }
+  }
+
+  private showInventoryOverflowUI(tombstone: any, items: any[], availableSlots: number, oldElements: Phaser.GameObjects.GameObject[], oldDestroyAll: () => void): void {
+    // Destroy old UI
+    oldDestroyAll();
+
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+    const { width, height } = this.cameras.main;
+
+    const overlay = this.add.rectangle(width / 2, height / 2, 700, 550, 0x1a1a2e, 0.95)
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+    
+    const titleText = this.add.text(width / 2, height / 2 - 250, 'Inventory Full!', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#ff4444',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    const infoText = this.add.text(width / 2, height / 2 - 210, 
+      `You can only carry ${availableSlots} more items.\nSelect ${items.length - availableSlots} items to drop:`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+      align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    uiElements.push(overlay, titleText, infoText);
+
+    const player = this.gameState.getPlayer();
+    const selectedToDrop: Set<number> = new Set();
+    const neededToDrop = items.length - availableSlots;
+
+    // Show current inventory items
+    let yPos = height / 2 - 160;
+    player.inventory.forEach((invItem: any, index: number) => {
+      const itemData = ItemDatabase.getItem(invItem.itemId);
+      if (!itemData) return;
+
+      const itemColor = ExploreScene.getEnhancementColor(invItem.enhancement || 0, invItem.isShiny || false);
+      const itemName = ExploreScene.getEnhancedItemName(itemData.name, invItem.enhancement || 0, invItem.isShiny || false);
+      
+      const itemText = this.add.text(width / 2 - 280, yPos, itemName, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: itemColor,
+      }).setScrollFactor(0).setDepth(1001);
+
+      const buttonText = this.add.text(width / 2 + 200, yPos, selectedToDrop.has(index) ? '[X]' : '[ ]', {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: '#ffffff',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
+      
+      const buttonBg = this.add.rectangle(width / 2 + 200, yPos, 50, 25, 0x444444, 0.8)
+        .setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+        .setInteractive()
+        .on('pointerdown', () => {
+          if (selectedToDrop.has(index)) {
+            selectedToDrop.delete(index);
+            buttonText.setText('[ ]');
+          } else {
+            selectedToDrop.add(index);
+            buttonText.setText('[X]');
+          }
+        });
+
+      uiElements.push(itemText, buttonBg, buttonText);
+      yPos += 30;
+
+      if (yPos > height / 2 + 160) return; // Stop if too many items
+    });
+
+    // Confirm button
+    const confirmBtn = this.createButton(width / 2, height / 2 + 240, 'Confirm', async () => {
+      if (selectedToDrop.size !== neededToDrop) {
+        this.showMessage(`Must select exactly ${neededToDrop} items to drop`);
+        return;
+      }
+
+      try {
+        // Drop selected items
+        const droppedItems = Array.from(selectedToDrop).sort((a, b) => b - a).map(idx => {
+          return player.inventory.splice(idx, 1)[0];
+        });
+
+        // Add looted items
+        items.forEach((item: any) => {
+          player.inventory.push(item);
+        });
+
+        this.gameState.updatePlayer(player);
+        await ApiClient.lootTombstone(tombstone.id);
+
+        uiElements.forEach(el => el.destroy());
+        this.isOverlayActive = false;
+        this.menuState = 'none';
+        this.currentMenuCloseFunction = null;
+        this.encounterCooldown = false;
+
+        this.showMessage(`Dropped ${droppedItems.length} items and looted ${items.length} items`);
+        
+        // Reload tombstones
+        this.tombstoneMarkers.clear();
+        await this.loadTombstones();
+      } catch (error) {
+        console.error('Failed to loot tombstone:', error);
+        this.showMessage('Failed to loot tombstone');
+      }
+    }).setScrollFactor(0).setDepth(1002);
+
+    uiElements.push(confirmBtn);
+
+    this.currentMenuCloseFunction = () => {
+      uiElements.forEach(el => el.destroy());
+      this.isOverlayActive = false;
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+      this.encounterCooldown = false;
+    };
+
+    // ESC key support
+    const escHandler = () => {
+      if (this.currentMenuCloseFunction) {
+        this.currentMenuCloseFunction();
+      }
     };
     this.escKey.once('down', escHandler);
   }
