@@ -57,6 +57,7 @@ export class ExploreScene extends Phaser.Scene {
     this.load.image('tree3', '/assets/terrain/tree3.png');
     this.load.image('delve-entrance', '/assets/terrain/delve-entrance.png');
     this.load.image('roboka-city', '/assets/terrain/roboka-city.png');
+    this.load.image('tombstone', '/assets/tombstone.png');
     this.load.image('gemforge-logo', '/assets/ui/gemforge-logo.png');
     this.load.image('coin-aa', '/assets/ui/currency/arcane-ash-coin.png');
     this.load.image('coin-ca', '/assets/ui/currency/crystalline-animus-coin.png');
@@ -333,10 +334,9 @@ export class ExploreScene extends Phaser.Scene {
   }
 
   private createTombstoneMarker(id: number, x: number, y: number): Phaser.GameObjects.Container {
-    // TODO: Replace with actual tombstone sprite when available
-    // For now, use a gray rectangle as placeholder
-    const tombstone = this.add.rectangle(0, 0, 32, 48, 0x555555);
+    const tombstone = this.add.image(0, 0, 'tombstone');
     tombstone.setOrigin(0.5, 0.75);
+    tombstone.setScale(0.8);
     
     const glow = this.add.circle(0, 0, 32, 0xff4444, 0.2);
     const label = this.add.text(0, -60, 'Your Corpse', {
@@ -618,6 +618,8 @@ export class ExploreScene extends Phaser.Scene {
       this.handleVoidCorruptionEncounter(encounterType);
     } else if (encounterType.type === 'trapped_chest') {
       this.handleTrappedChestEncounter(encounterType);
+    } else if (encounterType.type === 'tombstone') {
+      this.handleTombstoneEncounter(encounterType);
     } else if (encounterType.type === 'wandering_merchant') {
       this.handleWanderingMerchantEncounter(encounterType);
     }
@@ -1044,10 +1046,116 @@ export class ExploreScene extends Phaser.Scene {
     uiElements.push(closeBtn);
   }
 
+  private async handleTombstoneEncounter(encounterType: any): Promise<void> {
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+    const { width, height } = this.cameras.main;
+
+    const overlay = this.add.rectangle(width / 2, height / 2, 600, 400, 0x1a1a2e, 0.95)
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+    const titleText = this.add.text(width / 2, height / 2 - 150, 'Fallen Adventurer', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#ff4444',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    const descText = this.add.text(width / 2, height / 2 - 90, encounterType.description, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: 500 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    uiElements.push(overlay, titleText, descText);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.encounterCooldown = false;
+      this.isOverlayActive = false;
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'encounter';
+
+    // Try to fetch a random tombstone from other players
+    try {
+      const tombstones = await ApiClient.getRandomTombstones(1);
+      
+      if (tombstones.length === 0) {
+        // No tombstones available
+        const noLootText = this.add.text(width / 2, height / 2 - 20, 
+          'The body has already been looted.\nNothing remains.', {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.small,
+          color: '#888888',
+          align: 'center',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+        uiElements.push(noLootText);
+
+        const continueBtn = this.createButton(width / 2, height / 2 + 140, 'Continue', () => {
+          destroyAll();
+        }).setScrollFactor(0).setDepth(1002);
+        uiElements.push(continueBtn);
+      } else {
+        const tombstone = tombstones[0];
+        
+        // Show tombstone info
+        const ownerText = this.add.text(width / 2, height / 2 - 20, 
+          `Owner: ${tombstone.owner_name}`, {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.medium,
+          color: '#cccccc',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+        
+        const itemCountText = this.add.text(width / 2, height / 2 + 20, 
+          `Items: ${tombstone.items.length}`, {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.small,
+          color: '#ffcc00',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+        uiElements.push(ownerText, itemCountText);
+
+        // Loot button - will be fully implemented in task 7
+        const lootBtn = this.createButton(width / 2, height / 2 + 100, 'Loot (Coming Soon)', () => {
+          this.showMessage('Looting system coming soon!');
+        }).setScrollFactor(0).setDepth(1002);
+
+        const leaveBtn = this.createButton(width / 2, height / 2 + 140, 'Leave', () => {
+          destroyAll();
+        }).setScrollFactor(0).setDepth(1002);
+
+        uiElements.push(lootBtn, leaveBtn);
+      }
+    } catch (error) {
+      console.error('Failed to fetch random tombstones:', error);
+      
+      const errorText = this.add.text(width / 2, height / 2 - 20, 
+        'Failed to examine the remains.', {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: '#ff4444',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+      uiElements.push(errorText);
+
+      const closeBtn = this.createButton(width / 2, height / 2 + 140, 'Continue', () => {
+        destroyAll();
+      }).setScrollFactor(0).setDepth(1002);
+      uiElements.push(closeBtn);
+    }
+
+    // ESC key support
+    const escHandler = () => {
+      destroyAll();
+    };
+    this.escKey.once('down', escHandler);
+  }
+
   private generateRandomEncounter(): any {
     const roll = Math.random();
     
-    if (roll < 0.40) {
+    if (roll < 0.38) {
       const numEnemies = Math.floor(Math.random() * 2) + 1;
       const enemies = [];
       for (let i = 0; i < numEnemies; i++) {
@@ -1059,7 +1167,7 @@ export class ExploreScene extends Phaser.Scene {
         description: `You've been ambushed by ${numEnemies} ${enemies[0].name}${numEnemies > 1 ? 's' : ''}!`,
         enemies,
       };
-    } else if (roll < 0.60) {
+    } else if (roll < 0.58) {
       const aa = Math.floor(Math.random() * 41) + 40;
       const ca = (Math.random() * 3) + 3;
       
@@ -1068,20 +1176,25 @@ export class ExploreScene extends Phaser.Scene {
         description: 'You stumble upon a hidden cache of resources!',
         loot: { aa, ca: parseFloat(ca.toFixed(1)) },
       };
-    } else if (roll < 0.75) {
+    } else if (roll < 0.73) {
       return {
         type: 'shrine',
         description: 'You discover a shrine to the Faceless Old God...\nCorrupted whispers promise power for the faithful.',
       };
-    } else if (roll < 0.85) {
+    } else if (roll < 0.83) {
       return {
         type: 'void_corruption',
         description: 'A pocket of void corruption pulses before you.\nDangerous... but potentially rewarding.',
       };
-    } else if (roll < 0.95) {
+    } else if (roll < 0.93) {
       return {
         type: 'trapped_chest',
         description: 'You spot an ornate chest partially buried in the earth.',
+      };
+    } else if (roll < 0.98) {
+      return {
+        type: 'tombstone',
+        description: 'You discover the remains of a fallen adventurer...\nTheir equipment lies scattered around them.',
       };
     } else {
       return {
