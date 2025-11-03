@@ -410,9 +410,12 @@ export class CombatScene extends Phaser.Scene {
       this.showMessage('Successfully escaped!');
       this.time.delayedCall(1500, () => {
         if (this.isWildEncounter) {
-          SceneManager.getInstance().transitionTo('explore');
+          SceneManager.getInstance().transitionTo('explore', { returnToLocation: this.returnToLocation });
         } else {
-          SceneManager.getInstance().transitionTo('delve', { delve: this.currentDelve });
+          SceneManager.getInstance().transitionTo('delve', { 
+            delve: this.currentDelve,
+            returnToLocation: this.returnToLocation 
+          });
         }
       });
     } else {
@@ -664,7 +667,10 @@ export class CombatScene extends Phaser.Scene {
       if (this.isWildEncounter) {
         SceneManager.getInstance().transitionTo('explore', { returnToLocation: this.returnToLocation });
       } else {
-        SceneManager.getInstance().transitionTo('delve', { delve: this.currentDelve });
+        SceneManager.getInstance().transitionTo('delve', { 
+          delve: this.currentDelve,
+          returnToLocation: this.returnToLocation 
+        });
       }
     });
   }

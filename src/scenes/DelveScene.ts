@@ -15,13 +15,15 @@ export class DelveScene extends Phaser.Scene {
   private menuState: 'none' | 'main' | 'inventory' | 'quit' = 'none';
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
+  private returnToLocation?: { x: number; y: number };
 
   constructor() {
     super('DelveScene');
   }
 
-  init(data: { delve: Delve }) {
+  init(data: { delve: Delve; returnToLocation?: { x: number; y: number } }) {
     this.currentDelve = data.delve;
+    this.returnToLocation = data.returnToLocation;
   }
 
   create() {
@@ -199,13 +201,19 @@ export class DelveScene extends Phaser.Scene {
   }
 
   private exitDelve(): void {
-    // Mark delve as completed
+    // Mark delve as completed (only for real map delves with location)
     if (this.currentDelve.location) {
       this.gameState.markDelveCompleted(this.currentDelve.location.x, this.currentDelve.location.y);
       SceneManager.getInstance().transitionTo('explore', {
         returnToLocation: { x: this.currentDelve.location.x, y: this.currentDelve.location.y }
       });
+    } else if (this.returnToLocation) {
+      // For void portal encounters and other temporary delves, return to stored location
+      SceneManager.getInstance().transitionTo('explore', {
+        returnToLocation: this.returnToLocation
+      });
     } else {
+      // Fallback to default explore location (Roboka)
       SceneManager.getInstance().transitionTo('explore');
     }
   }
@@ -246,7 +254,7 @@ export class DelveScene extends Phaser.Scene {
     SceneManager.getInstance().transitionTo('combat', {
       delve: this.currentDelve,
       room: room,
-      returnToLocation: this.currentDelve.location || { x: 1500, y: 1500 },
+      returnToLocation: this.returnToLocation || this.currentDelve.location || { x: 1500, y: 1500 },
     });
   }
 
@@ -259,7 +267,7 @@ export class DelveScene extends Phaser.Scene {
     this.gameState.addArcaneAsh(50 * this.currentDelve.tier);
     this.gameState.addCrystallineAnimus(0.5 * this.currentDelve.tier);
     this.showMessage('Treasure collected!');
-    this.scene.restart({ delve: this.currentDelve });
+    this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
   }
 
   private solveChallenge(room: DelveRoom): void {
@@ -269,7 +277,7 @@ export class DelveScene extends Phaser.Scene {
     }
     room.completed = true;
     this.showMessage('Challenge overcome!');
-    this.scene.restart({ delve: this.currentDelve });
+    this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
   }
 
   private investigateTrap(room: DelveRoom): void {
@@ -358,7 +366,7 @@ export class DelveScene extends Phaser.Scene {
 
       const continueBtn = this.createButton(width / 2, height / 2 + 80, 'Continue', () => {
         room.completed = true;
-        this.scene.restart({ delve: this.currentDelve });
+        this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
       });
       continueBtn.setDepth(1002);
       uiElements.push(continueBtn);
@@ -448,7 +456,7 @@ export class DelveScene extends Phaser.Scene {
           SceneManager.getInstance().transitionTo('town');
         } else {
           room.completed = true;
-          this.scene.restart({ delve: this.currentDelve });
+          this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
         }
       });
       continueBtn.setDepth(1002);
@@ -473,7 +481,7 @@ export class DelveScene extends Phaser.Scene {
 
       const continueBtn = this.createButton(width / 2, height / 2 + 100, 'Continue', () => {
         room.completed = true;
-        this.scene.restart({ delve: this.currentDelve });
+        this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
       });
       continueBtn.setDepth(1002);
     }
@@ -487,7 +495,7 @@ export class DelveScene extends Phaser.Scene {
 
     if (nextRoomId) {
       this.currentDelve.currentRoomId = nextRoomId;
-      this.scene.restart({ delve: this.currentDelve });
+      this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
     }
   }
 
