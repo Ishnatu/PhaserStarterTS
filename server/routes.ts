@@ -127,11 +127,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Heartbeat endpoint for multi-instance detection
   app.post("/api/game/heartbeat", async (req: any, res) => {
     try {
-      const playerId = getPlayerId(req);
-      const clientSessionId = req.body.sessionId;
+      // Use authenticated userId if available, otherwise use the playerId from body
+      let playerId: string;
+      if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
+        playerId = req.user.claims.sub;
+      } else {
+        // For anonymous users, use the playerId from body (stable across tabs)
+        playerId = req.body.playerId;
+      }
       
-      if (!playerId || !clientSessionId) {
-        return res.status(400).json({ message: "Player ID and session ID required" });
+      const instanceId = req.body.instanceId; // Unique per tab/window
+      
+      if (!playerId || !instanceId) {
+        return res.status(400).json({ message: "Player ID and instance ID required" });
       }
 
       const now = Date.now();
@@ -140,11 +148,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let sessions = activeSessions.get(playerId) || [];
       
       // Find existing session or add new one
-      const existingSession = sessions.find(s => s.sessionId === clientSessionId);
+      const existingSession = sessions.find(s => s.sessionId === instanceId);
       if (existingSession) {
         existingSession.lastHeartbeat = now;
       } else {
-        sessions.push({ playerId, sessionId: clientSessionId, lastHeartbeat: now });
+        sessions.push({ playerId, sessionId: instanceId, lastHeartbeat: now });
       }
       
       // Filter out stale sessions

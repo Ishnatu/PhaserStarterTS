@@ -103,10 +103,12 @@ function showDuplicateInstanceModal(): void {
   }, 10000);
 }
 
-// Start heartbeat monitoring
-HeartbeatManager.getInstance().start(() => {
-  showDuplicateInstanceModal();
-});
+// Start heartbeat monitoring after a brief delay to ensure server is ready
+setTimeout(() => {
+  HeartbeatManager.getInstance().start(() => {
+    showDuplicateInstanceModal();
+  });
+}, 2000); // Wait 2 seconds before starting heartbeat
 
 console.log('Gemforge Chronicles - Phase One: The Hunt');
 console.log('Game initialized successfully!');

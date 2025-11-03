@@ -76,9 +76,9 @@ export class ApiClient {
   }
 
   // Heartbeat for multi-instance detection
-  static async sendHeartbeat(sessionId: string): Promise<{ hasDuplicate: boolean; activeSessionCount: number }> {
+  static async sendHeartbeat(playerId: string, instanceId: string): Promise<{ hasDuplicate: boolean; activeSessionCount: number }> {
     try {
-      const response = await this.post('/api/game/heartbeat', { sessionId });
+      const response = await this.post('/api/game/heartbeat', { playerId, instanceId });
       return {
         hasDuplicate: response.hasDuplicate || false,
         activeSessionCount: response.activeSessionCount || 1,

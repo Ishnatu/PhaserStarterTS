@@ -4,12 +4,14 @@ import { SessionManager } from './SessionManager';
 export class HeartbeatManager {
   private static instance: HeartbeatManager;
   private intervalId: number | null = null;
-  private sessionId: string;
+  private playerId: string; // Stable ID shared across tabs
+  private instanceId: string; // Unique ID for this tab
   private onDuplicateDetected: (() => void) | null = null;
   private isShuttingDown: boolean = false;
 
   private constructor() {
-    this.sessionId = SessionManager.getOrCreateSessionId();
+    this.playerId = SessionManager.getOrCreateSessionId(); // Stable across tabs
+    this.instanceId = SessionManager.getInstanceId(); // Unique per tab
   }
 
   static getInstance(): HeartbeatManager {
@@ -44,7 +46,7 @@ export class HeartbeatManager {
     }
 
     try {
-      const result = await ApiClient.sendHeartbeat(this.sessionId);
+      const result = await ApiClient.sendHeartbeat(this.playerId, this.instanceId);
       
       if (result.hasDuplicate && this.onDuplicateDetected) {
         this.isShuttingDown = true;
@@ -53,6 +55,7 @@ export class HeartbeatManager {
       }
     } catch (error) {
       console.error('Heartbeat failed:', error);
+      // Continue running even if heartbeat fails to avoid breaking the game
     }
   }
 }
