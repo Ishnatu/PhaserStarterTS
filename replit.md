@@ -4,6 +4,7 @@
 Gemforge Chronicles is an ambitious web3 RPG game, drawing inspiration from classic turn-based games like Pokemon, Final Fantasy, and Heroes of Might and Magic, and incorporating tabletop RPG mechanics and a rich economy system. Built on Phaser 3 with TypeScript, the project aims to integrate with blockchain (Ronin network) for NFT support. The game features a core loop of town interaction, wilderness exploration, procedurally generated delves, and D20-style turn-based combat.
 
 ## Recent Changes
+- **Gameplay Balance Enhancements**: T1 zone random encounters now limited to max 1 T2 enemy for better new player balance. Wandering Merchant upgraded to sell 3 enhanced items (+1/+2) with pricing formula: (base + cumulative forge costs) * 1.5. Corrupted Void Portal (renamed from Void Corruption) converted to 2-stage mini-delve with tier-appropriate enemies in stage 1 and guaranteed T1 boss in stage 2.
 - **Soulbinding & Karma System**: Complete extraction game mechanics implemented - Garthek the Stitcher NPC allows binding up to 3 equipment slots to soul (soulbound items return on death). Karma system rewards players who return looted tombstone items via Halls of Virtue. Keeper of Virtue NPC shows leaderboard and unclaimed returns.
 - **Tombstone Encounters**: 5% random encounter chance to find other players' tombstones with lootable items. Full inventory overflow handling with item selection UI.
 - **Enhanced Wilderness Visuals**: Added pixel art bushes and grass tufts (2 variants) scattered procedurally across terrain for visual depth and atmosphere.
@@ -48,7 +49,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Inventory & Equipment**: 8-slot equipment system, 15-slot active inventory, and 80-slot footlocker. Supports dual-wielding of 1-handed weapons.
 - **Armor Balancing**: Various armor types provide different combinations of evasion and damage reduction.
 - **Loot System**: Enemies drop tier-based items.
-- **Random Encounters**: Reduced frequency system (2.5% chance every 50 steps) with six types: Combat, Treasure, Shrine, Void Corruption, Trapped Chest, Wandering Merchant.
+- **Random Encounters**: Reduced frequency system (2.5% chance every 50 steps) with seven types: Combat (38%, max 1 T2 enemy in groups), Treasure (20%), Shrine (15%), Corrupted Void Portal (10%, 2-stage mini-delve), Trapped Chest (10%), Tombstone (5%), Wandering Merchant (2%, sells 3 enhanced items).
 - **Buff System**: Time-based temporary effects tracked via BuffManager, cleared upon returning to town.
 - **Expanded Wilderness**: 3000x3000 world with camera-follow, procedurally placed delve entrances, and Roboka city sprite for instant return.
 - **Terrain Generation**: Procedural terrain using seeded random, with grass (3 color variants), dirt paths, pixel art trees (3 variants), bushes, and grass tufts (2 variants) for enhanced visual depth. Y-sorted rendering for proper depth layering. Delve exclusion zones prevent decorations from blocking entrances.
@@ -67,7 +68,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Death/Respawn**: Player respawns in Roboka upon defeat.
 - **Item Database**: Comprehensive database for weapons, armor, potions, and materials.
 - **Potion Mechanics**: Restore health/stamina.
-- **Merchant System**: Shop in Roboka selling base items, with real-time balance tracking. Wandering Merchant encounters offer discounts.
+- **Merchant System**: Shop in Roboka selling base items, with real-time balance tracking. Wandering Merchant encounters sell 3 enhanced items (+1/+2) at premium pricing: (base + cumulative forge costs) * 1.5.
 - **Item Durability System**: Weapons and armor have durability that decays with use. Items become unusable at 0 durability and can be repaired at the blacksmith. Durability is color-coded.
 - **Forging & Enhancement System**: Blacksmith offers +1 to +9 weapon/armor enhancements with varying success rates, costs, and failure penalties (downgrade or destruction). Enhancements provide damage, durability, evasion, or damage reduction bonuses. Currency validation prevents negative balances - funds checked before forging and deducted immediately after attempt.
 - **Shiny System**: Rare variant items with golden nameplate that can occur during successful forging (0.5%-1.75% chance based on tier). Shiny items are immune to destruction but can still be downgraded on failure. Provides aspirational prestige goals.

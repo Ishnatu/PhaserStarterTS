@@ -665,8 +665,8 @@ export class ExploreScene extends Phaser.Scene {
       this.handleTreasureEncounter(encounterType);
     } else if (encounterType.type === 'shrine') {
       this.handleShrineEncounter(encounterType);
-    } else if (encounterType.type === 'void_corruption') {
-      this.handleVoidCorruptionEncounter(encounterType);
+    } else if (encounterType.type === 'corrupted_void_portal') {
+      this.handleCorruptedVoidPortalEncounter(encounterType);
     } else if (encounterType.type === 'trapped_chest') {
       this.handleTrappedChestEncounter(encounterType);
     } else if (encounterType.type === 'tombstone') {
@@ -869,13 +869,13 @@ export class ExploreScene extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
   }
 
-  private handleVoidCorruptionEncounter(encounterType: any): void {
+  private handleCorruptedVoidPortalEncounter(encounterType: any): void {
     const uiElements: Phaser.GameObjects.GameObject[] = [];
     const { width, height } = this.cameras.main;
 
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 350, 0x1a0a2a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    const titleText = this.add.text(width / 2, height / 2 - 130, 'Void Corruption Pocket', {
+    const titleText = this.add.text(width / 2, height / 2 - 130, 'Corrupted Void Portal', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#8844ff',
@@ -887,7 +887,7 @@ export class ExploreScene extends Phaser.Scene {
       align: 'center',
       wordWrap: { width: 450 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const choiceText = this.add.text(width / 2, height / 2, 'Enter the corruption?\nFace an elite enemy for 2x loot!', {
+    const choiceText = this.add.text(width / 2, height / 2, 'Enter the void?\n2 stages: enemies + boss battle!', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffcc88',
@@ -924,9 +924,7 @@ export class ExploreScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         destroyAll();
-        const eliteEnemy = EnemyFactory.createEnemy(2, false);
-        eliteEnemy.lootTable.forEach(item => item.dropChance *= 2);
-        this.startWildCombat([eliteEnemy]);
+        this.startVoidPortalDelve();
       });
 
     const enterBtnLabel = this.add.text(width / 2 - 70, height / 2 + 70, 'Enter', {
@@ -947,6 +945,64 @@ export class ExploreScene extends Phaser.Scene {
       fontSize: FONTS.size.small,
       color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
+    
+    // ESC key support
+    const escHandler = () => {
+      if (this.currentMenuCloseFunction) {
+        this.currentMenuCloseFunction();
+      }
+    };
+    this.escKey.once('down', escHandler);
+  }
+  
+  private startVoidPortalDelve(): void {
+    // Create a mini 2-room delve with tier-appropriate enemies
+    const generator = new DelveGenerator();
+    const voidDelve = generator.generateDelve(1); // T1 zone
+    
+    // Clear existing rooms and create exactly 2 rooms
+    voidDelve.rooms.clear();
+    
+    // Room 1: Combat with tier-appropriate enemies (T1 or T2)
+    // enemyIds are just markers - CombatScene will generate actual enemies
+    const numEnemies = Math.floor(Math.random() * 2) + 1; // 1-2 enemies
+    const room1Enemies: string[] = [];
+    
+    for (let i = 0; i < numEnemies; i++) {
+      const tier = Math.random() < 0.5 ? 1 : 2; // Mix of T1 and T2
+      // Store tier info as enemy ID marker (will be parsed in CombatScene)
+      room1Enemies.push(`tier_${tier}_normal`);
+    }
+    
+    const room1 = {
+      id: 'void_room_1',
+      type: 'combat' as const,
+      completed: false,
+      connections: ['void_room_2'],
+      enemyIds: room1Enemies,
+    };
+    
+    // Room 2: Boss battle with T1 boss
+    const room2 = {
+      id: 'void_room_2',
+      type: 'boss' as const,
+      completed: false,
+      connections: [],
+      enemyIds: ['tier_1_boss'],
+    };
+    
+    voidDelve.rooms.set('void_room_1', room1);
+    voidDelve.rooms.set('void_room_2', room2);
+    voidDelve.currentRoomId = 'void_room_1';
+    voidDelve.entranceRoomId = 'void_room_1';
+    voidDelve.bossRoomId = 'void_room_2';
+    
+    SceneManager.getInstance().transitionTo('combat', {
+      delve: voidDelve,
+      room: room1,
+      wildEncounter: false,
+      returnToLocation: { x: this.player.x, y: this.player.y },
+    });
   }
 
   private handleTrappedChestEncounter(encounterType: any): void {
@@ -1016,22 +1072,27 @@ export class ExploreScene extends Phaser.Scene {
     const uiElements: Phaser.GameObjects.GameObject[] = [];
     const { width, height } = this.cameras.main;
 
-    const overlay = this.add.rectangle(width / 2, height / 2, 600, 450, 0x1a1a2a, 0.95)
+    const overlay = this.add.rectangle(width / 2, height / 2, 700, 400, 0x1a1a2a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    const titleText = this.add.text(width / 2, height / 2 - 200, 'Wandering Merchant', {
+    const titleText = this.add.text(width / 2, height / 2 - 180, 'Wandering Merchant', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#ffaa44',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const descText = this.add.text(width / 2, height / 2 - 160, encounterType.description, {
+    const descText = this.add.text(width / 2, height / 2 - 140, encounterType.description, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
       align: 'center',
-      wordWrap: { width: 550 },
+      wordWrap: { width: 650 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    const subtitle = this.add.text(width / 2, height / 2 - 95, 'Enhanced Items for Sale:', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffcc88',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-    uiElements.push(overlay, titleText, descText);
+    uiElements.push(overlay, titleText, descText, subtitle);
     
     const destroyAll = () => {
       uiElements.forEach(el => el.destroy());
@@ -1044,57 +1105,99 @@ export class ExploreScene extends Phaser.Scene {
     this.currentMenuCloseFunction = destroyAll;
     this.menuState = 'encounter';
 
-    const allItems = ShopData.getAllShopItems();
-    const randomItems = [];
-    for (let i = 0; i < 5; i++) {
-      randomItems.push(allItems[Math.floor(Math.random() * allItems.length)]);
+    // Select 3 random weapons/armor for enhancement (exclude potions)
+    const forgeableItems = [...ShopData.getWeaponShopItems(), ...ShopData.getArmorShopItems()];
+    const selectedItems = [];
+    for (let i = 0; i < 3; i++) {
+      const randomItem = forgeableItems[Math.floor(Math.random() * forgeableItems.length)];
+      const enhancement = Math.random() < 0.5 ? 1 : 2; // +1 or +2
+      selectedItems.push({ ...randomItem, enhancement });
     }
 
-    let yPos = height / 2 - 110;
-    randomItems.forEach((shopItem, index) => {
+    let yPos = height / 2 - 60;
+    selectedItems.forEach((shopItem) => {
       const itemData = ItemDatabase.getItem(shopItem.itemId);
-      const price = Math.floor(shopItem.price * 1.5);
+      const basePrice = shopItem.price;
       
-      const itemText = this.add.text(width / 2 - 220, yPos, 
-        `${itemData?.name || shopItem.itemId} - ${price} ${shopItem.currency}`, {
+      // Calculate forge cost (sum of all tiers up to enhancement level)
+      let forgeCost = { aa: 0, ca: 0 };
+      for (let level = 1; level <= shopItem.enhancement; level++) {
+        const tierCost = ForgingSystem.getForgingCost(level);
+        if (tierCost) {
+          forgeCost.aa += tierCost.aa;
+          forgeCost.ca += tierCost.ca;
+        }
+      }
+      
+      // Total price = base + forge cost + 50% markup
+      const totalAA = Math.floor((basePrice + forgeCost.aa) * 1.5);
+      const totalCA = parseFloat((forgeCost.ca * 1.5).toFixed(1));
+      
+      const enhancedName = ExploreScene.getEnhancedItemName(
+        itemData?.name || shopItem.itemId, 
+        shopItem.enhancement, 
+        false
+      );
+      const nameColor = ExploreScene.getEnhancementColor(shopItem.enhancement, false);
+      
+      const itemText = this.add.text(width / 2 - 280, yPos, enhancedName, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: nameColor,
+      }).setScrollFactor(0).setDepth(1001);
+      
+      const priceText = this.add.text(width / 2 - 30, yPos, 
+        `${totalAA} AA${totalCA > 0 ? ` + ${totalCA} CA` : ''}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: '#ffffff',
       }).setScrollFactor(0).setDepth(1001);
       
-      const buyBtn = this.createButton(width / 2 + 150, yPos, 'Buy', () => {
+      const buyBtn = this.createButton(width / 2 + 220, yPos, 'Buy', () => {
         const player = this.gameState.getPlayer();
-        const canAfford = shopItem.currency === 'AA' 
-          ? player.arcaneAsh >= price 
-          : player.crystallineAnimus >= price;
+        const canAfford = player.arcaneAsh >= totalAA && player.crystallineAnimus >= totalCA;
 
         if (!canAfford) {
-          itemText.setColor('#ff4444');
-          this.time.delayedCall(500, () => itemText.setColor('#ffffff'));
+          priceText.setColor('#ff4444');
+          this.time.delayedCall(500, () => priceText.setColor('#ffffff'));
           return;
         }
 
-        if (shopItem.currency === 'AA') {
-          this.gameState.addArcaneAsh(-price);
-        } else {
-          this.gameState.addCrystallineAnimus(-price);
+        this.gameState.addArcaneAsh(-totalAA);
+        if (totalCA > 0) {
+          this.gameState.addCrystallineAnimus(-totalCA);
         }
 
-        player.inventory.push({ itemId: shopItem.itemId, quantity: 1 });
+        player.inventory.push({ 
+          itemId: shopItem.itemId, 
+          quantity: 1,
+          enhancementLevel: shopItem.enhancement,
+          durability: 100,
+          maxDurability: 100,
+        });
         this.gameState.updatePlayer(player);
         
-        itemText.setColor('#44ff44').setText(`${itemData?.name || shopItem.itemId} - PURCHASED`);
+        itemText.setColor('#44ff44');
+        priceText.setText('PURCHASED').setColor('#44ff44');
         buyBtn.setVisible(false);
       }).setScrollFactor(0).setDepth(1002);
 
-      uiElements.push(itemText, buyBtn);
-      yPos += 50;
+      uiElements.push(itemText, priceText, buyBtn);
+      yPos += 55;
     });
 
-    const closeBtn = this.createButton(width / 2, height / 2 + 180, 'Leave', () => {
+    const closeBtn = this.createButton(width / 2, height / 2 + 160, 'Leave', () => {
       destroyAll();
     }).setScrollFactor(0).setDepth(1002);
     uiElements.push(closeBtn);
+    
+    // ESC key support
+    const escHandler = () => {
+      if (this.currentMenuCloseFunction) {
+        this.currentMenuCloseFunction();
+      }
+    };
+    this.escKey.once('down', escHandler);
   }
 
   private async handleTombstoneEncounter(encounterType: any): Promise<void> {
@@ -1381,8 +1484,19 @@ export class ExploreScene extends Phaser.Scene {
     if (roll < 0.38) {
       const numEnemies = Math.floor(Math.random() * 2) + 1;
       const enemies = [];
+      
+      // T1 zone encounters: max 1 T2 enemy allowed
+      let t2Count = 0;
       for (let i = 0; i < numEnemies; i++) {
-        enemies.push(EnemyFactory.createWildEnemy());
+        const tier = Math.floor(Math.random() * 2) + 1; // 1 or 2
+        
+        // If we already have a T2 enemy, force T1 for remaining enemies
+        if (tier === 2 && t2Count >= 1) {
+          enemies.push(EnemyFactory.createEnemy(1, false));
+        } else {
+          enemies.push(EnemyFactory.createEnemy(tier, false));
+          if (tier === 2) t2Count++;
+        }
       }
       
       return {
@@ -1406,8 +1520,8 @@ export class ExploreScene extends Phaser.Scene {
       };
     } else if (roll < 0.83) {
       return {
-        type: 'void_corruption',
-        description: 'A pocket of void corruption pulses before you.\nDangerous... but potentially rewarding.',
+        type: 'corrupted_void_portal',
+        description: 'A corrupted void portal tears through reality before you.\nDangerous... but potentially rewarding.',
       };
     } else if (roll < 0.93) {
       return {
