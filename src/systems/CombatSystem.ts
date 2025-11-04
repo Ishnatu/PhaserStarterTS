@@ -143,9 +143,8 @@ export class CombatSystem {
     }
 
     this.checkCombatEnd();
-    if (!this.combatState.isComplete) {
-      this.combatState.currentTurn = 'enemy';
-    }
+    this.deductActions(attack.actionCost);
+    this.checkAndEndPlayerTurn();
 
     let combinedMessage = '';
     if (!offHandResult) {
