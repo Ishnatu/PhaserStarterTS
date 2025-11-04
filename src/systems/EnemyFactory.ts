@@ -1,6 +1,11 @@
-import { Enemy, DiceRoll } from '../types/GameTypes';
+import { Enemy, DiceRoll, WeaponType } from '../types/GameTypes';
 
 export class EnemyFactory {
+  private static randomWeaponType(): WeaponType {
+    const weaponTypes: WeaponType[] = ['dagger', 'shortsword', 'longsword', 'battleaxe', 'mace', 'warhammer', 'greatsword', 'greataxe', 'spear', 'rapier'];
+    return weaponTypes[Math.floor(Math.random() * weaponTypes.length)];
+  }
+
   static createEnemy(tier: number, isBoss: boolean = false): Enemy {
     // Tier 1 specific stats
     if (tier === 1) {
@@ -23,7 +28,10 @@ export class EnemyFactory {
         evasion,
         damageReduction: 0,
         weaponDamage,
+        weaponType: this.randomWeaponType(),
         lootTable,
+        statusConditions: [],
+        backstabUsed: false,
       };
     }
 
@@ -51,7 +59,10 @@ export class EnemyFactory {
       evasion: baseEvasion,
       damageReduction,
       weaponDamage,
+      weaponType: this.randomWeaponType(),
       lootTable,
+      statusConditions: [],
+      backstabUsed: false,
     };
   }
 

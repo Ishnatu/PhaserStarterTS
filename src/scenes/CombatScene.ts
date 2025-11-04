@@ -5,12 +5,14 @@ import { CombatSystem } from '../systems/CombatSystem';
 import { EnemyFactory } from '../systems/EnemyFactory';
 import { ItemDatabase } from '../config/ItemDatabase';
 import { DiceRoller } from '../utils/DiceRoller';
-import { Delve, DelveRoom, Enemy, PlayerEquipment, InventoryItem } from '../types/GameTypes';
+import { Delve, DelveRoom, Enemy, PlayerEquipment, InventoryItem, WeaponAttack } from '../types/GameTypes';
 import { GameConfig } from '../config/GameConfig';
 import { DurabilityManager } from '../systems/DurabilityManager';
 import { FONTS } from '../config/fonts';
 import { ItemColorUtil } from '../utils/ItemColorUtil';
 import { ApiClient } from '../utils/ApiClient';
+import { WeaponAttackDatabase } from '../config/WeaponAttackDatabase';
+import { ConditionManager } from '../systems/ConditionManager';
 
 export class CombatScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -27,6 +29,10 @@ export class CombatScene extends Phaser.Scene {
   private isOverlayActive: boolean = false;
   private actionButtons: Phaser.GameObjects.Container[] = [];
   private returnToLocation?: { x: number; y: number };
+  private selectedAttack?: WeaponAttack;
+  private attackUIElements: Phaser.GameObjects.GameObject[] = [];
+  private statusIndicators: Map<number, Phaser.GameObjects.Container[]> = new Map();
+  private isTargetSelectionMode: boolean = false;
 
   constructor() {
     super('CombatScene');
@@ -210,8 +216,8 @@ export class CombatScene extends Phaser.Scene {
         })
         .on('pointerout', () => enemyBox.setFillStyle(0xff4444))
         .on('pointerdown', () => {
-          if (!this.isOverlayActive) {
-            this.attackEnemy(index);
+          if (!this.isOverlayActive && this.isTargetSelectionMode) {
+            this.attackEnemyWithSelectedAttack(index);
           }
         });
     });
@@ -241,7 +247,7 @@ export class CombatScene extends Phaser.Scene {
     const menuBg = this.add.rectangle(menuX, menuY, 230, 160, 0x2a2a3e, 0.95).setOrigin(0);
 
     const attackBtn = this.createActionButton(menuX + 20, menuY + 20, 'Attack', () => {
-      this.showMessage('Select an enemy to attack');
+      this.showAttackSelection();
     });
     this.actionButtons.push(attackBtn);
 
@@ -426,6 +432,46 @@ export class CombatScene extends Phaser.Scene {
     }
   }
 
+  private attackEnemyWithSelectedAttack(targetIndex: number): void {
+    if (!this.combatSystem.isPlayerTurn() || !this.selectedAttack) return;
+
+    this.isTargetSelectionMode = false;
+    this.disableEnemyTargeting();
+
+    const player = this.gameState.getPlayer();
+    const staminaCost = this.selectedAttack.staminaCost;
+    
+    if (player.stamina < staminaCost) {
+      const staminaPotionItem = player.inventory.find(item => item.itemId === 'potion_stamina');
+      
+      if (staminaPotionItem && staminaPotionItem.quantity > 0) {
+        this.showMessage('Exhausted! Automatically using Stamina Potion...');
+        this.usePotionNoTurnEnd('potion_stamina');
+        
+        this.time.delayedCall(1500, () => {
+          const updatedPlayer = this.gameState.getPlayer();
+          if (updatedPlayer.stamina >= staminaCost) {
+            this.executeAttackWithSelection(targetIndex);
+          } else {
+            this.showMessage('Still exhausted after potion! Must flee combat!');
+            this.selectedAttack = undefined;
+            this.time.delayedCall(1500, () => {
+              this.attemptRun();
+            });
+          }
+        });
+      } else {
+        this.showMessage('Exhausted with no stamina potions! Must flee combat!');
+        this.selectedAttack = undefined;
+        this.time.delayedCall(1500, () => {
+          this.attemptRun();
+        });
+      }
+    } else {
+      this.executeAttackWithSelection(targetIndex);
+    }
+  }
+
   private attackEnemy(targetIndex: number): void {
     if (!this.combatSystem.isPlayerTurn()) return;
 
@@ -459,6 +505,20 @@ export class CombatScene extends Phaser.Scene {
     } else {
       this.executeAttack(targetIndex);
     }
+  }
+
+  private executeAttackWithSelection(targetIndex: number): void {
+    const result = this.combatSystem.playerAttack(targetIndex, this.selectedAttack);
+    this.selectedAttack = undefined;
+    this.updateCombatDisplay();
+
+    this.time.delayedCall(1000, () => {
+      if (!this.combatSystem.isCombatComplete()) {
+        this.enemyTurn();
+      } else {
+        this.endCombat();
+      }
+    });
   }
 
   private executeAttack(targetIndex: number): void {
@@ -505,6 +565,8 @@ export class CombatScene extends Phaser.Scene {
 
     const recentLogs = state.combatLog.slice(-4).join('\n');
     this.logText.setText(recentLogs);
+    
+    this.updateStatusIndicators();
   }
 
   private endCombat(): void {
@@ -789,6 +851,263 @@ export class CombatScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     return this.add.container(x, y, [bg, label]);
+  }
+
+  private getAvailableAttacks(): WeaponAttack[] {
+    const player = this.gameState.getPlayer();
+    const attacks: WeaponAttack[] = [];
+    
+    const mainHandItem = player.equipment.mainHand;
+    const offHandItem = player.equipment.offHand;
+    
+    if (mainHandItem) {
+      const mainHandWeapon = ItemDatabase.getWeapon(mainHandItem.itemId);
+      if (mainHandWeapon) {
+        const weaponAttacks = WeaponAttackDatabase.getAttacksForWeapon(mainHandWeapon.type);
+        attacks.push(...weaponAttacks);
+      }
+    }
+    
+    if (offHandItem) {
+      const offHandWeapon = ItemDatabase.getWeapon(offHandItem.itemId);
+      const offHandArmor = ItemDatabase.getArmor(offHandItem.itemId);
+      
+      if (offHandWeapon && !offHandWeapon.twoHanded) {
+        const weaponAttacks = WeaponAttackDatabase.getAttacksForWeapon(offHandWeapon.type);
+        const dualWieldAttacks = weaponAttacks.filter(a => !a.requiresDualWield || (mainHandItem && !ItemDatabase.getWeapon(mainHandItem.itemId)?.twoHanded));
+        attacks.push(...dualWieldAttacks);
+      } else if (offHandArmor && offHandArmor.slot === 'shield') {
+        if (offHandItem.itemId === 'shield_steel') {
+          attacks.push(...WeaponAttackDatabase.getAttacksForWeapon('steel_shield'));
+        } else if (offHandItem.itemId === 'shield_wooden') {
+          attacks.push(...WeaponAttackDatabase.getAttacksForWeapon('leather_shield'));
+        }
+      }
+    }
+    
+    if (attacks.length === 0) {
+      attacks.push({
+        name: 'Unarmed Strike',
+        actionCost: 1,
+        staminaCost: 3,
+        damageMultiplier: 0.5,
+        hitBonus: 0,
+        specialEffect: 'Basic unarmed attack',
+        availableWithShield: true,
+        requiresDualWield: false,
+      });
+    }
+    
+    return attacks;
+  }
+
+  private showAttackSelection(): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    const availableAttacks = this.getAvailableAttacks();
+    
+    this.isOverlayActive = true;
+    this.attackUIElements = [];
+    
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
+    this.attackUIElements.push(overlay);
+    
+    const panelWidth = 600;
+    const panelHeight = 400;
+    const panel = this.add.rectangle(width / 2, height / 2, panelWidth, panelHeight, 0x2a2a3e).setOrigin(0.5);
+    this.attackUIElements.push(panel);
+    
+    const title = this.add.text(width / 2, height / 2 - panelHeight / 2 + 30, 'Select Attack', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#f0a020',
+    }).setOrigin(0.5);
+    this.attackUIElements.push(title);
+    
+    const cols = 2;
+    const attackBoxWidth = 250;
+    const attackBoxHeight = 90;
+    const spacing = 20;
+    const startX = width / 2 - (cols * attackBoxWidth + (cols - 1) * spacing) / 2;
+    const startY = height / 2 - panelHeight / 2 + 80;
+    
+    availableAttacks.forEach((attack, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const x = startX + col * (attackBoxWidth + spacing);
+      const y = startY + row * (attackBoxHeight + spacing);
+      
+      this.createAttackBox(x, y, attackBoxWidth, attackBoxHeight, attack, player.stamina);
+    });
+    
+    const backBtn = this.createMenuButton(width / 2, height / 2 + panelHeight / 2 - 40, 'Back', () => {
+      this.closeAttackSelection();
+    });
+    this.attackUIElements.push(backBtn);
+  }
+
+  private createAttackBox(x: number, y: number, width: number, height: number, attack: WeaponAttack, playerStamina: number): void {
+    const canAfford = playerStamina >= attack.staminaCost;
+    const baseColor = canAfford ? 0x444466 : 0x333344;
+    const hoverColor = canAfford ? 0x555577 : 0x444455;
+    
+    const bg = this.add.rectangle(x, y, width, height, baseColor).setOrigin(0);
+    
+    if (canAfford) {
+      bg.setInteractive({ useHandCursor: true })
+        .on('pointerover', () => bg.setFillStyle(hoverColor))
+        .on('pointerout', () => bg.setFillStyle(baseColor))
+        .on('pointerdown', () => {
+          this.selectAttack(attack);
+        });
+    } else {
+      bg.setAlpha(0.5);
+    }
+    
+    const nameColor = canAfford ? '#00ff00' : '#ff0000';
+    const nameText = this.add.text(x + width / 2, y + 15, attack.name, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: nameColor,
+      fontStyle: 'bold',
+    }).setOrigin(0.5, 0);
+    
+    const staminaText = this.add.text(x + 10, y + 45, `STAM ${attack.staminaCost}`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffcc00',
+    });
+    
+    const actionText = this.add.text(x + width - 10, y + 45, `ATK ${attack.actionCost}`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+    }).setOrigin(1, 0);
+    
+    if (attack.specialEffect) {
+      const effectText = this.add.text(x + width / 2, y + 68, attack.specialEffect, {
+        fontFamily: FONTS.primary,
+        fontSize: '12px',
+        color: '#aaaaff',
+        wordWrap: { width: width - 20 },
+        align: 'center',
+      }).setOrigin(0.5, 0);
+      this.attackUIElements.push(effectText);
+    }
+    
+    this.attackUIElements.push(bg, nameText, staminaText, actionText);
+  }
+
+  private selectAttack(attack: WeaponAttack): void {
+    this.selectedAttack = attack;
+    this.closeAttackSelection();
+    
+    const isAoE = attack.name.includes('Sweeping') || attack.name.includes('Arcing') || attack.name.includes('Murderous Intent') || attack.name.includes('Spinning Flurry');
+    
+    if (isAoE) {
+      this.executeAoEAttack();
+    } else {
+      this.showMessage('Select Target');
+      this.isTargetSelectionMode = true;
+      this.enableEnemyTargeting();
+    }
+  }
+
+  private closeAttackSelection(): void {
+    this.attackUIElements.forEach(el => el.destroy());
+    this.attackUIElements = [];
+    this.isOverlayActive = false;
+  }
+
+  private enableEnemyTargeting(): void {
+    this.enemyContainers.forEach((container, index) => {
+      const enemyBox = container.getAt(0) as Phaser.GameObjects.Rectangle;
+      if (enemyBox && this.combatSystem.getCombatState()?.enemies[index].health > 0) {
+        enemyBox.setStrokeStyle(3, 0xffff00);
+      }
+    });
+  }
+
+  private disableEnemyTargeting(): void {
+    this.enemyContainers.forEach((container) => {
+      const enemyBox = container.getAt(0) as Phaser.GameObjects.Rectangle;
+      if (enemyBox) {
+        enemyBox.setStrokeStyle(0);
+      }
+    });
+  }
+
+  private executeAoEAttack(): void {
+    if (!this.selectedAttack) return;
+    
+    const state = this.combatSystem.getCombatState();
+    if (!state) return;
+    
+    state.enemies.forEach((enemy, index) => {
+      if (enemy.health > 0) {
+        this.combatSystem.playerAttack(index, this.selectedAttack);
+      }
+    });
+    
+    this.selectedAttack = undefined;
+    this.updateCombatDisplay();
+    
+    this.time.delayedCall(1000, () => {
+      if (!this.combatSystem.isCombatComplete()) {
+        this.enemyTurn();
+      } else {
+        this.endCombat();
+      }
+    });
+  }
+
+  private renderStatusIndicators(enemy: Enemy, enemyIndex: number, enemyX: number, enemyY: number): void {
+    const existingIndicators = this.statusIndicators.get(enemyIndex);
+    if (existingIndicators) {
+      existingIndicators.forEach(ind => ind.destroy());
+    }
+    
+    const indicators: Phaser.GameObjects.Container[] = [];
+    const squareSize = 20;
+    const spacing = 5;
+    let currentX = enemyX - (enemy.statusConditions.length * (squareSize + spacing)) / 2;
+    const indicatorY = enemyY - 110;
+    
+    enemy.statusConditions.forEach((condition) => {
+      const color = ConditionManager.getConditionColor(condition.type);
+      const square = this.add.rectangle(currentX, indicatorY, squareSize, squareSize, color);
+      
+      const stackText = this.add.text(currentX, indicatorY, condition.stacks > 1 ? `${condition.stacks}` : '', {
+        fontFamily: FONTS.primary,
+        fontSize: '12px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      }).setOrigin(0.5);
+      
+      const container = this.add.container(0, 0, [square, stackText]);
+      indicators.push(container);
+      
+      currentX += squareSize + spacing;
+    });
+    
+    this.statusIndicators.set(enemyIndex, indicators);
+  }
+
+  private updateStatusIndicators(): void {
+    const state = this.combatSystem.getCombatState();
+    if (!state) return;
+    
+    const { width } = this.cameras.main;
+    const spacing = 200;
+    const totalWidth = (state.enemies.length - 1) * spacing;
+    const startX = width - 300 - totalWidth / 2;
+    const startY = 200;
+    
+    state.enemies.forEach((enemy, index) => {
+      const x = startX + (index * spacing);
+      const y = startY;
+      this.renderStatusIndicators(enemy, index, x, y);
+    });
   }
 
   private showMessage(message: string): void {
