@@ -13,6 +13,7 @@ import { ItemColorUtil } from '../utils/ItemColorUtil';
 import { ApiClient } from '../utils/ApiClient';
 import { WeaponAttackDatabase } from '../config/WeaponAttackDatabase';
 import { ConditionManager } from '../systems/ConditionManager';
+import { EquipmentManager } from '../systems/EquipmentManager';
 
 export class CombatScene extends Phaser.Scene {
   private gameState!: GameStateManager;
