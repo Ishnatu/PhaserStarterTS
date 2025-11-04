@@ -550,11 +550,14 @@ export class CombatScene extends Phaser.Scene {
     this.selectedAttack = undefined;
     this.updateCombatDisplay();
 
+    const state = this.combatSystem.getCombatState();
+    const shouldEndTurn = state && state.currentTurn === 'enemy';
+
     this.time.delayedCall(1000, () => {
-      if (!this.combatSystem.isCombatComplete()) {
-        this.enemyTurn();
-      } else {
+      if (this.combatSystem.isCombatComplete()) {
         this.endCombat();
+      } else if (shouldEndTurn) {
+        this.enemyTurn();
       }
     });
   }
@@ -563,11 +566,14 @@ export class CombatScene extends Phaser.Scene {
     const result = this.combatSystem.playerAttack(targetIndex);
     this.updateCombatDisplay();
 
+    const state = this.combatSystem.getCombatState();
+    const shouldEndTurn = state && state.currentTurn === 'enemy';
+
     this.time.delayedCall(1000, () => {
-      if (!this.combatSystem.isCombatComplete()) {
-        this.enemyTurn();
-      } else {
+      if (this.combatSystem.isCombatComplete()) {
         this.endCombat();
+      } else if (shouldEndTurn) {
+        this.enemyTurn();
       }
     });
   }
@@ -1108,23 +1114,18 @@ export class CombatScene extends Phaser.Scene {
   private executeAoEAttack(): void {
     if (!this.selectedAttack) return;
     
-    const state = this.combatSystem.getCombatState();
-    if (!state) return;
-    
-    state.enemies.forEach((enemy, index) => {
-      if (enemy.health > 0) {
-        this.combatSystem.playerAttack(index, this.selectedAttack);
-      }
-    });
-    
+    const result = this.combatSystem.playerAttack(0, this.selectedAttack);
     this.selectedAttack = undefined;
     this.updateCombatDisplay();
     
+    const state = this.combatSystem.getCombatState();
+    const shouldEndTurn = state && state.currentTurn === 'enemy';
+    
     this.time.delayedCall(1000, () => {
-      if (!this.combatSystem.isCombatComplete()) {
-        this.enemyTurn();
-      } else {
+      if (this.combatSystem.isCombatComplete()) {
         this.endCombat();
+      } else if (shouldEndTurn) {
+        this.enemyTurn();
       }
     });
   }
