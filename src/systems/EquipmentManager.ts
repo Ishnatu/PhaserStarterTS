@@ -1,6 +1,7 @@
-import { PlayerData, PlayerEquipment, PlayerStats, WeaponData, ArmorData, EquippedItem, InventoryItem } from '../types/GameTypes';
+import { PlayerData, PlayerEquipment, PlayerStats, WeaponData, ArmorData, EquippedItem, InventoryItem, WeaponAttack } from '../types/GameTypes';
 import { ItemDatabase } from '../config/ItemDatabase';
 import { ForgingSystem } from './ForgingSystem';
+import { WeaponAttackDatabase } from '../config/WeaponAttackDatabase';
 
 export class EquipmentManager {
   static calculatePlayerStats(player: PlayerData): PlayerStats {
@@ -219,6 +220,46 @@ export class EquipmentManager {
     }
     
     return undefined;
+  }
+
+  static getAvailableAttacks(player: PlayerData): WeaponAttack[] {
+    const attacks: WeaponAttack[] = [];
+    
+    if (player.equipment.mainHand) {
+      const mainWeapon = ItemDatabase.getWeapon(player.equipment.mainHand.itemId);
+      if (mainWeapon) {
+        const mainAttacks = WeaponAttackDatabase.getAttacks(mainWeapon.type);
+        const mainHandLevel = player.equipment.mainHand.enhancementLevel || 0;
+        
+        mainAttacks.forEach(attack => {
+          attacks.push({
+            ...attack,
+            sourceHand: 'mainHand',
+            weaponData: mainWeapon,
+            enhancementLevel: mainHandLevel
+          });
+        });
+      }
+    }
+    
+    if (this.isDualWielding(player) && player.equipment.offHand) {
+      const offWeapon = ItemDatabase.getWeapon(player.equipment.offHand.itemId);
+      if (offWeapon) {
+        const offAttacks = WeaponAttackDatabase.getAttacks(offWeapon.type);
+        const offHandLevel = player.equipment.offHand.enhancementLevel || 0;
+        
+        offAttacks.forEach(attack => {
+          attacks.push({
+            ...attack,
+            sourceHand: 'offHand',
+            weaponData: offWeapon,
+            enhancementLevel: offHandLevel
+          });
+        });
+      }
+    }
+    
+    return attacks;
   }
 
   private static addToInventory(player: PlayerData, itemId: string, quantity: number, enhancementLevel?: number, durability?: number, maxDurability?: number): void {

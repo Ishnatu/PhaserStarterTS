@@ -28,6 +28,9 @@ export interface WeaponAttack {
   specialEffect?: string;
   availableWithShield: boolean;
   requiresDualWield: boolean;
+  sourceHand?: WeaponSlot;
+  weaponData?: WeaponData;
+  enhancementLevel?: number;
 }
 
 export interface DiceRoll {
