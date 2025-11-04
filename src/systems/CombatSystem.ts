@@ -428,13 +428,22 @@ export class CombatSystem {
       this.deductActions(attack.actionCost);
       this.checkAndEndPlayerTurn();
 
+      const totalDamage = firstStrike.damage + secondStrike.damage;
+      let resultMessage: string;
+      
+      if (secondStrike.hit) {
+        resultMessage = `Vipers Fangs: Both strikes connected for ${totalDamage} total damage`;
+      } else {
+        resultMessage = `Vipers Fangs: First strike hit for ${firstStrike.damage} damage, second strike missed`;
+      }
+
       return {
         hit: true,
         critical: firstStrike.critical || secondStrike.critical,
         attackRoll: Math.max(firstStrike.attackRoll, secondStrike.attackRoll),
-        damage: firstStrike.damage + secondStrike.damage,
+        damage: totalDamage,
         damageBeforeReduction: firstStrike.damageBeforeReduction + secondStrike.damageBeforeReduction,
-        message: `Vipers Fangs: Both strikes connected for ${firstStrike.damage + secondStrike.damage} total damage`,
+        message: resultMessage,
       };
     }
 

@@ -585,6 +585,9 @@ export class CombatScene extends Phaser.Scene {
 
     if (this.combatSystem.isCombatComplete()) {
       this.time.delayedCall(1000, () => this.endCombat());
+    } else {
+      this.combatSystem.playerTurnStart();
+      this.updateCombatDisplay();
     }
   }
 
