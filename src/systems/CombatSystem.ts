@@ -109,12 +109,6 @@ export class CombatSystem {
 
     this.combatState.player.stamina = Math.max(0, this.combatState.player.stamina - attack.staminaCost);
 
-    const isDualWielding = EquipmentManager.isDualWielding(this.combatState.player);
-    
-    if (isDualWielding && attack.name === 'Light Attack') {
-      return this.performDualWieldAttack(targetIndex, attack);
-    }
-
     return this.executeAttack(targetIndex, attack);
   }
 
