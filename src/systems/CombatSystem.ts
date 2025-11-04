@@ -30,6 +30,8 @@ export class CombatSystem {
       isComplete: false,
       playerVictory: false,
       isWildEncounter,
+      actionsRemaining: 2,
+      maxActionsPerTurn: 2,
     };
 
     return this.combatState;
@@ -37,6 +39,8 @@ export class CombatSystem {
 
   playerTurnStart(): void {
     if (!this.combatState) return;
+
+    this.combatState.actionsRemaining = this.combatState.maxActionsPerTurn;
 
     if (ConditionManager.isStunned(this.combatState.player)) {
       this.combatState.combatLog.push('You are stunned and cannot act!');
