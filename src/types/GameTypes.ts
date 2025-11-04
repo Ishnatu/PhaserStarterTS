@@ -3,9 +3,32 @@ export type ArmorSlot = 'helmet' | 'chest' | 'legs' | 'boots' | 'shoulders' | 'c
 export type EquipmentSlot = WeaponSlot | ArmorSlot;
 
 export type WeaponType = 'dagger' | 'shortsword' | 'longsword' | 'battleaxe' | 'mace' | 'warhammer' | 
-                         'greatsword' | 'greataxe' | 'staff' | 'spear' | 'rapier';
+                         'greatsword' | 'greataxe' | 'staff' | 'spear' | 'rapier' | 'quarterstaff';
+export type ShieldType = 'steel_shield' | 'leather_shield';
 export type ArmorType = 'light' | 'heavy' | 'shield';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+
+export type StatusConditionType = 'bleeding' | 'stunned' | 'poisoned' | 'dependable' | 'raise_evasion' | 'raise_defence' | 'vampiric' | 'decapitate';
+
+export interface StatusCondition {
+  type: StatusConditionType;
+  stacks: number;
+  duration: number;
+}
+
+export interface WeaponAttack {
+  name: string;
+  actionCost: number;
+  staminaCost: number;
+  damageMultiplier: number;
+  hitBonus: number;
+  conditionInflicted?: StatusConditionType;
+  conditionChance?: number;
+  conditionDuration?: number;
+  specialEffect?: string;
+  availableWithShield: boolean;
+  requiresDualWield: boolean;
+}
 
 export interface DiceRoll {
   numDice: number;
@@ -110,6 +133,7 @@ export interface PlayerData {
   activeBuffs: PlayerBuff[];
   exploredTiles: string[];
   completedDelves?: string[];
+  statusConditions: StatusCondition[];
 }
 
 export interface DelveRoom {
@@ -139,7 +163,10 @@ export interface Enemy {
   evasion: number;
   damageReduction: number;
   weaponDamage: DiceRoll;
+  weaponType?: WeaponType;
   lootTable: { itemId: string; dropChance: number }[];
+  statusConditions: StatusCondition[];
+  backstabUsed?: boolean;
 }
 
 export interface AttackResult {
@@ -149,6 +176,8 @@ export interface AttackResult {
   damage: number;
   damageBeforeReduction: number;
   message: string;
+  conditionsApplied?: StatusCondition[];
+  additionalEffects?: string[];
 }
 
 export interface CombatState {
