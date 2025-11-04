@@ -550,14 +550,14 @@ export class CombatScene extends Phaser.Scene {
     this.selectedAttack = undefined;
     this.updateCombatDisplay();
 
-    const state = this.combatSystem.getCombatState();
-    const shouldEndTurn = state && state.currentTurn === 'enemy';
-
     this.time.delayedCall(1000, () => {
       if (this.combatSystem.isCombatComplete()) {
         this.endCombat();
-      } else if (shouldEndTurn) {
-        this.enemyTurn();
+      } else {
+        const state = this.combatSystem.getCombatState();
+        if (state && state.currentTurn === 'enemy') {
+          this.enemyTurn();
+        }
       }
     });
   }
@@ -566,14 +566,14 @@ export class CombatScene extends Phaser.Scene {
     const result = this.combatSystem.playerAttack(targetIndex);
     this.updateCombatDisplay();
 
-    const state = this.combatSystem.getCombatState();
-    const shouldEndTurn = state && state.currentTurn === 'enemy';
-
     this.time.delayedCall(1000, () => {
       if (this.combatSystem.isCombatComplete()) {
         this.endCombat();
-      } else if (shouldEndTurn) {
-        this.enemyTurn();
+      } else {
+        const state = this.combatSystem.getCombatState();
+        if (state && state.currentTurn === 'enemy') {
+          this.enemyTurn();
+        }
       }
     });
   }
@@ -1118,14 +1118,14 @@ export class CombatScene extends Phaser.Scene {
     this.selectedAttack = undefined;
     this.updateCombatDisplay();
     
-    const state = this.combatSystem.getCombatState();
-    const shouldEndTurn = state && state.currentTurn === 'enemy';
-    
     this.time.delayedCall(1000, () => {
       if (this.combatSystem.isCombatComplete()) {
         this.endCombat();
-      } else if (shouldEndTurn) {
-        this.enemyTurn();
+      } else {
+        const state = this.combatSystem.getCombatState();
+        if (state && state.currentTurn === 'enemy') {
+          this.enemyTurn();
+        }
       }
     });
   }
