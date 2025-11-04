@@ -1,0 +1,33 @@
+weapon_type	hand_requirement	attack_name	action_cost	stamina_cost	damage_multiplier	hit_bonus	condition_inflicted	condition_chance	condition_duration	special_effect_of_attack	available_with_shield	requires_dual_wield
+dagger	one-handed	Light Attack	1	3	1	0	bleeding	15	2	Standard attack	yes	no
+dagger	one-handed	Backstab	2	10	3	0	bleeding	35	2	Chance to bleed, Critical strike in a 19,20, crtical strikes double the dice rolled, can only be used once per target, or if a target is stunned	yes	no
+shortsword	one-handed	Light Attack	1	5	1	0	none	0	0	Standard attack, dependable 	yes	no
+shortsword	one-handed	Disarming strike	2	10	1	0	none	0	0	Raises evasion by 3 and damage reduction by 10% for 1 round, dependable 	yes	no
+rapier	one-handed	Light Attack	1	5	1	0	bleeding	25	2	On a successful strike has a 10% chance to attack again	yes	no
+rapier	one-handed	Puncture	2	15	1	0	bleeding	40	2	Lunge and attack the target three times	yes	no
+longsword	one-handed	Light Attack	1	5	1	0	none	0	0	Standard attack	yes	no
+longsword	one-handed	Sweeping Strike	2	10	1	0	none	0	0	Cleaving momentum deal 75% damage to surrounding enemies	yes	no
+battle_axe	one-handed	Rend	1	5	1	0	bleeding	10	2	A rending attack that has a chance to cause bleed	yes	no
+battle_axe	one-handed	Sweeping rend	2	10	1.5	0	bleeding	30	2	A sweeping strike that has a chance to cause bleed	yes	no
+mace	one-handed	Light Attack	1	5	1	0	stunned	10	2	Standard attack, stun chance is doubled on a critical strike	yes	no
+mace	one-handed	Crushing blow	2	10	1.5	0	stunned	30	2	Hard hitting attack, stun chance is tripled on a critical strike	yes	no
+warhammer_1h	one-handed	Light Attack	1	5	1	0	stunned	15	1	Standard attack, stun chance is doubled on a critical strike	yes	no
+warhammer_1h	one-handed	Heavy Attack	2	10	1.5	0	stunned	33	1	Hard hitting attack, stun chance is tripled on a critical strike	yes	no
+spear	versatile	Light Attack	1	5	1	0	poison	20	2	Standard attack with chance on hit to poison target	yes	no
+spear	versatile	Vipers Fangs	2	10	1.5	0	poison	25	2	Standard attack with chance on hit to poison target, on a successful hit performs a second attack	yes	no
+greatsword	two-handed	Thrust	1	5	1	0	none	0	0	Standard attack	no	no
+greatsword	two-handed	Heavy Attack	2	10	1	0	bleeding	15	2	Hard-hitting; slower recovery.	no	no
+greatsword	two-handed	Arcing blade	1	10	1	0	bleeding	25	1	Wide arcing attack that strikes all enemies in combat, with a chance to inflict bleed	no	no
+greatsword	two-handed	Crimson Mist	2	20	2	0	decapitate	35	1	Powerful overhead strike, chance to crit in 18,19,20, on a critical strike on an enemy that is under 30% health has a 35% chance to instantly kill them	no	no
+greataxe	two-handed	Light Attack	1	5	1	0	bleeding	20	2	Fast attack that can cause a bleed effect	no	no
+greataxe	two-handed	Savage Strike	2	10	1	0	none	0	0	A hard hitting attack, crit on 19,20 and roll additional xd12 on critical strikes (where x is the number of damage die for the greataxe)	no	no
+greataxe	two-handed	Bloodfury	1	10	1	0	vampiric	100	0	On bleeding targets heal 50% of damage delt	no	no
+greataxe	two-handed	Muderous Intent	2	20	2	0	bleeding	55	2	A savage arching strike that hits all enemies, if an enemy dies to this strike, make an additional savage strike at no stamina cost to a random remaining enemy, will not loop if additional enemy dies 	no	no
+quarterstaff	two-handed	Light Attack	1	5	1	0	stunned	10	1	Fast concusive strikes	no	no
+quarterstaff	two-handed	Guarding strike	2	10	1.5	0	none	0	0	A quick and powerful strike that also raises evasion by +5 for one round	no	no
+quarterstaff	two-handed	Rising Oak	1	10	1.2	0	stunned	35	1	A powerful strike that can stun a target	no	no
+quarterstaff	two-handed	Spinning Flurry	2	20	1	0	stunned	30	1	A consecutive set of three sweeping strikes, these strikes have a chance to stun all targets	no	no
+steel_shield	off-hand	Shield wall	1	5		0	Raise defence	100	1	Absorb 10x(y/2) damage (where y = level of shield)		
+steel_shield	off-hand	Shield Slam	2	10	1	0	stunned	30	1	Absorb 10x(y/2) damage (where y = level of shield) and a chance to stun target		
+leather_shield	off-hand	Roll	1	5	1	0	raise evasion	100	1	roll and raise evasion by 3 for one round		
+leather_shield	off-hand	Dust up	2	10	1	0	raise evasion	100	1	kick up dust at the enemy, raise evasion by 5 for one round and reduce damage by 15%		
