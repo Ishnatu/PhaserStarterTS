@@ -962,7 +962,7 @@ export class CombatScene extends Phaser.Scene {
   private showAttackSelection(): void {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
-    const availableAttacks = this.getAvailableAttacks();
+    const availableAttacks = EquipmentManager.getAvailableAttacks(player);
     
     this.isOverlayActive = true;
     this.attackUIElements = [];
@@ -1033,7 +1033,8 @@ export class CombatScene extends Phaser.Scene {
       nameColor = '#888888';
     }
     
-    const nameText = this.add.text(x + width / 2, y + 15, attack.name, {
+    const handLabel = attack.sourceHand === 'offHand' ? '[Off] ' : '[Main] ';
+    const nameText = this.add.text(x + width / 2, y + 15, handLabel + attack.name, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: nameColor,
