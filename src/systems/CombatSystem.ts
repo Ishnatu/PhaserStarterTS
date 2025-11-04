@@ -327,7 +327,8 @@ export class CombatSystem {
     if (!hit) {
       const missMessage = `You swing and miss! (-${attack.staminaCost} stamina)`;
       this.combatState.combatLog.push(missMessage);
-      this.endPlayerTurn();
+      this.deductActions(attack.actionCost);
+      this.checkAndEndPlayerTurn();
       return this.createFailedAttack(missMessage, attackResult.d20);
     }
 
@@ -353,7 +354,8 @@ export class CombatSystem {
       this.combatState.combatLog.push(`${target.name} has been defeated!`);
     }
 
-    this.endPlayerTurn();
+    this.deductActions(attack.actionCost);
+    this.checkAndEndPlayerTurn();
 
     return {
       hit: true,
@@ -395,7 +397,8 @@ export class CombatSystem {
       }
     }
 
-    this.endPlayerTurn();
+    this.deductActions(attack.actionCost);
+    this.checkAndEndPlayerTurn();
 
     return {
       hit: anyHit,
@@ -423,7 +426,8 @@ export class CombatSystem {
         this.combatState.combatLog.push(`${target.name} has been defeated!`);
       }
 
-      this.endPlayerTurn();
+      this.deductActions(attack.actionCost);
+      this.checkAndEndPlayerTurn();
 
       return {
         hit: true,
@@ -439,7 +443,8 @@ export class CombatSystem {
       this.combatState.combatLog.push(`${target.name} has been defeated!`);
     }
 
-    this.endPlayerTurn();
+    this.deductActions(attack.actionCost);
+    this.checkAndEndPlayerTurn();
     return firstStrike;
   }
 
@@ -471,7 +476,8 @@ export class CombatSystem {
       this.combatState.combatLog.push(`${primaryTarget.name} has been defeated!`);
     }
 
-    this.endPlayerTurn();
+    this.deductActions(attack.actionCost);
+    this.checkAndEndPlayerTurn();
     return primaryResult;
   }
 
@@ -501,7 +507,8 @@ export class CombatSystem {
       }
     }
 
-    this.endPlayerTurn();
+    this.deductActions(attack.actionCost);
+    this.checkAndEndPlayerTurn();
 
     return {
       hit: anyHit,
@@ -543,7 +550,8 @@ export class CombatSystem {
       }
     }
 
-    this.endPlayerTurn();
+    this.deductActions(attack.actionCost);
+    this.checkAndEndPlayerTurn();
 
     return {
       hit: anyHit,
@@ -555,7 +563,7 @@ export class CombatSystem {
     };
   }
 
-  private executeMurderousIntent(attack: WeaponAttack): AttackResult {
+  private executeMurderousIntent(attack: WeaponAttack): AttackResult{
     if (!this.combatState) {
       return this.createFailedAttack('No combat state!');
     }
@@ -597,7 +605,8 @@ export class CombatSystem {
       }
     }
 
-    this.endPlayerTurn();
+    this.deductActions(attack.actionCost);
+    this.checkAndEndPlayerTurn();
 
     return {
       hit: anyHit,
@@ -635,7 +644,8 @@ export class CombatSystem {
     if (!hit) {
       const missMessage = `Crimson Mist misses! (-${attack.staminaCost} stamina)`;
       this.combatState.combatLog.push(missMessage);
-      this.endPlayerTurn();
+      this.deductActions(attack.actionCost);
+      this.checkAndEndPlayerTurn();
       return this.createFailedAttack(missMessage, attackResult.d20);
     }
 
@@ -664,7 +674,8 @@ export class CombatSystem {
       this.combatState.combatLog.push(`${target.name} has been defeated!`);
     }
 
-    this.endPlayerTurn();
+    this.deductActions(attack.actionCost);
+    this.checkAndEndPlayerTurn();
 
     return {
       hit: true,
@@ -722,7 +733,8 @@ export class CombatSystem {
     if (!hit) {
       const missMessage = `Savage Strike misses! (-${attack.staminaCost} stamina)`;
       this.combatState.combatLog.push(missMessage);
-      this.endPlayerTurn();
+      this.deductActions(attack.actionCost);
+      this.checkAndEndPlayerTurn();
       return this.createFailedAttack(missMessage, attackResult.d20);
     }
 
@@ -752,7 +764,8 @@ export class CombatSystem {
       this.combatState.combatLog.push(`${target.name} has been defeated!`);
     }
 
-    this.endPlayerTurn();
+    this.deductActions(attack.actionCost);
+    this.checkAndEndPlayerTurn();
 
     return {
       hit: true,
@@ -784,11 +797,13 @@ export class CombatSystem {
         this.combatState.combatLog.push(`${target.name} has been defeated!`);
       }
 
-      this.endPlayerTurn();
+      this.deductActions(attack.actionCost);
+      this.checkAndEndPlayerTurn();
       return result;
     }
 
-    this.endPlayerTurn();
+    this.deductActions(attack.actionCost);
+    this.checkAndEndPlayerTurn();
 
     return {
       hit: true,
@@ -829,7 +844,8 @@ export class CombatSystem {
       this.combatState.combatLog.push(`${target.name} has been defeated!`);
     }
 
-    this.endPlayerTurn();
+    this.deductActions(attack.actionCost);
+    this.checkAndEndPlayerTurn();
     return result;
   }
 
@@ -979,7 +995,20 @@ export class CombatSystem {
     }
   }
 
-  private endPlayerTurn(): void {
+  private deductActions(actionCost: number): void {
+    if (!this.combatState) return;
+    this.combatState.actionsRemaining -= actionCost;
+  }
+
+  private checkAndEndPlayerTurn(): void {
+    if (!this.combatState) return;
+    
+    if (this.combatState.actionsRemaining < 1) {
+      this.endPlayerTurn();
+    }
+  }
+
+  endPlayerTurn(): void {
     if (!this.combatState) return;
     
     this.checkCombatEnd();
