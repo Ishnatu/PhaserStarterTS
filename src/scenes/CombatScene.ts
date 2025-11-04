@@ -1061,6 +1061,12 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private selectAttack(attack: WeaponAttack): void {
+    const state = this.combatSystem.getCombatState();
+    if (!state || state.actionsRemaining < attack.actionCost) {
+      this.showMessage('Not enough actions!');
+      return;
+    }
+    
     this.selectedAttack = attack;
     this.closeAttackSelection();
     
