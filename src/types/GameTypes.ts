@@ -189,6 +189,8 @@ export interface CombatState {
   isComplete: boolean;
   playerVictory: boolean;
   isWildEncounter: boolean;
+  actionsRemaining: number;
+  maxActionsPerTurn: number;
 }
 
 export type GameScene = 'town' | 'explore' | 'delve' | 'combat';
