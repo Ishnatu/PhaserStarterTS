@@ -33,6 +33,7 @@ export class CombatScene extends Phaser.Scene {
   private attackUIElements: Phaser.GameObjects.GameObject[] = [];
   private statusIndicators: Map<number, Phaser.GameObjects.Container[]> = new Map();
   private isTargetSelectionMode: boolean = false;
+  private actionCounterText!: Phaser.GameObjects.Text;
 
   constructor() {
     super('CombatScene');
@@ -242,24 +243,40 @@ export class CombatScene extends Phaser.Scene {
   private renderActionButtons(): void {
     const { width, height } = this.cameras.main;
     const menuX = width - 250;
-    const menuY = height - 180;
+    const menuY = height - 230;
 
-    const menuBg = this.add.rectangle(menuX, menuY, 230, 160, 0x2a2a3e, 0.95).setOrigin(0);
+    const menuBg = this.add.rectangle(menuX, menuY, 230, 210, 0x2a2a3e, 0.95).setOrigin(0);
 
-    const attackBtn = this.createActionButton(menuX + 20, menuY + 20, 'Attack', () => {
+    const state = this.combatSystem.getCombatState();
+    const actionsRemaining = state?.actionsRemaining || 0;
+    const maxActions = state?.maxActionsPerTurn || 2;
+
+    this.actionCounterText = this.add.text(menuX + 115, menuY + 15, `Actions: ${actionsRemaining}/${maxActions}`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#00ff00',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    const attackBtn = this.createActionButton(menuX + 20, menuY + 40, 'Attack', () => {
       this.showAttackSelection();
     });
     this.actionButtons.push(attackBtn);
 
-    const inventoryBtn = this.createActionButton(menuX + 20, menuY + 70, 'Inventory', () => {
+    const inventoryBtn = this.createActionButton(menuX + 20, menuY + 90, 'Inventory', () => {
       this.openInventory();
     });
     this.actionButtons.push(inventoryBtn);
 
-    const runBtn = this.createActionButton(menuX + 20, menuY + 120, 'Run', () => {
+    const runBtn = this.createActionButton(menuX + 20, menuY + 140, 'Run', () => {
       this.attemptRun();
     });
     this.actionButtons.push(runBtn);
+
+    const endTurnBtn = this.createActionButton(menuX + 20, menuY + 170, 'End Turn', () => {
+      this.endPlayerTurn();
+    });
+    this.actionButtons.push(endTurnBtn);
   }
 
   private createActionButton(
@@ -270,10 +287,24 @@ export class CombatScene extends Phaser.Scene {
   ): Phaser.GameObjects.Container {
     const bg = this.add.rectangle(0, 0, 190, 35, 0x444466)
       .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => bg.setFillStyle(0x555577))
+      .on('pointerover', () => {
+        const state = this.combatSystem.getCombatState();
+        const hasActions = state && state.actionsRemaining > 0;
+        if (text === 'Attack' || text === 'Inventory') {
+          if (hasActions) bg.setFillStyle(0x555577);
+        } else {
+          bg.setFillStyle(0x555577);
+        }
+      })
       .on('pointerout', () => bg.setFillStyle(0x444466))
       .on('pointerdown', () => {
         if (!this.isOverlayActive && this.combatSystem.isPlayerTurn()) {
+          const state = this.combatSystem.getCombatState();
+          const hasActions = state && state.actionsRemaining > 0;
+          if ((text === 'Attack' || text === 'Inventory') && !hasActions) {
+            this.showMessage('Not enough actions!');
+            return;
+          }
           callback();
         }
       });
@@ -376,11 +407,18 @@ export class CombatScene extends Phaser.Scene {
 
     this.gameState.removeItemFromInventory(itemId, 1);
     this.gameState.updatePlayer(player);
+
+    this.combatSystem.deductActions(1);
     this.updateCombatDisplay();
+
+    const state = this.combatSystem.getCombatState();
+    const shouldEndTurn = state && state.actionsRemaining <= 0;
 
     this.time.delayedCall(1000, () => {
       if (!this.combatSystem.isCombatComplete()) {
-        this.enemyTurn();
+        if (shouldEndTurn) {
+          this.enemyTurn();
+        }
       } else {
         this.endCombat();
       }
@@ -534,6 +572,13 @@ export class CombatScene extends Phaser.Scene {
     });
   }
 
+  private endPlayerTurn(): void {
+    this.showMessage('Ending turn...');
+    this.time.delayedCall(500, () => {
+      this.enemyTurn();
+    });
+  }
+
   private enemyTurn(): void {
     const logs = this.combatSystem.enemyTurn();
     this.updateCombatDisplay();
@@ -549,6 +594,10 @@ export class CombatScene extends Phaser.Scene {
 
     this.playerHealthText.setText(`HP: ${state.player.health}/${state.player.maxHealth}`);
     this.playerStaminaText.setText(`SP: ${state.player.stamina}/${state.player.maxStamina}`);
+
+    if (this.actionCounterText) {
+      this.actionCounterText.setText(`Actions: ${state.actionsRemaining}/${state.maxActionsPerTurn}`);
+    }
 
     state.enemies.forEach((enemy, index) => {
       const healthText = this.enemyHealthTexts[index];
@@ -947,13 +996,17 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private createAttackBox(x: number, y: number, width: number, height: number, attack: WeaponAttack, playerStamina: number): void {
-    const canAfford = playerStamina >= attack.staminaCost;
-    const baseColor = canAfford ? 0x444466 : 0x333344;
-    const hoverColor = canAfford ? 0x555577 : 0x444455;
+    const state = this.combatSystem.getCombatState();
+    const hasEnoughActions = state && state.actionsRemaining >= attack.actionCost;
+    const canAffordStamina = playerStamina >= attack.staminaCost;
+    const canUse = canAffordStamina && hasEnoughActions;
+    
+    const baseColor = canUse ? 0x444466 : 0x333344;
+    const hoverColor = canUse ? 0x555577 : 0x444455;
     
     const bg = this.add.rectangle(x, y, width, height, baseColor).setOrigin(0);
     
-    if (canAfford) {
+    if (canUse) {
       bg.setInteractive({ useHandCursor: true })
         .on('pointerover', () => bg.setFillStyle(hoverColor))
         .on('pointerout', () => bg.setFillStyle(baseColor))
@@ -964,7 +1017,13 @@ export class CombatScene extends Phaser.Scene {
       bg.setAlpha(0.5);
     }
     
-    const nameColor = canAfford ? '#00ff00' : '#ff0000';
+    let nameColor = '#00ff00';
+    if (!canAffordStamina) {
+      nameColor = '#ff0000';
+    } else if (!hasEnoughActions) {
+      nameColor = '#888888';
+    }
+    
     const nameText = this.add.text(x + width / 2, y + 15, attack.name, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
@@ -975,20 +1034,20 @@ export class CombatScene extends Phaser.Scene {
     const staminaText = this.add.text(x + 10, y + 45, `STAM ${attack.staminaCost}`, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
-      color: '#ffcc00',
+      color: canAffordStamina ? '#ffcc00' : '#ff0000',
     });
     
     const actionText = this.add.text(x + width - 10, y + 45, `ATK ${attack.actionCost}`, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
-      color: '#ffffff',
+      color: hasEnoughActions ? '#ffffff' : '#888888',
     }).setOrigin(1, 0);
     
     if (attack.specialEffect) {
       const effectText = this.add.text(x + width / 2, y + 68, attack.specialEffect, {
         fontFamily: FONTS.primary,
         fontSize: '12px',
-        color: '#aaaaff',
+        color: canUse ? '#aaaaff' : '#666666',
         wordWrap: { width: width - 20 },
         align: 'center',
       }).setOrigin(0.5, 0);
