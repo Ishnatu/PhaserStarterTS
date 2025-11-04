@@ -228,7 +228,7 @@ export class EquipmentManager {
     if (player.equipment.mainHand) {
       const mainWeapon = ItemDatabase.getWeapon(player.equipment.mainHand.itemId);
       if (mainWeapon) {
-        const mainAttacks = WeaponAttackDatabase.getAttacks(mainWeapon.type);
+        const mainAttacks = WeaponAttackDatabase.getAttacksForWeapon(mainWeapon.type);
         const mainHandLevel = player.equipment.mainHand.enhancementLevel || 0;
         
         mainAttacks.forEach(attack => {
@@ -245,7 +245,7 @@ export class EquipmentManager {
     if (this.isDualWielding(player) && player.equipment.offHand) {
       const offWeapon = ItemDatabase.getWeapon(player.equipment.offHand.itemId);
       if (offWeapon) {
-        const offAttacks = WeaponAttackDatabase.getAttacks(offWeapon.type);
+        const offAttacks = WeaponAttackDatabase.getAttacksForWeapon(offWeapon.type);
         const offHandLevel = player.equipment.offHand.enhancementLevel || 0;
         
         offAttacks.forEach(attack => {
