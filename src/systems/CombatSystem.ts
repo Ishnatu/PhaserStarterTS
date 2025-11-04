@@ -224,6 +224,11 @@ export class CombatSystem {
 
     const target = this.combatState.enemies[targetIndex];
 
+    if (attack.weaponData && attack.enhancementLevel !== undefined && attack.sourceHand) {
+      const weaponLabel = attack.sourceHand === 'mainHand' ? 'main hand' : 'off hand';
+      return this.executeAttackWithSpecifiedWeapon(targetIndex, attack, attack.weaponData, attack.enhancementLevel, weaponLabel);
+    }
+
     if (attack.name === 'Backstab') {
       if (target.backstabUsed && !ConditionManager.isStunned(target)) {
         return this.createFailedAttack('Backstab already used on this target (unless stunned)!');
@@ -291,6 +296,76 @@ export class CombatSystem {
     }
 
     return this.executeStandardAttack(targetIndex, attack);
+  }
+
+  private executeAttackWithSpecifiedWeapon(
+    targetIndex: number,
+    attack: WeaponAttack,
+    weapon: WeaponData,
+    enhancementLevel: number,
+    weaponLabel: string
+  ): AttackResult {
+    if (!this.combatState) {
+      return this.createFailedAttack('No combat state!');
+    }
+
+    const target = this.combatState.enemies[targetIndex];
+
+    if (attack.name === 'Backstab') {
+      if (target.backstabUsed && !ConditionManager.isStunned(target)) {
+        return this.createFailedAttack('Backstab already used on this target (unless stunned)!');
+      }
+    }
+
+    const baseDamage = ForgingSystem.calculateEnhancedDamage(weapon, enhancementLevel);
+    const multipliedDamage = this.applyDamageMultiplier(baseDamage, attack.damageMultiplier);
+    const critThreshold = this.getCritThreshold(attack);
+    const attackResult = this.rollAttackWithBonus(critThreshold);
+    
+    const targetEvasion = target.evasion + ConditionManager.getEvasionBonus(target);
+    const hit = attackResult.total >= targetEvasion;
+
+    if (!hit) {
+      const missMessage = `[${weaponLabel}] You swing and miss! (-${attack.staminaCost} stamina)`;
+      this.combatState.combatLog.push(missMessage);
+      this.deductActions(attack.actionCost);
+      this.checkAndEndPlayerTurn();
+      return this.createFailedAttack(missMessage, attackResult.d20);
+    }
+
+    const { damage, damageBeforeReduction, damageRollInfo } = this.calculateDamage(
+      multipliedDamage,
+      attackResult.critical,
+      target,
+      attack.name
+    );
+
+    target.health = Math.max(0, target.health - damage);
+    
+    let logMessage = `[${weaponLabel}] You hit ${target.name} with ${attack.name}! ${damageRollInfo} -> ${damage} damage (-${attack.staminaCost} stamina)`;
+    this.combatState.combatLog.push(logMessage);
+
+    this.applyConditionFromAttack(target, attack);
+
+    if (attack.name === 'Backstab' && attackResult.critical) {
+      target.backstabUsed = true;
+    }
+
+    if (target.health <= 0) {
+      this.combatState.combatLog.push(`${target.name} has been defeated!`);
+    }
+
+    this.deductActions(attack.actionCost);
+    this.checkAndEndPlayerTurn();
+
+    return {
+      hit: true,
+      critical: attackResult.critical,
+      attackRoll: attackResult.d20,
+      damage,
+      damageBeforeReduction,
+      message: logMessage,
+    };
   }
 
   private executeStandardAttack(targetIndex: number, attack: WeaponAttack): AttackResult {
