@@ -550,8 +550,14 @@ export class CombatSystem {
       const cleaveDamage = Math.floor(primaryResult.damage * 0.75);
       let cleaveTargetCount = 0;
 
+      console.log('[CLEAVE DEBUG] Primary hit successful, cleave damage:', cleaveDamage);
+      console.log('[CLEAVE DEBUG] All enemies:', this.combatState.enemies.map((e, i) => ({ index: i, name: e.name, health: e.health })));
+      console.log('[CLEAVE DEBUG] Target index:', targetIndex);
+
       this.combatState.enemies.forEach((enemy, index) => {
+        console.log(`[CLEAVE DEBUG] Checking enemy ${index}: ${enemy.name}, health: ${enemy.health}, targetIndex: ${targetIndex}`);
         if (index !== targetIndex && enemy && enemy.health > 0) {
+          console.log(`[CLEAVE DEBUG] Applying cleave to ${enemy.name}`);
           cleaveTargetCount++;
           enemy.health = Math.max(0, enemy.health - cleaveDamage);
           this.combatState?.combatLog.push(`${enemy.name} takes ${cleaveDamage} cleave damage`);
@@ -564,6 +570,8 @@ export class CombatSystem {
         }
       });
 
+      console.log('[CLEAVE DEBUG] Cleave target count:', cleaveTargetCount);
+      
       if (cleaveTargetCount > 0) {
         this.combatState.combatLog.push(`Savage cleave strikes ${cleaveTargetCount} other enemies for ${cleaveDamage} damage each!`);
       }
