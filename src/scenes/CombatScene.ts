@@ -35,9 +35,15 @@ export class CombatScene extends Phaser.Scene {
   private statusIndicators: Map<number, Phaser.GameObjects.Container[]> = new Map();
   private isTargetSelectionMode: boolean = false;
   private actionCounterText!: Phaser.GameObjects.Text;
+  private playerSprite!: Phaser.GameObjects.Sprite;
+  private previousPlayerHealth: number = 0;
 
   constructor() {
     super('CombatScene');
+  }
+
+  preload() {
+    this.load.image('player-combat', '/assets/player/player-combat.png');
   }
 
   init(data: { delve: Delve; room: DelveRoom; wildEncounter?: boolean; wildEnemies?: Enemy[]; returnToLocation?: { x: number; y: number } }) {
@@ -137,9 +143,11 @@ export class CombatScene extends Phaser.Scene {
     const playerX = 240;
     const playerY = height - 200;
 
-    const playerBox = this.add.rectangle(playerX, playerY, 100, 100, 0x4488ff);
+    this.playerSprite = this.add.sprite(playerX, playerY, 'player-combat');
+    this.playerSprite.setScale(1.5);
     
     const player = this.gameState.getPlayer();
+    this.previousPlayerHealth = player.health;
     
     // Nameplate below sprite - horizontal layout
     const plateY = playerY + 80;
@@ -547,35 +555,55 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private executeAttackWithSelection(targetIndex: number): void {
-    const result = this.combatSystem.playerAttack(targetIndex, this.selectedAttack);
-    this.selectedAttack = undefined;
-    this.updateCombatDisplay();
+    if (!this.selectedAttack) {
+      this.showMessage('No attack selected!');
+      return;
+    }
+    
+    this.playLungeAnimation();
+    
+    this.time.delayedCall(200, () => {
+      const result = this.combatSystem.playerAttack(targetIndex, this.selectedAttack!);
+      this.selectedAttack = undefined;
+      this.updateCombatDisplay();
 
-    this.time.delayedCall(1000, () => {
-      if (this.combatSystem.isCombatComplete()) {
-        this.endCombat();
-      } else {
-        const state = this.combatSystem.getCombatState();
-        if (state && state.currentTurn === 'enemy') {
-          this.enemyTurn();
+      this.time.delayedCall(1000, () => {
+        if (this.combatSystem.isCombatComplete()) {
+          this.endCombat();
+        } else {
+          const state = this.combatSystem.getCombatState();
+          if (state && state.currentTurn === 'enemy') {
+            this.enemyTurn();
+          }
         }
-      }
+      });
     });
   }
 
   private executeAttack(targetIndex: number): void {
-    const result = this.combatSystem.playerAttack(targetIndex);
-    this.updateCombatDisplay();
+    const attacks = this.getAvailableAttacks();
+    if (attacks.length === 0) {
+      this.showMessage('No attacks available!');
+      return;
+    }
+    
+    const defaultAttack = attacks[0];
+    this.playLungeAnimation();
+    
+    this.time.delayedCall(200, () => {
+      const result = this.combatSystem.playerAttack(targetIndex, defaultAttack);
+      this.updateCombatDisplay();
 
-    this.time.delayedCall(1000, () => {
-      if (this.combatSystem.isCombatComplete()) {
-        this.endCombat();
-      } else {
-        const state = this.combatSystem.getCombatState();
-        if (state && state.currentTurn === 'enemy') {
-          this.enemyTurn();
+      this.time.delayedCall(1000, () => {
+        if (this.combatSystem.isCombatComplete()) {
+          this.endCombat();
+        } else {
+          const state = this.combatSystem.getCombatState();
+          if (state && state.currentTurn === 'enemy') {
+            this.enemyTurn();
+          }
         }
-      }
+      });
     });
   }
 
@@ -615,6 +643,11 @@ export class CombatScene extends Phaser.Scene {
       this.actionCounterText.setText(`Actions: ${state.actionsRemaining}/${state.maxActionsPerTurn}`);
     }
 
+    if (state.player.health < this.previousPlayerHealth) {
+      this.playHitFlashAnimation();
+    }
+    this.previousPlayerHealth = state.player.health;
+
     state.enemies.forEach((enemy, index) => {
       const healthText = this.enemyHealthTexts[index];
       const container = this.enemyContainers[index];
@@ -632,6 +665,42 @@ export class CombatScene extends Phaser.Scene {
     this.logText.setText(recentLogs);
     
     this.updateStatusIndicators();
+  }
+
+  private playHitFlashAnimation(): void {
+    if (!this.playerSprite) return;
+
+    const flashDuration = 150;
+    const flashCount = 3;
+    
+    for (let i = 0; i < flashCount; i++) {
+      this.time.delayedCall(i * flashDuration * 2, () => {
+        this.tweens.add({
+          targets: this.playerSprite,
+          tint: 0xff3333,
+          duration: flashDuration,
+          yoyo: true,
+          ease: 'Sine.easeInOut'
+        });
+      });
+    }
+  }
+
+  private playLungeAnimation(): void {
+    if (!this.playerSprite) return;
+
+    const originalX = this.playerSprite.x;
+    
+    this.tweens.add({
+      targets: this.playerSprite,
+      x: originalX + 40,
+      duration: 150,
+      ease: 'Power2',
+      yoyo: true,
+      onComplete: () => {
+        this.playerSprite.x = originalX;
+      }
+    });
   }
 
   private endCombat(): void {
