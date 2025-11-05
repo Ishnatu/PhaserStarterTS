@@ -421,24 +421,11 @@ export class CombatSystem {
 
     const otherEnemies = this.combatState.enemies.filter((e, i) => i !== targetIndex && e.health > 0);
     
-    if (otherEnemies.length > 0) {
-      this.combatState.combatLog.push(`Cleaving momentum strikes ${otherEnemies.length} adjacent enemies!`);
+    if (otherEnemies.length > 0 && primaryResult.hit) {
+      const cleaveDamage = Math.floor(primaryResult.damage * 0.75);
+      this.combatState.combatLog.push(`Cleaving momentum strikes ${otherEnemies.length} adjacent enemies for ${cleaveDamage} damage each!`);
       
       for (const enemy of otherEnemies) {
-        const weaponWithEnhancement = EquipmentManager.getEquippedWeaponWithEnhancement(this.combatState.player);
-        if (!weaponWithEnhancement) continue;
-
-        const baseDamage = ForgingSystem.calculateEnhancedDamage(
-          weaponWithEnhancement.weapon,
-          weaponWithEnhancement.enhancementLevel || 0
-        );
-        
-        const cleaveDamageBeforeArmor = Math.floor(this.applyDamageMultiplier(baseDamage, attack.damageMultiplier) * 0.75);
-        
-        const bonusDR = ConditionManager.getDamageReductionBonus(enemy);
-        const totalDR = enemy.damageReduction + bonusDR;
-        const cleaveDamage = Math.max(1, cleaveDamageBeforeArmor - totalDR);
-        
         enemy.health = Math.max(0, enemy.health - cleaveDamage);
         this.combatState.combatLog.push(`${enemy.name} takes ${cleaveDamage} cleave damage`);
         
