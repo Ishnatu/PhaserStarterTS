@@ -77,6 +77,6 @@ export class TerrainGenerator {
     
     this.seed = tileX * 73856093 ^ tileY * 19349663 ^ 777;
     
-    return Math.floor(this.seededRandom() * 2) + 1; // Returns 1 or 2
+    return Math.floor(this.seededRandom() * 4) + 1; // Returns 1-4
   }
 }

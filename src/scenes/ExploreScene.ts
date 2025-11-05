@@ -75,6 +75,8 @@ export class ExploreScene extends Phaser.Scene {
     this.load.image('bush', '/assets/terrain/bush.png');
     this.load.image('grass1', '/assets/terrain/grass1.png');
     this.load.image('grass2', '/assets/terrain/grass2.png');
+    this.load.image('grass3', '/assets/terrain/grass3.png');
+    this.load.image('grass4', '/assets/terrain/grass4.png');
     this.load.image('delve-entrance', '/assets/terrain/delve-entrance.png');
     this.load.image('roboka-city', '/assets/terrain/roboka-city.png');
     this.load.image('tombstone', '/assets/tombstone.png');
@@ -639,10 +641,10 @@ export class ExploreScene extends Phaser.Scene {
       const grass = this.add.rectangle(x, y, this.TILE_SIZE, this.TILE_SIZE, color).setOrigin(0);
       this.terrainContainer.add(grass);
       
-      // Add grass tuft sprite (grass1 or grass2)
+      // Add grass tuft sprite (grass1-4)
       const tuftVariation = TerrainGenerator.getGrassTuftVariant(x, y);
       const tuft = this.add.sprite(x + 16, y + 16, `grass${tuftVariation}`);
-      tuft.setScale(0.04);
+      tuft.setScale(0.08);
       tuft.setOrigin(0.5, 0.7);
       tuft.setDepth(2 + y / 10000);
       
