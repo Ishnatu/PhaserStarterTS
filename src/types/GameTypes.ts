@@ -137,6 +137,8 @@ export interface PlayerData {
   exploredTiles: string[];
   completedDelves?: string[];
   statusConditions: StatusCondition[];
+  wildernessRestsRemaining: number;
+  lastRestTimestamp: number;
 }
 
 export interface DelveRoom {

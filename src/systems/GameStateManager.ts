@@ -69,6 +69,17 @@ export class GameStateManager {
         equipped.maxDurability = maxDurability;
       }
     });
+    
+    // Migrate rest tracking system
+    if (player.wildernessRestsRemaining === undefined) {
+      player.wildernessRestsRemaining = GameConfig.STAMINA.MAX_WILDERNESS_RESTS;
+    }
+    if (player.lastRestTimestamp === undefined) {
+      player.lastRestTimestamp = 0;
+    }
+    if (!player.statusConditions) {
+      player.statusConditions = [];
+    }
   }
 
   private createInitialState(): GameState {
@@ -102,6 +113,9 @@ export class GameStateManager {
       activeBuffs: [],
       exploredTiles: [],
       completedDelves: [],
+      statusConditions: [],
+      wildernessRestsRemaining: GameConfig.STAMINA.MAX_WILDERNESS_RESTS,
+      lastRestTimestamp: 0,
     };
     this.exploredTilesSet = new Set();
 

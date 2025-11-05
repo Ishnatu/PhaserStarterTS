@@ -10,8 +10,12 @@ export class ConditionManager {
     const existingCondition = target.statusConditions.find(c => c.type === conditionType);
     
     if (existingCondition) {
-      existingCondition.stacks += stacks;
-      existingCondition.duration = Math.max(existingCondition.duration, duration);
+      if (conditionType === 'dependable') {
+        existingCondition.duration = Math.max(existingCondition.duration, duration);
+      } else {
+        existingCondition.stacks += stacks;
+        existingCondition.duration = Math.max(existingCondition.duration, duration);
+      }
     } else {
       target.statusConditions.push({
         type: conditionType,

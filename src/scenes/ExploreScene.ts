@@ -1861,7 +1861,10 @@ export class ExploreScene extends Phaser.Scene {
       });
     uiElements.push(equipmentBtn);
 
-    const shortRestBtn = this.add.text(width / 2, height / 2 + 50, '[ Short Rest ]', {
+    const player = this.gameState.getPlayer();
+    const maxRests = GameConfig.STAMINA.MAX_WILDERNESS_RESTS;
+    const restsText = `[ Short Rest ] (${player.wildernessRestsRemaining}/${maxRests} remaining)`;
+    const shortRestBtn = this.add.text(width / 2, height / 2 + 50, restsText, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.medium,
       color: '#ffffff',
@@ -2129,16 +2132,33 @@ export class ExploreScene extends Phaser.Scene {
       return;
     }
 
+    if (player.wildernessRestsRemaining <= 0) {
+      this.showMessage('No rests remaining! Return to town to reset.');
+      return;
+    }
+
+    const now = Date.now();
+    const timeSinceLastRest = now - player.lastRestTimestamp;
+    const cooldownRemaining = GameConfig.STAMINA.REST_COOLDOWN_MS - timeSinceLastRest;
+
+    if (cooldownRemaining > 0) {
+      const minutesRemaining = Math.ceil(cooldownRemaining / 60000);
+      this.showMessage(`Rest on cooldown! ${minutesRemaining} minute${minutesRemaining > 1 ? 's' : ''} remaining.`);
+      return;
+    }
+
     const recoveryPercent = GameConfig.STAMINA.REST_RECOVERY_PERCENT;
     const healthRecovered = Math.floor(player.maxHealth * recoveryPercent);
     const staminaRecovered = Math.floor(player.maxStamina * recoveryPercent);
     
     player.health = Math.min(player.maxHealth, player.health + healthRecovered);
     player.stamina = Math.min(player.maxStamina, player.stamina + staminaRecovered);
+    player.wildernessRestsRemaining--;
+    player.lastRestTimestamp = now;
     
     this.gameState.updatePlayer(player);
     
-    this.showMessage(`Resting... Recovered ${healthRecovered} HP and ${staminaRecovered} Stamina`);
+    this.showMessage(`Resting... Recovered ${healthRecovered} HP and ${staminaRecovered} Stamina (${player.wildernessRestsRemaining} rests remaining)`);
     
     const encounterChance = GameConfig.STAMINA.WILDERNESS_ENCOUNTER_CHANCE_WHILE_RESTING;
     const encounterRoll = Math.random();

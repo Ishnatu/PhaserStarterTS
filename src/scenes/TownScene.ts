@@ -13,6 +13,7 @@ import { FONTS } from '../config/fonts';
 import { ItemColorUtil } from '../utils/ItemColorUtil';
 import { ItemSprites } from '../config/ItemSprites';
 import { ApiClient } from '../utils/ApiClient';
+import { GameConfig } from '../config/GameConfig';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -42,6 +43,7 @@ export class TownScene extends Phaser.Scene {
     
     let player = this.gameState.getPlayer();
     BuffManager.clearTownBuffs(player);
+    player.wildernessRestsRemaining = GameConfig.STAMINA.MAX_WILDERNESS_RESTS;
     this.gameState.updatePlayer(player);
 
     const { width, height } = this.cameras.main;
