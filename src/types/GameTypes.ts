@@ -26,6 +26,7 @@ export interface WeaponAttack {
   conditionChance?: number;
   conditionDuration?: number;
   specialEffect?: string;
+  cleave?: number;
   availableWithShield: boolean;
   requiresDualWield: boolean;
   sourceHand?: WeaponSlot;

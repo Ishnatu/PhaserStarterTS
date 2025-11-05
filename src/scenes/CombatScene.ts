@@ -144,7 +144,7 @@ export class CombatScene extends Phaser.Scene {
     const playerY = height - 200;
 
     this.playerSprite = this.add.sprite(playerX, playerY, 'player-combat');
-    this.playerSprite.setScale(0.12);
+    this.playerSprite.setScale(0.24);
     
     const player = this.gameState.getPlayer();
     this.previousPlayerHealth = player.health;

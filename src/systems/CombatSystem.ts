@@ -139,10 +139,6 @@ export class CombatSystem {
       return this.executeVipersFangs(targetIndex, attack);
     }
 
-    if (attack.name === 'Sweeping Strike' || attack.name === 'Sweeping Rend') {
-      return this.executeSweepingStrike(targetIndex, attack);
-    }
-
     if (attack.name === 'Arcing Blade') {
       return this.executeArcingBlade(attack);
     }
@@ -302,6 +298,10 @@ export class CombatSystem {
 
     if (target.health <= 0) {
       this.combatState.combatLog.push(`${target.name} has been defeated!`);
+    }
+
+    if (attack.cleave && attack.cleave > 0) {
+      this.applyCleave(targetIndex, damage, attack.cleave, attack.name);
     }
 
     this.deductActions(attack.actionCost);
@@ -539,33 +539,25 @@ export class CombatSystem {
     
     const primaryResult = this.executeSingleStrike(primaryTarget, attack, 'Murderous Intent (primary)');
     let totalDamage = primaryResult.damage;
-    let enemyKilled = false;
+    let enemyKilled = primaryTarget.health <= 0;
 
-    if (primaryTarget.health <= 0) {
+    if (enemyKilled) {
       this.combatState.combatLog.push(`${primaryTarget.name} has been defeated!`);
-      enemyKilled = true;
     }
 
-    if (primaryResult.hit) {
-      const cleaveDamage = Math.floor(primaryResult.damage * 0.75);
-      let cleaveTargetCount = 0;
-
-      this.combatState.enemies.forEach((enemy, index) => {
-        if (index !== targetIndex && enemy && enemy.health > 0) {
-          cleaveTargetCount++;
-          enemy.health = Math.max(0, enemy.health - cleaveDamage);
-          this.combatState?.combatLog.push(`${enemy.name} takes ${cleaveDamage} cleave damage`);
-          totalDamage += cleaveDamage;
-          
-          if (enemy.health <= 0) {
-            this.combatState?.combatLog.push(`${enemy.name} has been defeated!`);
-            enemyKilled = true;
-          }
-        }
-      });
+    if (primaryResult.hit && attack.cleave) {
+      const enemiesBeforeCleave = this.combatState.enemies.filter(e => e.health > 0).length;
+      const cleaveDamage = Math.floor(primaryResult.damage * attack.cleave);
+      const otherEnemies = this.combatState.enemies.filter((e, i) => i !== targetIndex && e.health > 0);
       
-      if (cleaveTargetCount > 0) {
-        this.combatState.combatLog.push(`Savage cleave strikes ${cleaveTargetCount} other enemies for ${cleaveDamage} damage each!`);
+      if (otherEnemies.length > 0) {
+        this.applyCleave(targetIndex, primaryResult.damage, attack.cleave, attack.name);
+        totalDamage += cleaveDamage * otherEnemies.length;
+      }
+      
+      const enemiesAfterCleave = this.combatState.enemies.filter(e => e.health > 0).length;
+      if (enemiesAfterCleave < enemiesBeforeCleave) {
+        enemyKilled = true;
       }
     }
 
@@ -882,6 +874,26 @@ export class CombatSystem {
       damageBeforeReduction,
       message: `${label}: ${damage} damage`,
     };
+  }
+
+  private applyCleave(primaryTargetIndex: number, primaryDamage: number, cleavePercent: number, attackName: string): void {
+    if (!this.combatState) return;
+
+    const cleaveDamage = Math.floor(primaryDamage * cleavePercent);
+    const otherEnemies = this.combatState.enemies.filter((e, i) => i !== primaryTargetIndex && e.health > 0);
+
+    if (otherEnemies.length === 0) return;
+
+    this.combatState.combatLog.push(`Cleaving momentum strikes ${otherEnemies.length} other enemies for ${cleaveDamage} damage each!`);
+
+    for (const enemy of otherEnemies) {
+      enemy.health = Math.max(0, enemy.health - cleaveDamage);
+      this.combatState.combatLog.push(`${enemy.name} takes ${cleaveDamage} cleave damage`);
+
+      if (enemy.health <= 0) {
+        this.combatState.combatLog.push(`${enemy.name} has been defeated!`);
+      }
+    }
   }
 
   private applyDamageMultiplier(baseDamage: DiceRoll, multiplier: number): DiceRoll {
