@@ -139,7 +139,7 @@ export class CombatSystem {
       return this.executeVipersFangs(targetIndex, attack);
     }
 
-    if (attack.name === 'Sweeping Strike') {
+    if (attack.name === 'Sweeping Strike' || attack.name === 'Sweeping Rend') {
       return this.executeSweepingStrike(targetIndex, attack);
     }
 
