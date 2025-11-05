@@ -587,6 +587,9 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private enemyTurn(): void {
+    this.combatSystem.enemyTurnStart();
+    this.updateCombatDisplay();
+    
     const logs = this.combatSystem.enemyTurn();
     this.updateCombatDisplay();
 
