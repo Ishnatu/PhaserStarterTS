@@ -592,6 +592,9 @@ export class CombatScene extends Phaser.Scene {
     
     const logs = this.combatSystem.enemyTurn();
     this.updateCombatDisplay();
+    
+    this.combatSystem.enemyTurnEnd();
+    this.updateCombatDisplay();
 
     if (this.combatSystem.isCombatComplete()) {
       this.time.delayedCall(1000, () => this.endCombat());

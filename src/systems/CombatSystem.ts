@@ -1010,17 +1010,34 @@ export class CombatSystem {
     for (const enemy of aliveEnemies) {
       if (ConditionManager.isStunned(enemy)) {
         this.combatState.combatLog.push(`${enemy.name} is stunned and cannot act!`);
-        ConditionManager.tickConditions(enemy);
         continue;
       }
 
-      const tickResult = ConditionManager.tickConditions(enemy);
-      if (tickResult.damage > 0) {
-        enemy.health = Math.max(0, enemy.health - tickResult.damage);
-        tickResult.messages.forEach(msg => this.combatState!.combatLog.push(`[${enemy.name}] ${msg}`));
+      const poisonTick = ConditionManager.tickPoisonOnly(enemy);
+      if (poisonTick.damage > 0) {
+        enemy.health = Math.max(0, enemy.health - poisonTick.damage);
+        poisonTick.messages.forEach(msg => this.combatState!.combatLog.push(`[${enemy.name}] ${msg}`));
         
         if (enemy.health <= 0) {
-          this.combatState.combatLog.push(`${enemy.name} succumbed to conditions!`);
+          this.combatState.combatLog.push(`${enemy.name} succumbed to poison!`);
+        }
+      }
+    }
+  }
+
+  enemyTurnEnd(): void {
+    if (!this.combatState) return;
+
+    const aliveEnemies = this.combatState.enemies.filter(e => e.health > 0);
+    
+    for (const enemy of aliveEnemies) {
+      const bleedTick = ConditionManager.tickBleedingOnly(enemy);
+      if (bleedTick.damage > 0) {
+        enemy.health = Math.max(0, enemy.health - bleedTick.damage);
+        bleedTick.messages.forEach(msg => this.combatState!.combatLog.push(`[${enemy.name}] ${msg}`));
+        
+        if (enemy.health <= 0) {
+          this.combatState.combatLog.push(`${enemy.name} bled out!`);
         }
       }
     }

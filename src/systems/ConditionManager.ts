@@ -71,6 +71,66 @@ export class ConditionManager {
     return { damage: totalDamage, messages };
   }
 
+  static tickPoisonOnly(target: Enemy | PlayerData): { damage: number; messages: string[] } {
+    const messages: string[] = [];
+    let totalDamage = 0;
+
+    const conditionsToRemove: StatusConditionType[] = [];
+
+    for (const condition of target.statusConditions) {
+      if (condition.type === 'poisoned') {
+        const poisonDamage = condition.stacks * 3;
+        totalDamage += poisonDamage;
+        messages.push(`Poisoned: ${poisonDamage} damage (${condition.stacks} stack${condition.stacks > 1 ? 's' : ''})`);
+        
+        if (condition.duration > 0) {
+          condition.duration--;
+        }
+        
+        if (condition.duration === 0) {
+          conditionsToRemove.push(condition.type);
+        }
+      }
+    }
+
+    for (const conditionType of conditionsToRemove) {
+      this.removeCondition(target, conditionType);
+      messages.push(`${this.getConditionDisplayName(conditionType)} wore off`);
+    }
+
+    return { damage: totalDamage, messages };
+  }
+
+  static tickBleedingOnly(target: Enemy | PlayerData): { damage: number; messages: string[] } {
+    const messages: string[] = [];
+    let totalDamage = 0;
+
+    const conditionsToRemove: StatusConditionType[] = [];
+
+    for (const condition of target.statusConditions) {
+      if (condition.type === 'bleeding') {
+        const bleedDamage = condition.stacks * 2;
+        totalDamage += bleedDamage;
+        messages.push(`Bleeding: ${bleedDamage} damage (${condition.stacks} stack${condition.stacks > 1 ? 's' : ''})`);
+        
+        if (condition.duration > 0) {
+          condition.duration--;
+        }
+        
+        if (condition.duration === 0) {
+          conditionsToRemove.push(condition.type);
+        }
+      }
+    }
+
+    for (const conditionType of conditionsToRemove) {
+      this.removeCondition(target, conditionType);
+      messages.push(`${this.getConditionDisplayName(conditionType)} wore off`);
+    }
+
+    return { damage: totalDamage, messages };
+  }
+
   static getConditionDisplayName(conditionType: StatusConditionType): string {
     const displayNames: Record<StatusConditionType, string> = {
       bleeding: 'Bleeding',
