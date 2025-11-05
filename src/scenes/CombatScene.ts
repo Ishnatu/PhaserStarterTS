@@ -1078,7 +1078,7 @@ export class CombatScene extends Phaser.Scene {
     this.selectedAttack = attack;
     this.closeAttackSelection();
     
-    const isAoE = attack.name.includes('Sweeping') || attack.name.includes('Arcing') || attack.name.includes('Murderous Intent') || attack.name.includes('Spinning Flurry');
+    const isAoE = attack.name.includes('Arcing') || attack.name.includes('Spinning Flurry');
     
     if (isAoE) {
       this.executeAoEAttack();

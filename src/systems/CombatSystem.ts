@@ -152,7 +152,7 @@ export class CombatSystem {
     }
 
     if (attack.name === 'Murderous Intent') {
-      return this.executeMurderousIntent(attack);
+      return this.executeMurderousIntent(targetIndex, attack);
     }
 
     if (attack.name === 'Crimson Mist') {
@@ -529,23 +529,12 @@ export class CombatSystem {
     };
   }
 
-  private executeMurderousIntent(attack: WeaponAttack): AttackResult{
+  private executeMurderousIntent(targetIndex: number, attack: WeaponAttack): AttackResult{
     if (!this.combatState) {
       return this.createFailedAttack('No combat state!');
     }
 
-    const livingEnemyIndices: number[] = [];
-    this.combatState.enemies.forEach((e, index) => {
-      if (e.health > 0) livingEnemyIndices.push(index);
-    });
-
-    if (livingEnemyIndices.length === 0) {
-      return this.createFailedAttack('No living enemies!');
-    }
-
-    const primaryTargetIndex = livingEnemyIndices[0];
-    const primaryTarget = this.combatState.enemies[primaryTargetIndex];
-    
+    const primaryTarget = this.combatState.enemies[targetIndex];
     this.combatState.combatLog.push(`Murderous Intent - savage strike on ${primaryTarget.name}!`);
     
     const primaryResult = this.executeSingleStrike(primaryTarget, attack, 'Murderous Intent (primary)');
@@ -562,7 +551,7 @@ export class CombatSystem {
       let cleaveTargetCount = 0;
 
       this.combatState.enemies.forEach((enemy, index) => {
-        if (index !== primaryTargetIndex && enemy && enemy.health > 0) {
+        if (index !== targetIndex && enemy && enemy.health > 0) {
           cleaveTargetCount++;
           enemy.health = Math.max(0, enemy.health - cleaveDamage);
           this.combatState?.combatLog.push(`${enemy.name} takes ${cleaveDamage} cleave damage`);
@@ -576,7 +565,7 @@ export class CombatSystem {
       });
 
       if (cleaveTargetCount > 0) {
-        this.combatState.combatLog.push(`Savage cleave strikes ${cleaveTargetCount} other enemies!`);
+        this.combatState.combatLog.push(`Savage cleave strikes ${cleaveTargetCount} other enemies for ${cleaveDamage} damage each!`);
       }
     }
 
