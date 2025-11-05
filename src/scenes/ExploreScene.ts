@@ -644,7 +644,7 @@ export class ExploreScene extends Phaser.Scene {
       // Add grass tuft sprite (grass1-4)
       const tuftVariation = TerrainGenerator.getGrassTuftVariant(x, y);
       const tuft = this.add.sprite(x + 16, y + 16, `grass${tuftVariation}`);
-      tuft.setScale(0.08);
+      tuft.setScale(0.2);
       tuft.setOrigin(0.5, 0.7);
       tuft.setDepth(2 + y / 10000);
       
