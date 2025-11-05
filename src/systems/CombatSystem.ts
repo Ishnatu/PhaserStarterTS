@@ -534,12 +534,18 @@ export class CombatSystem {
       return this.createFailedAttack('No combat state!');
     }
 
-    const livingEnemies = this.combatState.enemies.filter(e => e.health > 0);
-    if (livingEnemies.length === 0) {
+    const livingEnemyIndices: number[] = [];
+    this.combatState.enemies.forEach((e, index) => {
+      if (e.health > 0) livingEnemyIndices.push(index);
+    });
+
+    if (livingEnemyIndices.length === 0) {
       return this.createFailedAttack('No living enemies!');
     }
 
-    const primaryTarget = livingEnemies[0];
+    const primaryTargetIndex = livingEnemyIndices[0];
+    const primaryTarget = this.combatState.enemies[primaryTargetIndex];
+    
     this.combatState.combatLog.push(`Murderous Intent - savage strike on ${primaryTarget.name}!`);
     
     const primaryResult = this.executeSingleStrike(primaryTarget, attack, 'Murderous Intent (primary)');
@@ -551,21 +557,26 @@ export class CombatSystem {
       enemyKilled = true;
     }
 
-    const otherEnemies = this.combatState.enemies.filter(e => e !== primaryTarget && e.health > 0);
-    
-    if (otherEnemies.length > 0 && primaryResult.hit) {
+    if (primaryResult.hit) {
       const cleaveDamage = Math.floor(primaryResult.damage * 0.75);
-      this.combatState.combatLog.push(`Savage cleave strikes ${otherEnemies.length} other enemies for ${cleaveDamage} damage each!`);
-      
-      for (const enemy of otherEnemies) {
-        enemy.health = Math.max(0, enemy.health - cleaveDamage);
-        this.combatState.combatLog.push(`${enemy.name} takes ${cleaveDamage} cleave damage`);
-        totalDamage += cleaveDamage;
-        
-        if (enemy.health <= 0) {
-          this.combatState.combatLog.push(`${enemy.name} has been defeated!`);
-          enemyKilled = true;
+      let cleaveTargetCount = 0;
+
+      this.combatState.enemies.forEach((enemy, index) => {
+        if (index !== primaryTargetIndex && enemy && enemy.health > 0) {
+          cleaveTargetCount++;
+          enemy.health = Math.max(0, enemy.health - cleaveDamage);
+          this.combatState?.combatLog.push(`${enemy.name} takes ${cleaveDamage} cleave damage`);
+          totalDamage += cleaveDamage;
+          
+          if (enemy.health <= 0) {
+            this.combatState?.combatLog.push(`${enemy.name} has been defeated!`);
+            enemyKilled = true;
+          }
         }
+      });
+
+      if (cleaveTargetCount > 0) {
+        this.combatState.combatLog.push(`Savage cleave strikes ${cleaveTargetCount} other enemies!`);
       }
     }
 
