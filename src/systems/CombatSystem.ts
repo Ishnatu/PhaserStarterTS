@@ -139,21 +139,6 @@ export class CombatSystem {
       return this.executeVipersFangs(targetIndex, attack);
     }
 
-    if (attack.name === 'Rapier' && attack.name === 'Light Attack') {
-      const result = this.executeStandardAttack(targetIndex, attack);
-      if (result.hit && Math.random() < 0.10) {
-        this.combatState.combatLog.push('Chain attack triggered!');
-        const chainResult = this.executeStandardAttack(targetIndex, attack);
-        return {
-          ...result,
-          damage: result.damage + chainResult.damage,
-          damageBeforeReduction: result.damageBeforeReduction + chainResult.damageBeforeReduction,
-          message: result.message + ' + Chain attack!',
-        };
-      }
-      return result;
-    }
-
     if (attack.name === 'Sweeping Strike') {
       return this.executeSweepingStrike(targetIndex, attack);
     }
@@ -252,6 +237,7 @@ export class CombatSystem {
     }
 
     this.deductActions(attack.actionCost);
+    this.checkCombatEnd();
     this.checkAndEndPlayerTurn();
 
     return {
@@ -319,6 +305,7 @@ export class CombatSystem {
     }
 
     this.deductActions(attack.actionCost);
+    this.checkCombatEnd();
     this.checkAndEndPlayerTurn();
 
     return {
@@ -362,6 +349,7 @@ export class CombatSystem {
     }
 
     this.deductActions(attack.actionCost);
+    this.checkCombatEnd();
     this.checkAndEndPlayerTurn();
 
     return {
@@ -391,6 +379,7 @@ export class CombatSystem {
       }
 
       this.deductActions(attack.actionCost);
+      this.checkCombatEnd();
       this.checkAndEndPlayerTurn();
 
       const totalDamage = firstStrike.damage + secondStrike.damage;
@@ -417,6 +406,7 @@ export class CombatSystem {
     }
 
     this.deductActions(attack.actionCost);
+    this.checkCombatEnd();
     this.checkAndEndPlayerTurn();
     return firstStrike;
   }
@@ -450,6 +440,7 @@ export class CombatSystem {
     }
 
     this.deductActions(attack.actionCost);
+    this.checkCombatEnd();
     this.checkAndEndPlayerTurn();
     return primaryResult;
   }
@@ -481,6 +472,7 @@ export class CombatSystem {
     }
 
     this.deductActions(attack.actionCost);
+    this.checkCombatEnd();
     this.checkAndEndPlayerTurn();
 
     return {
@@ -524,6 +516,7 @@ export class CombatSystem {
     }
 
     this.deductActions(attack.actionCost);
+    this.checkCombatEnd();
     this.checkAndEndPlayerTurn();
 
     return {
@@ -579,6 +572,7 @@ export class CombatSystem {
     }
 
     this.deductActions(attack.actionCost);
+    this.checkCombatEnd();
     this.checkAndEndPlayerTurn();
 
     return {
@@ -648,6 +642,7 @@ export class CombatSystem {
     }
 
     this.deductActions(attack.actionCost);
+    this.checkCombatEnd();
     this.checkAndEndPlayerTurn();
 
     return {
@@ -738,6 +733,7 @@ export class CombatSystem {
     }
 
     this.deductActions(attack.actionCost);
+    this.checkCombatEnd();
     this.checkAndEndPlayerTurn();
 
     return {
@@ -771,11 +767,13 @@ export class CombatSystem {
       }
 
       this.deductActions(attack.actionCost);
+      this.checkCombatEnd();
       this.checkAndEndPlayerTurn();
       return result;
     }
 
     this.deductActions(attack.actionCost);
+    this.checkCombatEnd();
     this.checkAndEndPlayerTurn();
 
     return {
@@ -818,6 +816,7 @@ export class CombatSystem {
     }
 
     this.deductActions(attack.actionCost);
+    this.checkCombatEnd();
     this.checkAndEndPlayerTurn();
     return result;
   }
