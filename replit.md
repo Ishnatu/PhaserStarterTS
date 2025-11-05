@@ -1,27 +1,7 @@
 # Gemforge Chronicles
 
 ## Overview
-Gemforge Chronicles is an ambitious web3 RPG game, drawing inspiration from classic turn-based games like Pokemon, Final Fantasy, and Heroes of Might and Magic, and incorporating tabletop RPG mechanics and a rich economy system. Built on Phaser 3 with TypeScript, the project aims to integrate with blockchain (Ronin network) for NFT support. The game features a core loop of town interaction, wilderness exploration, procedurally generated delves, and D20-style turn-based combat.
-
-## Recent Changes
-- **Player Combat Sprite & Animations**: Replaced blue square placeholder with pixel art warrior sprite in combat. Added dynamic animations: red glow flash (3 flashes) when taking damage, and forward lunge animation when attacking. Animations timed to sync with combat flow - lunge triggers before damage calculation, flash triggers on health decrease.
-- **Wilderness Rest Limitations**: Implemented short rest system with 2 max rests per wilderness trip, 15-minute cooldown between rests, 20% encounter chance (down from 30%), automatic reset when returning to town. UI displays rests remaining and cooldown feedback.
-- **Dependable Condition Fix**: Shortsword's dependable buff now only refreshes duration instead of stacking, preventing +5 evasion exploit. Provides consistent defensive bonus without abuse potential.
-- **Cleaving Attack Mechanics Refinement**: Revised cleaving attacks (Sweeping Strike, Sweeping Rend, Murderous Intent) to use momentum-based damage. Primary target receives full damage calculation including armor reduction, then 75% of that FINAL damage carries through to adjacent enemies. This creates more balanced and intuitive cleaving mechanics compared to recalculating armor per enemy. Murderous Intent additionally triggers a bonus savage strike on a random remaining enemy if any foe dies during the cleave sequence.
-- **Combat Ending Immediate Victory Check**: Combat now ends immediately when last enemy is defeated, regardless of remaining player actions. Added checkCombatEnd() calls after all attack types (standard, special, AoE, shield abilities) to prevent combat from waiting for manual turn end after victory.
-- **2-Action Economy Combat System**: Complete action economy implementation - players get 2 actions per turn that reset at turn start. Light attacks (1 action) allow tactical combinations: 2 light attacks, light attack + potion, or save actions. Heavy attacks (2 actions) end turn immediately. Combat UI displays "Actions: X/2" counter, "End Turn" button for manual turn end, and visual feedback (green=available, red=no stamina, gray=no actions). All attack paths (including dual-wield) properly deduct actions and check turn end conditions.
-- **Tactical Combat System Overhaul**: Complete reimplementation of combat with Pokemon-style attack selection UI. Each weapon type now has 2-4 unique attacks with different stamina costs (3-20), action costs (1-2), and damage multipliers (1x-3x). Special attacks include: backstab (3x damage, crit 19-20), multi-hit chains (Puncture 3x, Viper's Fangs), AoE/cleave (Sweeping Strike, Arcing Blade, Murderous Intent), defensive buffs, vampiric healing, and Crimson Mist instant-kill. Combat UI displays "STAM X" and "ATK X" for each attack option. Improved multi-strike messaging (Vipers Fangs shows "missed" instead of "0 damage" for failed second strike).
-- **Status Condition System**: Full D&D-style status effects with ConditionManager tracking stacks, duration, and tick damage. Implemented stunned (skip turn), poisoned (2 damage/tick), bleeding (1-3 damage/tick), and dependable (+2 evasion) conditions. Visual indicators display as colored squares above enemy portraits (grey=stunned, green=poisoned, red=bleeding) with stack numbers.
-- **Void Portal Respawn Fix**: returnToLocation now properly maintained through entire encounter chain (DelveScene, CombatScene, ExploreScene). Players return to correct wilderness position after void portal encounters instead of being sent to Roboka.
-- **Multi-Instance Detection System**: Prevents save conflicts by detecting when multiple game instances are running simultaneously. Heartbeat system (5-second intervals) identifies duplicate sessions and displays a blocking modal that forces game exit. Auto-closes duplicate tabs after 10 seconds. Separates stable playerId (shared across tabs in localStorage) from unique instanceId (per-tab) for accurate detection.
-- **Gameplay Balance Enhancements**: T1 zone random encounters now limited to max 1 T2 enemy for better new player balance. Wandering Merchant upgraded to sell 3 enhanced items (+1/+2) with pricing formula: (base + cumulative forge costs) * 1.5. Corrupted Void Portal (renamed from Void Corruption) converted to 2-stage mini-delve with tier-appropriate enemies in stage 1 and guaranteed T1 boss in stage 2.
-- **Soulbinding & Karma System**: Complete extraction game mechanics implemented - Garthek the Stitcher NPC allows binding up to 3 equipment slots to soul (soulbound items return on death). Karma system rewards players who return looted tombstone items via Halls of Virtue. Keeper of Virtue NPC shows leaderboard and unclaimed returns.
-- **Tombstone Encounters**: 5% random encounter chance to find other players' tombstones with lootable items. Full inventory overflow handling with item selection UI.
-- **Enhanced Wilderness Visuals**: Added pixel art bushes and grass tufts (2 variants) scattered procedurally across terrain for visual depth and atmosphere.
-- **ESC Key Universal Fix**: Simplified handleEscapeKey() to work with all overlays using currentMenuCloseFunction, fixing karma prompts and future UIs.
-- **Enhanced trap room system**: Interactive trap rooms with D20 disarm checks (DC scales with tier: T1=8, T2=10, etc.). Failed disarms trigger dramatic choice system (Duck vs Leap) against randomized trap types (spike/dart) with 2d10+4 damage for wrong choices.
-- **Mystery delve navigation**: Room types now hidden until entered - unvisited rooms display as '???' to maintain suspense and exploration tension.
-- **Potion usage in combat**: Using potions from inventory consumes player's turn (existing emergency stamina potion system preserved).
+Gemforge Chronicles is an ambitious web3 RPG game inspired by classic turn-based titles like Pokemon, Final Fantasy, and Heroes of Might and Magic. It integrates tabletop RPG mechanics, a rich economy, and blockchain (Ronin network) for NFT support. Built on Phaser 3 with TypeScript, the game features a core loop of town interaction, wilderness exploration, procedurally generated delves, and D20-style turn-based combat. The project aims to deliver a deep, engaging RPG experience with a strong emphasis on strategic combat, economic simulation, and a dark fantasy aesthetic.
 
 ## User Preferences
 This is a long-term solo project built collaboratively with an AI assistant. The approach:
@@ -34,55 +14,37 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 ## System Architecture
 
 ### UI/UX Decisions
-- **Current Visual Assets**: Pixel art city sprite for Roboka, pixel art delve entrance markers, trees, bushes, and grass tufts for wilderness decoration, 370×510px equipment panel graphic, item sprites (shortsword), tombstone sprite, player combat sprite (armored warrior with sword). NPCs are colored rectangles.
-- **Combat Animations**: Player sprite features lunge animation on attack (forward motion + snap back, 150ms) and red hit flash on damage (3 flashes, 150ms per flash with red tint 0xff3333).
-- **Typography**: VT323 monospace font (Google Fonts) for all UI text and menus, configured in `src/config/fonts.ts` with standardized sizes.
-- **Currency Icons**: Pixel art coin sprites for Arcane Ash (AA) and Crystalline Animus (CA), displayed using the `CurrencyDisplay` utility.
-- **Equipment Panel**: Custom pixel art 3×4 grid panel (370×510px) displaying equipped items with interactive slots. Items render as sprites scaled to 70px max dimension while preserving aspect ratio. Click-to-equip functionality: clicking a slot shows a dropdown menu of equippable items with durability info and "[Equip]" buttons.
-- **Item Sprite System**: Configurable sprite mapping via `ItemSprites` class, dynamic loading in preload, supports any sprite dimensions with automatic scaling.
-- **Enhancement Color Coding**: Items display with color-coded names based on enhancement level: white (base), green (+1-3), blue (+4-6), purple (+7-8), red (+9), golden yellow (shiny).
-- **Equipped Item Indicators**: Items currently equipped display "[E]" marker in forge UI, allowing enhancement and repair while maintaining equipped status.
-- **Target Style (Future)**: Full pixel art assets, tabletop RPG aesthetic (dice rolling, grid-based), dark fantasy atmosphere (Void corruption theme), inspired by Heroes of Might and Magic and Final Fantasy.
+- **Visuals**: Pixel art for environments (city, wilderness, delve entrances, trees, bushes, grass), item sprites, and player combat sprite. NPCs are currently colored rectangles.
+- **Combat Animations**: Player sprite has a lunge animation for attacks and a red hit flash when taking damage.
+- **Typography**: VT323 monospace font for all UI text and menus.
+- **Currency Icons**: Pixel art coin sprites for Arcane Ash (AA) and Crystalline Animus (CA).
+- **Equipment Panel**: Custom pixel art 3x4 grid panel with interactive slots, displaying equipped items with scaling and click-to-equip functionality.
+- **Item Enhancement Visuals**: Color-coded item names based on enhancement level (white, green, blue, purple, red, golden yellow for shiny). Equipped items show "[E]" in forge UI.
+- **Target Style**: Future target is full pixel art assets, tabletop RPG aesthetic (dice rolling, grid-based), dark fantasy atmosphere with a Void corruption theme, inspired by Heroes of Might and Magic and Final Fantasy.
 
 ### Technical Implementations
-- **Game Engine**: Phaser 3.90.0 (Canvas/WebGL)
+- **Game Engine**: Phaser 3.90.0
 - **Language**: TypeScript 5.4
 - **Build Tool**: Vite 5.0
 - **Backend**: Express.js with TypeScript
 - **Database**: PostgreSQL (Neon) via Drizzle ORM
-- **Authentication**: Replit Auth (OpenID Connect) with session-based auth
-- **State Management**: Server-side PostgreSQL saves with 30-second auto-save, LocalStorage fallback for offline play.
+- **Authentication**: Replit Auth (OpenID Connect) with session-based auth. Multi-instance detection prevents save conflicts.
+- **State Management**: Server-side PostgreSQL saves with 30-second auto-save, LocalStorage fallback.
 - **Core Gameplay Loop**: Main Menu -> Town (Roboka) -> Explore Map -> Delve (3-5 Rooms) -> Combat -> Back to Town.
-- **D20 Combat System**: Turn-based tactical combat with d20 attack rolls, critical hits, and armor damage reduction. Pokemon-style UI with Attack/Inventory/Run menus. Each weapon type has 2-4 unique attacks with variable stamina costs, action costs, and damage multipliers. Special mechanics include status conditions (stunned, poisoned, bleeding, dependable), multi-hit combos, AoE cleaves, backstabs, vampiric healing, and instant-kill finishers. Enemies use simplified combat (basic attacks), players get full tactical depth. Stamina emergency system automatically consumes potions if available.
-- **Stamina Management**: Drains per tile moved (0.33/sec) and per attack (5 stamina). Short rests in wilderness (M menu) restore 50% health/stamina with 30% encounter risk. Combat system validates stamina before allowing attacks.
-- **Delve Generation**: Procedurally generated 3-5 room dungeons with varied room types and tier-based difficulty. Completed delves are removed from the map.
-- **Economy**: Uses Arcane Ash (AA) for common transactions and Crystalline Animus (CA) for rare items.
-- **Inventory & Equipment**: 8-slot equipment system, 15-slot active inventory, and 80-slot footlocker. Supports dual-wielding of 1-handed weapons.
-- **Armor Balancing**: Various armor types provide different combinations of evasion and damage reduction.
-- **Loot System**: Enemies drop tier-based items.
-- **Random Encounters**: Reduced frequency system (2.5% chance every 50 steps) with seven types: Combat (38%, max 1 T2 enemy in groups), Treasure (20%), Shrine (15%), Corrupted Void Portal (10%, 2-stage mini-delve), Trapped Chest (10%), Tombstone (5%), Wandering Merchant (2%, sells 3 enhanced items).
-- **Buff System**: Time-based temporary effects tracked via BuffManager, cleared upon returning to town.
-- **Expanded Wilderness**: 3000x3000 world with camera-follow, procedurally placed delve entrances, and Roboka city sprite for instant return.
-- **Terrain Generation**: Procedural terrain using seeded random, with grass (3 color variants), dirt paths, pixel art trees (3 variants), bushes, and grass tufts (2 variants) for enhanced visual depth. Y-sorted rendering for proper depth layering. Delve exclusion zones prevent decorations from blocking entrances.
-- **Fog of War**: Three-layer exploration system (unexplored, explored-out-of-view, visible) with 256-pixel visibility radius.
-- **UI System**: Viewport-locked overlays with interactive blocking. Hierarchical ESC key navigation.
-- **Overlay Mechanics**: Uses `isOverlayActive` flag to disable player movement while menus are open.
-- **Save/Load System**: Server-authoritative saves in PostgreSQL, with LocalStorage fallback.
-- **Authentication System**: Login/register via Replit Auth.
+- **D20 Combat System**: Turn-based tactical combat with d20 rolls, critical hits, armor reduction, and a 2-action economy. Features Pokemon-style attack selection UI. Weapon types have unique attacks with varying stamina/action costs and damage multipliers. Includes status conditions (stunned, poisoned, bleeding, dependable), multi-hit combos, AoE cleaves, backstabs, vampiric healing, and instant-kill finishers. Combat ends immediately upon enemy defeat.
+- **Stamina Management**: Stamina drains per tile moved and per attack. Short rests restore health/stamina with encounter risk.
+- **Delve Generation**: Procedurally generated 3-5 room dungeons with tier-based difficulty and hidden room types ('???'). Includes interactive trap rooms with D20 disarm checks and dramatic choices.
+- **Economy**: Arcane Ash (AA) for common transactions, Crystalline Animus (CA) for rare items.
+- **Inventory & Equipment**: 8-slot equipment, 15-slot active inventory, 80-slot footlocker. Supports dual-wielding. Items have durability that decays and can be repaired. Soulbinding allows binding up to 3 equipment slots.
+- **Loot System**: Enemies drop tier-based items. Tombstone encounters (5% chance) allow looting items from other players.
+- **Random Encounters**: Varied types (Combat, Treasure, Shrine, Corrupted Void Portal (2-stage mini-delve), Trapped Chest, Tombstone, Wandering Merchant).
+- **Buff System**: Time-based temporary effects managed by BuffManager.
+- **Wilderness Exploration**: 3000x3000 world with camera-follow, procedural terrain (grass, dirt, trees, bushes, grass tufts), Y-sorted rendering, and fog of war. Limited rests per wilderness trip.
+- **UI System**: Viewport-locked, interactive, blocking overlays with hierarchical ESC key navigation.
 - **Modular Architecture**: Separated concerns using TypeScript and singleton patterns.
-- **HMR Configuration**: Vite dev server configured for Hot Module Replacement in Replit.
-- **Innkeeper Rest System**: Allows players to restore health and stamina for a fee.
-- **Vault Keeper Storage System**: Provides access to an 80-slot footlocker with a dual-panel UI.
-
-### Feature Specifications
-- **Town (Roboka)**: Player hub with interactive NPCs.
-- **Death/Respawn**: Player respawns in Roboka upon defeat.
-- **Item Database**: Comprehensive database for weapons, armor, potions, and materials.
-- **Potion Mechanics**: Restore health/stamina.
-- **Merchant System**: Shop in Roboka selling base items, with real-time balance tracking. Wandering Merchant encounters sell 3 enhanced items (+1/+2) at premium pricing: (base + cumulative forge costs) * 1.5.
-- **Item Durability System**: Weapons and armor have durability that decays with use. Items become unusable at 0 durability and can be repaired at the blacksmith. Durability is color-coded.
-- **Forging & Enhancement System**: Blacksmith offers +1 to +9 weapon/armor enhancements with varying success rates, costs, and failure penalties (downgrade or destruction). Enhancements provide damage, durability, evasion, or damage reduction bonuses. Currency validation prevents negative balances - funds checked before forging and deducted immediately after attempt.
-- **Shiny System**: Rare variant items with golden nameplate that can occur during successful forging (0.5%-1.75% chance based on tier). Shiny items are immune to destruction but can still be downgraded on failure. Provides aspirational prestige goals.
+- **Services**: Innkeeper for health/stamina rest, Vault Keeper for footlocker access, Blacksmith for forging and enhancement.
+- **Forging & Enhancement System**: Allows +1 to +9 enhancements with success rates, costs, and failure penalties (downgrade/destruction). Features a "Shiny System" for rare, prestige variant items immune to destruction.
+- **Karma System**: Rewards players for returning looted tombstone items via Halls of Virtue.
 
 ## External Dependencies
 
