@@ -534,39 +534,52 @@ export class CombatSystem {
       return this.createFailedAttack('No combat state!');
     }
 
-    this.combatState.combatLog.push('Murderous Intent - savage strike to all enemies!');
+    const livingEnemies = this.combatState.enemies.filter(e => e.health > 0);
+    if (livingEnemies.length === 0) {
+      return this.createFailedAttack('No living enemies!');
+    }
+
+    const primaryTarget = livingEnemies[0];
+    this.combatState.combatLog.push(`Murderous Intent - savage strike on ${primaryTarget.name}!`);
     
-    let totalDamage = 0;
-    let anyHit = false;
-    let anyCrit = false;
-    let attackRoll = 0;
+    const primaryResult = this.executeSingleStrike(primaryTarget, attack, 'Murderous Intent (primary)');
+    let totalDamage = primaryResult.damage;
     let enemyKilled = false;
 
-    for (const enemy of this.combatState.enemies) {
-      if (enemy.health <= 0) continue;
+    if (primaryTarget.health <= 0) {
+      this.combatState.combatLog.push(`${primaryTarget.name} has been defeated!`);
+      enemyKilled = true;
+    }
 
-      const result = this.executeSingleStrike(enemy, attack, `Murderous Intent on ${enemy.name}`);
-      anyHit = anyHit || result.hit;
-      anyCrit = anyCrit || result.critical;
-      attackRoll = Math.max(attackRoll, result.attackRoll);
-      totalDamage += result.damage;
-
-      if (enemy.health <= 0) {
-        this.combatState.combatLog.push(`${enemy.name} has been defeated!`);
-        enemyKilled = true;
+    const otherEnemies = this.combatState.enemies.filter(e => e !== primaryTarget && e.health > 0);
+    
+    if (otherEnemies.length > 0 && primaryResult.hit) {
+      const cleaveDamage = Math.floor(primaryResult.damage * 0.75);
+      this.combatState.combatLog.push(`Savage cleave strikes ${otherEnemies.length} other enemies for ${cleaveDamage} damage each!`);
+      
+      for (const enemy of otherEnemies) {
+        enemy.health = Math.max(0, enemy.health - cleaveDamage);
+        this.combatState.combatLog.push(`${enemy.name} takes ${cleaveDamage} cleave damage`);
+        totalDamage += cleaveDamage;
+        
+        if (enemy.health <= 0) {
+          this.combatState.combatLog.push(`${enemy.name} has been defeated!`);
+          enemyKilled = true;
+        }
       }
     }
 
     if (enemyKilled) {
-      this.combatState.combatLog.push('An enemy died! Bonus savage strike activates (no stamina cost)!');
-      for (const enemy of this.combatState.enemies) {
-        if (enemy.health <= 0) continue;
-
-        const bonusResult = this.executeSingleStrike(enemy, attack, `Bonus savage strike on ${enemy.name}`);
+      const remainingEnemies = this.combatState.enemies.filter(e => e.health > 0);
+      if (remainingEnemies.length > 0) {
+        const randomEnemy = remainingEnemies[Math.floor(Math.random() * remainingEnemies.length)];
+        this.combatState.combatLog.push(`An enemy died! Bonus savage strike on ${randomEnemy.name} (no stamina cost)!`);
+        
+        const bonusResult = this.executeSingleStrike(randomEnemy, attack, 'Bonus savage strike');
         totalDamage += bonusResult.damage;
 
-        if (enemy.health <= 0) {
-          this.combatState.combatLog.push(`${enemy.name} has been defeated!`);
+        if (randomEnemy.health <= 0) {
+          this.combatState.combatLog.push(`${randomEnemy.name} has been defeated!`);
         }
       }
     }
@@ -576,9 +589,9 @@ export class CombatSystem {
     this.checkAndEndPlayerTurn();
 
     return {
-      hit: anyHit,
-      critical: anyCrit,
-      attackRoll,
+      hit: primaryResult.hit,
+      critical: primaryResult.critical,
+      attackRoll: primaryResult.attackRoll,
       damage: totalDamage,
       damageBeforeReduction: totalDamage,
       message: `Murderous Intent complete! Total: ${totalDamage} damage`,
