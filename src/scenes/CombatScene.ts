@@ -183,6 +183,12 @@ export class CombatScene extends Phaser.Scene {
     });
   }
 
+  private getEnemySpriteKey(enemyName: string): string | null {
+    if (enemyName === 'Void Spawn') return 'void-spawn';
+    if (enemyName === 'Greater Void Spawn') return 'greater-void-spawn';
+    return null;
+  }
+
   private renderEnemies(enemies: Enemy[]): void {
     const { width, height } = this.cameras.main;
     const spacing = 200;
@@ -194,7 +200,15 @@ export class CombatScene extends Phaser.Scene {
       const x = startX + (index * spacing);
       const y = startY;
 
-      const enemyBox = this.add.rectangle(x, y, 80, 80, 0xff4444);
+      const spriteKey = this.getEnemySpriteKey(enemy.name);
+      let enemyVisual: Phaser.GameObjects.Sprite | Phaser.GameObjects.Rectangle;
+      
+      if (spriteKey) {
+        enemyVisual = this.add.sprite(x, y, spriteKey);
+        enemyVisual.setScale(0.2);
+      } else {
+        enemyVisual = this.add.rectangle(x, y, 80, 80, 0xff4444);
+      }
       
       // Nameplate positioned above sprite - centered
       const plateY = y - 80;
@@ -216,17 +230,27 @@ export class CombatScene extends Phaser.Scene {
 
       this.enemyHealthTexts.push(healthText);
 
-      const container = this.add.container(0, 0, [enemyBox, enemyInfoBg, nameText, healthText]);
+      const container = this.add.container(0, 0, [enemyVisual, enemyInfoBg, nameText, healthText]);
       container.setData('index', index);
       this.enemyContainers.push(container);
 
-      enemyBox.setInteractive({ useHandCursor: true })
+      enemyVisual.setInteractive({ useHandCursor: true })
         .on('pointerover', () => {
           if (!this.isOverlayActive && this.combatSystem.isPlayerTurn()) {
-            enemyBox.setFillStyle(0xff6666);
+            if (spriteKey) {
+              enemyVisual.setTint(0xff6666);
+            } else {
+              (enemyVisual as Phaser.GameObjects.Rectangle).setFillStyle(0xff6666);
+            }
           }
         })
-        .on('pointerout', () => enemyBox.setFillStyle(0xff4444))
+        .on('pointerout', () => {
+          if (spriteKey) {
+            enemyVisual.clearTint();
+          } else {
+            (enemyVisual as Phaser.GameObjects.Rectangle).setFillStyle(0xff4444);
+          }
+        })
         .on('pointerdown', () => {
           if (!this.isOverlayActive && this.isTargetSelectionMode) {
             this.attackEnemyWithSelectedAttack(index);
