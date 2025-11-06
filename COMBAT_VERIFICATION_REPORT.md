@@ -42,8 +42,14 @@
 ### ✅ GREATSWORD
 - **Thrust** (1 action, 5 stamina) - 1x damage
 - **Heavy Attack** (2 actions, 10 stamina) - 1x damage, bleeding
-- **Arcing Blade** (2 actions, 15 stamina) - 1x damage, **HITS ALL ENEMIES**
-- **Savage Strike** (2 actions, 10 stamina) - 1.5x damage, bleeding (higher chance)
+- **Arcing Blade** (1 action, 10 stamina) - 1x damage, **HITS ALL ENEMIES**, bleeding
+- **Crimson Mist** (2 actions, 20 stamina) - 2x damage, **CRITS 18-20**, 35% instant kill under 30% HP on crit
+
+### ✅ GREATAXE
+- **Light Attack** (1 action, 5 stamina) - 1x damage, bleeding
+- **Savage Strike** (2 actions, 10 stamina) - 1x damage, **CRITS 19-20**, rolls extra xd12 on crit
+- **Bloodfury** (1 action, 10 stamina) - 1x damage, **VAMPIRIC** (heal 50% vs bleeding targets)
+- **Murderous Intent** (2 actions, 20 stamina) - 2x damage, **CLEAVE 75%**, bleeding, **EXTRA STRIKE** if enemy dies
 
 ### ✅ QUARTERSTAFF
 - **Light Attack** (1 action, 5 stamina) - 1x damage, stun
@@ -72,10 +78,19 @@
 ### ✅ Cleave Attacks (75% damage to all other enemies)
 - **Sweeping Strike (Longsword)** ✅
 - **Sweeping Rend (Battleaxe)** ✅
+- **Murderous Intent (Greataxe)** ✅ (Also triggers extra strike if enemy dies)
 - **Works with dual-wield** ✅ (Fixed Nov 6, 2025)
 
 ### ✅ AoE Attacks (Hit ALL enemies)
 - **Arcing Blade (Greatsword)**: Strikes all enemies ✅
+
+### ✅ Vampiric/Lifesteal Attacks
+- **Bloodfury (Greataxe)**: Heals 50% of damage dealt vs bleeding targets ✅
+
+### ✅ Enhanced Critical Hits
+- **Backstab (Dagger)**: Crits on 19-20 ✅
+- **Savage Strike (Greataxe)**: Crits on 19-20, rolls extra xd12 ✅
+- **Crimson Mist (Greatsword)**: Crits on 18-20, 35% instant kill under 30% HP ✅
 
 ### ✅ Status Conditions
 - **Bleeding**: Dagger, Rapier, Battleaxe, Greatsword ✅
