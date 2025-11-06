@@ -14,12 +14,13 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 ## System Architecture
 
 ### UI/UX Decisions
-- **Visuals**: Pixel art for environments (city, wilderness, delve entrances, trees, bushes, grass), item sprites, and player combat sprite. NPCs are currently colored rectangles.
+- **Visuals**: Pixel art for environments (city, wilderness, delve entrances, trees, bushes, grass), item sprites, player combat sprite, and enemy sprites (Void Spawn, Greater Void Spawn). NPCs are currently colored rectangles. Enemy sprites use 0.2 scale with tint effects for hover states.
 - **Combat Animations**: Player sprite has a lunge animation for attacks and a red hit flash when taking damage.
 - **Typography**: VT323 monospace font for all UI text and menus.
 - **Currency Icons**: Pixel art coin sprites for Arcane Ash (AA) and Crystalline Animus (CA).
 - **Equipment Panel**: Custom pixel art 3x4 grid panel with interactive slots, displaying equipped items with scaling and click-to-equip functionality.
 - **Item Enhancement Visuals**: Color-coded item names based on enhancement level (white, green, blue, purple, red, golden yellow for shiny). Equipped items show "[E]" in forge UI.
+- **Enemy Sprite System**: Tier 1 enemies now display pixel art sprites. Void Spawn shows a purple void creature with glowing eye. Greater Void Spawn displays a larger tentacled void horror. System includes sprite mapping with fallback to colored rectangles for enemies without sprites.
 - **Target Style**: Future target is full pixel art assets, tabletop RPG aesthetic (dice rolling, grid-based), dark fantasy atmosphere with a Void corruption theme, inspired by Heroes of Might and Magic and Final Fantasy.
 
 ### Technical Implementations
