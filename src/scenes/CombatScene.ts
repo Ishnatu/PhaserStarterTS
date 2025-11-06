@@ -46,6 +46,7 @@ export class CombatScene extends Phaser.Scene {
     this.load.image('player-combat', '/assets/player/player-combat.png');
     this.load.image('void-spawn', '/assets/enemies/void-spawn.png');
     this.load.image('greater-void-spawn', '/assets/enemies/greater-void-spawn.png');
+    this.load.image('shadow-beast', '/assets/enemies/shadow-beast.png');
   }
 
   init(data: { delve: Delve; room: DelveRoom; wildEncounter?: boolean; wildEnemies?: Enemy[]; returnToLocation?: { x: number; y: number } }) {
@@ -186,6 +187,7 @@ export class CombatScene extends Phaser.Scene {
   private getEnemySpriteKey(enemyName: string): string | null {
     if (enemyName === 'Void Spawn') return 'void-spawn';
     if (enemyName === 'Greater Void Spawn') return 'greater-void-spawn';
+    if (enemyName === 'Shadow Beast') return 'shadow-beast';
     return null;
   }
 

@@ -20,7 +20,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Currency Icons**: Pixel art coin sprites for Arcane Ash (AA) and Crystalline Animus (CA).
 - **Equipment Panel**: Custom pixel art 3x4 grid panel with interactive slots, displaying equipped items with scaling and click-to-equip functionality.
 - **Item Enhancement Visuals**: Color-coded item names based on enhancement level (white, green, blue, purple, red, golden yellow for shiny). Equipped items show "[E]" in forge UI.
-- **Enemy Sprite System**: Tier 1 enemies now display pixel art sprites. Void Spawn shows a purple void creature with glowing eye. Greater Void Spawn displays a larger tentacled void horror. System includes sprite mapping with fallback to colored rectangles for enemies without sprites.
+- **Enemy Sprite System**: Tier 1-2 enemies now display pixel art sprites. Void Spawn (T1) shows a purple void creature with glowing eye. Greater Void Spawn (T1 boss) displays a larger tentacled void horror. Shadow Beast (T2) shows a dark shadowy creature with glowing magenta eyes. System includes sprite mapping with fallback to colored rectangles for enemies without sprites.
 - **Target Style**: Future target is full pixel art assets, tabletop RPG aesthetic (dice rolling, grid-based), dark fantasy atmosphere with a Void corruption theme, inspired by Heroes of Might and Magic and Final Fantasy.
 
 ### Technical Implementations
