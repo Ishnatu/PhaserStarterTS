@@ -232,6 +232,10 @@ export class CombatSystem {
       this.combatState.combatLog.push(`${target.name} has been defeated!`);
     }
 
+    if (attack.cleave && attack.cleave > 0) {
+      this.applyCleave(targetIndex, damage, attack.cleave, attack.name);
+    }
+
     this.deductActions(attack.actionCost);
     this.checkCombatEnd();
     this.checkAndEndPlayerTurn();
