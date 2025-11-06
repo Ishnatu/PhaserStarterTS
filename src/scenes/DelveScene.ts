@@ -6,6 +6,7 @@ import { DiceRoller } from '../utils/DiceRoller';
 import { Delve, DelveRoom } from '../types/GameTypes';
 import { FONTS } from '../config/fonts';
 import { ItemColorUtil } from '../utils/ItemColorUtil';
+import { GameConfig } from '../config/GameConfig';
 
 export class DelveScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -201,6 +202,10 @@ export class DelveScene extends Phaser.Scene {
   }
 
   private exitDelve(): void {
+    const player = this.gameState.getPlayer();
+    player.wildernessRestsRemaining = GameConfig.STAMINA.MAX_WILDERNESS_RESTS;
+    this.gameState.updatePlayer(player);
+    
     // Mark delve as completed (only for real map delves with location)
     if (this.currentDelve.location) {
       this.gameState.markDelveCompleted(this.currentDelve.location.x, this.currentDelve.location.y);
