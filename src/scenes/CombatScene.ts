@@ -237,18 +237,18 @@ export class CombatScene extends Phaser.Scene {
       enemyVisual.setInteractive({ useHandCursor: true })
         .on('pointerover', () => {
           if (!this.isOverlayActive && this.combatSystem.isPlayerTurn()) {
-            if (spriteKey) {
+            if (spriteKey && enemyVisual instanceof Phaser.GameObjects.Sprite) {
               enemyVisual.setTint(0xff6666);
-            } else {
-              (enemyVisual as Phaser.GameObjects.Rectangle).setFillStyle(0xff6666);
+            } else if (enemyVisual instanceof Phaser.GameObjects.Rectangle) {
+              enemyVisual.setFillStyle(0xff6666);
             }
           }
         })
         .on('pointerout', () => {
-          if (spriteKey) {
+          if (spriteKey && enemyVisual instanceof Phaser.GameObjects.Sprite) {
             enemyVisual.clearTint();
-          } else {
-            (enemyVisual as Phaser.GameObjects.Rectangle).setFillStyle(0xff4444);
+          } else if (enemyVisual instanceof Phaser.GameObjects.Rectangle) {
+            enemyVisual.setFillStyle(0xff4444);
           }
         })
         .on('pointerdown', () => {
