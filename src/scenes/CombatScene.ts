@@ -1200,18 +1200,26 @@ export class CombatScene extends Phaser.Scene {
 
   private enableEnemyTargeting(): void {
     this.enemyContainers.forEach((container, index) => {
-      const enemyBox = container.getAt(0) as Phaser.GameObjects.Rectangle;
-      if (enemyBox && this.combatSystem.getCombatState()?.enemies[index].health > 0) {
-        enemyBox.setStrokeStyle(3, 0xffff00);
+      const enemyVisual = container.getAt(0);
+      if (enemyVisual && this.combatSystem.getCombatState()?.enemies[index].health > 0) {
+        if (enemyVisual instanceof Phaser.GameObjects.Sprite) {
+          enemyVisual.setTint(0xffff00);
+        } else if (enemyVisual instanceof Phaser.GameObjects.Rectangle) {
+          enemyVisual.setStrokeStyle(3, 0xffff00);
+        }
       }
     });
   }
 
   private disableEnemyTargeting(): void {
     this.enemyContainers.forEach((container) => {
-      const enemyBox = container.getAt(0) as Phaser.GameObjects.Rectangle;
-      if (enemyBox) {
-        enemyBox.setStrokeStyle(0);
+      const enemyVisual = container.getAt(0);
+      if (enemyVisual) {
+        if (enemyVisual instanceof Phaser.GameObjects.Sprite) {
+          enemyVisual.clearTint();
+        } else if (enemyVisual instanceof Phaser.GameObjects.Rectangle) {
+          enemyVisual.setStrokeStyle(0);
+        }
       }
     });
   }
