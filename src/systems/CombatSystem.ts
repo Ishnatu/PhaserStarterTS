@@ -882,12 +882,21 @@ export class CombatSystem {
     const cleaveDamage = Math.floor(primaryDamage * cleavePercent);
     const otherEnemies = this.combatState.enemies.filter((e, i) => i !== primaryTargetIndex && e.health > 0);
 
-    if (otherEnemies.length === 0) return;
+    console.log(`[CLEAVE DEBUG] Primary target index: ${primaryTargetIndex}, Primary damage: ${primaryDamage}, Cleave %: ${cleavePercent}`);
+    console.log(`[CLEAVE DEBUG] Total enemies: ${this.combatState.enemies.length}, Other living enemies: ${otherEnemies.length}`);
+    console.log(`[CLEAVE DEBUG] Cleave damage to apply: ${cleaveDamage}`);
+
+    if (otherEnemies.length === 0) {
+      console.log(`[CLEAVE DEBUG] No other enemies to cleave!`);
+      return;
+    }
 
     this.combatState.combatLog.push(`Cleaving momentum strikes ${otherEnemies.length} other enemies for ${cleaveDamage} damage each!`);
 
     for (const enemy of otherEnemies) {
+      const beforeHP = enemy.health;
       enemy.health = Math.max(0, enemy.health - cleaveDamage);
+      console.log(`[CLEAVE DEBUG] ${enemy.name}: ${beforeHP} -> ${enemy.health} HP`);
       this.combatState.combatLog.push(`${enemy.name} takes ${cleaveDamage} cleave damage`);
 
       if (enemy.health <= 0) {

@@ -664,6 +664,11 @@ export class CombatScene extends Phaser.Scene {
     const state = this.combatSystem.getCombatState();
     if (!state) return;
 
+    console.log(`[UI UPDATE] Updating combat display - Enemy count: ${state.enemies.length}`);
+    state.enemies.forEach((enemy, i) => {
+      console.log(`[UI UPDATE] Enemy ${i} (${enemy.name}): ${enemy.health}/${enemy.maxHealth} HP`);
+    });
+
     this.playerHealthText.setText(`HP: ${state.player.health}/${state.player.maxHealth}`);
     this.playerStaminaText.setText(`SP: ${state.player.stamina}/${state.player.maxStamina}`);
 
