@@ -44,6 +44,8 @@ export class CombatScene extends Phaser.Scene {
 
   preload() {
     this.load.image('player-combat', '/assets/player/player-combat.png');
+    this.load.image('void-spawn', '/assets/enemies/void-spawn.png');
+    this.load.image('greater-void-spawn', '/assets/enemies/greater-void-spawn.png');
   }
 
   init(data: { delve: Delve; room: DelveRoom; wildEncounter?: boolean; wildEnemies?: Enemy[]; returnToLocation?: { x: number; y: number } }) {
