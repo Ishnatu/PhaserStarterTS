@@ -337,7 +337,7 @@ export class CombatSystem {
 
     for (let i = 0; i < 3; i++) {
       const target = this.combatState.enemies[targetIndex];
-      if (!target || target.health <= 0) break;
+      if (!target) break;
 
       const result = this.executeSingleStrike(target, attack, `Puncture strike ${i + 1}`);
       anyHit = anyHit || result.hit;
@@ -346,9 +346,8 @@ export class CombatSystem {
       totalDamage += result.damage;
       totalDamageBeforeReduction += result.damageBeforeReduction;
 
-      if (target.health <= 0) {
+      if (target.health <= 0 && i === 0) {
         this.combatState.combatLog.push(`${target.name} has been defeated!`);
-        break;
       }
     }
 
