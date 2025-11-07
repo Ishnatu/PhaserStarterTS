@@ -6,6 +6,7 @@ import { BuffManager } from './BuffManager';
 import { ForgingSystem } from './ForgingSystem';
 import { ConditionManager } from './ConditionManager';
 import { WeaponAttackDatabase } from '../config/WeaponAttackDatabase';
+import { ItemDatabase } from '../config/ItemDatabase';
 
 export class CombatSystem {
   private combatState: CombatState | null = null;
@@ -499,6 +500,7 @@ export class CombatSystem {
     let anyHit = false;
     let anyCrit = false;
     let attackRoll = 0;
+    let totalHits = 0;
 
     for (let sweep = 0; sweep < 3; sweep++) {
       this.combatState.combatLog.push(`Sweep ${sweep + 1}:`);
@@ -511,11 +513,20 @@ export class CombatSystem {
         anyCrit = anyCrit || result.critical;
         attackRoll = Math.max(attackRoll, result.attackRoll);
         totalDamage += result.damage;
+        
+        if (result.hit) {
+          totalHits++;
+        }
 
         if (enemy.health <= 0) {
           this.combatState.combatLog.push(`${enemy.name} has been defeated!`);
         }
       }
+    }
+    
+    if (totalHits >= 2) {
+      ConditionManager.applyCondition(this.combatState.player, 'raise_evasion', 2, 1);
+      this.combatState.combatLog.push(`Spinning Flurry momentum! Evasion raised by +3 for 2 rounds!`);
     }
 
     this.deductActions(attack.actionCost);
@@ -565,16 +576,19 @@ export class CombatSystem {
     }
 
     if (enemyKilled) {
-      const remainingEnemies = this.combatState.enemies.filter(e => e.health > 0);
-      if (remainingEnemies.length > 0) {
-        const randomEnemy = remainingEnemies[Math.floor(Math.random() * remainingEnemies.length)];
-        this.combatState.combatLog.push(`An enemy died! Bonus savage strike on ${randomEnemy.name} (no stamina cost)!`);
-        
-        const bonusResult = this.executeSingleStrike(randomEnemy, attack, 'Bonus savage strike');
-        totalDamage += bonusResult.damage;
+      const procChance = Math.random() * 100;
+      if (procChance < 20) {
+        const remainingEnemies = this.combatState.enemies.filter(e => e.health > 0);
+        if (remainingEnemies.length > 0) {
+          const randomEnemy = remainingEnemies[Math.floor(Math.random() * remainingEnemies.length)];
+          this.combatState.combatLog.push(`Murderous Intent procs! Bonus Savage Strike on ${randomEnemy.name} (no stamina cost)!`);
+          
+          const bonusResult = this.executeSingleStrike(randomEnemy, attack, 'Bonus Savage Strike');
+          totalDamage += bonusResult.damage;
 
-        if (randomEnemy.health <= 0) {
-          this.combatState.combatLog.push(`${randomEnemy.name} has been defeated!`);
+          if (randomEnemy.health <= 0) {
+            this.combatState.combatLog.push(`${randomEnemy.name} has been defeated!`);
+          }
         }
       }
     }
@@ -909,12 +923,41 @@ export class CombatSystem {
   }
 
   private applyDamageMultiplier(baseDamage: DiceRoll, multiplier: number): DiceRoll {
-    if (multiplier === 1) return baseDamage;
+    let adjustedMultiplier = multiplier;
+    
+    if (this.combatState) {
+      const dependableCondition = ConditionManager.getCondition(this.combatState.player, 'dependable');
+      if (dependableCondition) {
+        const mainHandWeapon = this.combatState.player.equipment.mainHand;
+        const offHandWeapon = this.combatState.player.equipment.offHand;
+        
+        let isShortsword = false;
+        if (mainHandWeapon) {
+          const mainWeaponData = ItemDatabase.getItem(mainHandWeapon.itemId);
+          if (mainWeaponData && 'weaponType' in mainWeaponData && mainWeaponData.weaponType === 'shortsword') {
+            isShortsword = true;
+          }
+        }
+        if (!isShortsword && offHandWeapon) {
+          const offWeaponData = ItemDatabase.getItem(offHandWeapon.itemId);
+          if (offWeaponData && 'weaponType' in offWeaponData && offWeaponData.weaponType === 'shortsword') {
+            isShortsword = true;
+          }
+        }
+        
+        if (isShortsword) {
+          const dependableBonus = dependableCondition.stacks * 0.1;
+          adjustedMultiplier += dependableBonus;
+        }
+      }
+    }
+    
+    if (adjustedMultiplier === 1) return baseDamage;
 
     return {
-      numDice: Math.floor(baseDamage.numDice * multiplier),
+      numDice: Math.floor(baseDamage.numDice * adjustedMultiplier),
       dieSize: baseDamage.dieSize,
-      modifier: Math.floor(baseDamage.modifier * multiplier),
+      modifier: Math.floor(baseDamage.modifier * adjustedMultiplier),
     };
   }
 
@@ -998,7 +1041,16 @@ export class CombatSystem {
 
     const roll = Math.random() * 100;
     if (roll < attack.conditionChance) {
-      ConditionManager.applyCondition(target, attack.conditionInflicted, attack.conditionDuration || 1);
+      let stacksToApply = 1;
+      
+      if (attack.name === 'Hydras Strike' && attack.conditionInflicted === 'poisoned') {
+        if (ConditionManager.hasCondition(target, 'poisoned')) {
+          stacksToApply = Math.ceil(1 * 1.5);
+          this.combatState.combatLog.push(`Hydra's venom intensifies on poisoned target! +50% poison stacks!`);
+        }
+      }
+      
+      ConditionManager.applyCondition(target, attack.conditionInflicted, attack.conditionDuration || 1, stacksToApply);
       const conditionName = ConditionManager.getConditionDisplayName(attack.conditionInflicted);
       this.combatState.combatLog.push(`${target.name} is afflicted with ${conditionName}!`);
     }
