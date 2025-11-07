@@ -1,0 +1,11 @@
+Enemy Name,Tier,Boss,Health,Evasion,Damage Reduction,Weapon Damage Dice,Weapon Damage Die Size,Weapon Damage Modifier,Example Min Damage,Example Max Damage,Sprite Path,Has Sprite Asset,Loot Table
+Void Spawn,1,NO,22,5,0%,1,4,2,3,6,/assets/enemies/void-spawn.png,YES,"potion_health (30%); potion_stamina (25%)"
+Greater Void Spawn,1,YES,60,10,0%,1,4,2,3,6,/assets/enemies/greater-void-spawn.png,YES,"potion_health (45%); potion_stamina (38%); warhammer_basic (25%)"
+Shadow Beast,2,NO,60,11,0%,1,10,4,5,14,/assets/enemies/shadow-beast.png,YES,"potion_health (30%); potion_stamina (25%); chest_leather (15%); helmet_leather (15%)"
+Shadow Lord,2,YES,120,11,0%,1,10,4,5,14,NONE - Uses colored rectangle,NO,"potion_health (45%); potion_stamina (38%); chest_leather (22%); helmet_leather (22%); warhammer_basic (25%)"
+Corrupted Warrior,3,NO,75,11,10%,1,12,5,6,17,NONE - Uses colored rectangle,NO,"potion_health (30%); potion_stamina (25%); chest_leather (15%); helmet_leather (15%); longsword_basic (20%); battleaxe_basic (15%)"
+Corrupted Champion,3,YES,150,11,10%,1,12,5,6,17,NONE - Uses colored rectangle,NO,"potion_health (45%); potion_stamina (38%); chest_leather (22%); helmet_leather (22%); longsword_basic (30%); battleaxe_basic (22%); warhammer_basic (25%)"
+Eldritch Horror,4,NO,90,12,10%,1,12,6,7,18,NONE - Uses colored rectangle,NO,"potion_health (30%); potion_stamina (25%); chest_leather (15%); helmet_leather (15%); longsword_basic (20%); battleaxe_basic (15%); chest_heavy (10%); greatsword_basic (10%)"
+Eldritch Nightmare,4,YES,180,12,10%,1,12,6,7,18,NONE - Uses colored rectangle,NO,"potion_health (45%); potion_stamina (38%); chest_leather (22%); helmet_leather (22%); longsword_basic (30%); battleaxe_basic (22%); chest_heavy (15%); greatsword_basic (15%); warhammer_basic (25%)"
+Voidtouched Abomination,5,NO,105,12,10%,1,12,7,8,19,NONE - Uses colored rectangle,NO,"potion_health (30%); potion_stamina (25%); chest_leather (15%); helmet_leather (15%); longsword_basic (20%); battleaxe_basic (15%); chest_heavy (10%); greatsword_basic (10%)"
+Primordial Voidbeast,5,YES,210,12,10%,1,12,7,8,19,NONE - Uses colored rectangle,NO,"potion_health (45%); potion_stamina (38%); chest_leather (22%); helmet_leather (22%); longsword_basic (30%); battleaxe_basic (22%); chest_heavy (15%); greatsword_basic (15%); warhammer_basic (25%)"
