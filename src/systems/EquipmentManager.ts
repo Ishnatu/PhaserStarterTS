@@ -225,38 +225,45 @@ export class EquipmentManager {
   static getAvailableAttacks(player: PlayerData): WeaponAttack[] {
     const attacks: WeaponAttack[] = [];
     
-    if (player.equipment.mainHand) {
-      const mainWeapon = ItemDatabase.getWeapon(player.equipment.mainHand.itemId);
-      if (mainWeapon) {
-        const mainAttacks = WeaponAttackDatabase.getAttacksForWeapon(mainWeapon.type);
-        const mainHandLevel = player.equipment.mainHand.enhancementLevel || 0;
-        
-        mainAttacks.forEach(attack => {
+    const mainHandItem = player.equipment.mainHand;
+    const offHandItem = player.equipment.offHand;
+    
+    const mainWeapon = mainHandItem ? ItemDatabase.getWeapon(mainHandItem.itemId) : undefined;
+    const offWeapon = offHandItem ? ItemDatabase.getWeapon(offHandItem.itemId) : undefined;
+    
+    const isDualWielding = this.isDualWielding(player);
+    const isMatchingDualWield = isDualWielding && mainWeapon && offWeapon && mainWeapon.type === offWeapon.type;
+    
+    if (mainHandItem && mainWeapon) {
+      const mainAttacks = WeaponAttackDatabase.getAttacksForWeapon(mainWeapon.type);
+      const mainHandLevel = mainHandItem.enhancementLevel || 0;
+      
+      mainAttacks.forEach(attack => {
+        if (!attack.requiresDualWield || isMatchingDualWield) {
           attacks.push({
             ...attack,
             sourceHand: 'mainHand',
             weaponData: mainWeapon,
             enhancementLevel: mainHandLevel
           });
-        });
-      }
+        }
+      });
     }
     
-    if (this.isDualWielding(player) && player.equipment.offHand) {
-      const offWeapon = ItemDatabase.getWeapon(player.equipment.offHand.itemId);
-      if (offWeapon) {
-        const offAttacks = WeaponAttackDatabase.getAttacksForWeapon(offWeapon.type);
-        const offHandLevel = player.equipment.offHand.enhancementLevel || 0;
-        
-        offAttacks.forEach(attack => {
+    if (isDualWielding && offHandItem && offWeapon) {
+      const offAttacks = WeaponAttackDatabase.getAttacksForWeapon(offWeapon.type);
+      const offHandLevel = offHandItem.enhancementLevel || 0;
+      
+      offAttacks.forEach(attack => {
+        if (!attack.requiresDualWield || isMatchingDualWield) {
           attacks.push({
             ...attack,
             sourceHand: 'offHand',
             weaponData: offWeapon,
             enhancementLevel: offHandLevel
           });
-        });
-      }
+        }
+      });
     }
     
     return attacks;
