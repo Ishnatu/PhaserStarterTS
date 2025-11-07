@@ -30,6 +30,8 @@ export class TownScene extends Phaser.Scene {
     this.load.image('coin-aa', '/assets/ui/currency/arcane-ash-coin.png');
     this.load.image('coin-ca', '/assets/ui/currency/crystalline-animus-coin.png');
     this.load.image('equipment-panel', '/assets/ui/equipment-panel.png');
+    this.load.image('blacksmith-button', '/assets/ui/shop-buttons/blacksmith-button.png');
+    this.load.image('garthek-button', '/assets/ui/shop-buttons/garthek-button.png');
     
     const itemSprites = ItemSprites.getAllSpritePaths();
     itemSprites.forEach(({ itemId, path }) => {
@@ -207,11 +209,11 @@ export class TownScene extends Phaser.Scene {
     const npcSpacing = 90;
 
     const npcs = [
-      { name: 'Blacksmith', color: 0xff6633, description: 'Forges and upgrades equipment' },
+      { name: 'Blacksmith', color: 0xff6633, description: 'Forges and upgrades equipment', sprite: 'blacksmith-button' },
       { name: 'Merchant', color: 0x66cc66, description: 'Buys and sells goods' },
       { name: 'Innkeeper', color: 0x6699ff, description: 'Provides rest and healing' },
       { name: 'Vault Keeper', color: 0x88ddff, description: 'Manages your storage footlocker' },
-      { name: 'Garthek', color: 0x9944cc, description: 'The Stitcher - Binds items to your soul' },
+      { name: 'Garthek', color: 0x9944cc, description: 'The Stitcher - Binds items to your soul', sprite: 'garthek-button' },
       { name: 'Keeper of Virtue', color: 0xffd700, description: 'Reclaim returned items and view karma' },
       { name: 'Quest Giver', color: 0xffcc33, description: 'Offers missions and lore' },
       { name: 'Gem Expert', color: 0xcc66ff, description: 'Soulbinds Voidtouched Gems' },
@@ -227,11 +229,24 @@ export class TownScene extends Phaser.Scene {
       const x = startX + col * (npcSpacing * 2);
       const y = npcY + row * 100;
 
-      const npcBox = this.add.rectangle(x, y, 80, 80, npc.color)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerover', () => npcBox.setFillStyle(npc.color, 0.7))
-        .on('pointerout', () => npcBox.setFillStyle(npc.color, 1))
-        .on('pointerdown', () => this.interactWithNPC(npc.name, npc.description));
+      let npcVisual: Phaser.GameObjects.GameObject;
+
+      if (npc.sprite) {
+        const npcSprite = this.add.image(x, y, npc.sprite)
+          .setDisplaySize(80, 80)
+          .setInteractive({ useHandCursor: true })
+          .on('pointerover', () => npcSprite.setTint(0xdddddd))
+          .on('pointerout', () => npcSprite.clearTint())
+          .on('pointerdown', () => this.interactWithNPC(npc.name, npc.description));
+        npcVisual = npcSprite;
+      } else {
+        const npcBox = this.add.rectangle(x, y, 80, 80, npc.color)
+          .setInteractive({ useHandCursor: true })
+          .on('pointerover', () => npcBox.setFillStyle(npc.color, 0.7))
+          .on('pointerout', () => npcBox.setFillStyle(npc.color, 1))
+          .on('pointerdown', () => this.interactWithNPC(npc.name, npc.description));
+        npcVisual = npcBox;
+      }
 
       this.add.text(x, y + 50, npc.name, {
         fontFamily: FONTS.primary,
