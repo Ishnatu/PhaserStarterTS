@@ -145,6 +145,7 @@ export class ConditionManager {
       raise_defence: 'Defence Up',
       vampiric: 'Vampiric',
       decapitate: 'Decapitate',
+      slowed: 'Slowed',
     };
     return displayNames[conditionType] || conditionType;
   }
@@ -159,6 +160,7 @@ export class ConditionManager {
       raise_defence: 0xffaa00,
       vampiric: 0xff00ff,
       decapitate: 0xff0000,
+      slowed: 0x9966cc,
     };
     return colors[conditionType] || 0xffffff;
   }

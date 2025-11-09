@@ -23,7 +23,9 @@ export class CombatSystem {
       enemies: enemies.map(e => ({ 
         ...e, 
         statusConditions: e.statusConditions || [],
-        backstabUsed: false 
+        backstabUsed: false,
+        chronostepUsesRemaining: e.name === 'Greater Void Spawn' ? 2 : undefined,
+        damageReceivedHistory: e.name === 'Greater Void Spawn' ? [] : undefined
       })),
       currentTurn: 'player',
       currentEnemyIndex: 0,
@@ -33,6 +35,7 @@ export class CombatSystem {
       isWildEncounter,
       actionsRemaining: 2,
       maxActionsPerTurn: 2,
+      currentRound: 0,
     };
 
     return this.combatState;
@@ -41,13 +44,18 @@ export class CombatSystem {
   playerTurnStart(): void {
     if (!this.combatState) return;
 
-    this.combatState.actionsRemaining = this.combatState.maxActionsPerTurn;
+    const isSlowed = ConditionManager.hasCondition(this.combatState.player, 'slowed');
+    this.combatState.actionsRemaining = isSlowed ? 1 : this.combatState.maxActionsPerTurn;
 
     if (ConditionManager.isStunned(this.combatState.player)) {
       this.combatState.combatLog.push('You are stunned and cannot act!');
       ConditionManager.tickConditions(this.combatState.player);
       this.combatState.currentTurn = 'enemy';
       return;
+    }
+    
+    if (isSlowed) {
+      this.combatState.combatLog.push('You are slowed! Only 1 action this turn.');
     }
 
     const tickResult = ConditionManager.tickConditions(this.combatState.player);
@@ -219,6 +227,7 @@ export class CombatSystem {
     );
 
     target.health = Math.max(0, target.health - damage);
+    this.trackDamageToEnemy(target, damage);
     
     let logMessage = `[${weaponLabel}] You hit ${target.name} with ${attack.name}! ${damageRollInfo} -> ${damage} damage (-${attack.staminaCost} stamina)`;
     this.combatState.combatLog.push(logMessage);
@@ -291,6 +300,7 @@ export class CombatSystem {
     );
 
     target.health = Math.max(0, target.health - damage);
+    this.trackDamageToEnemy(target, damage);
     
     let logMessage = `You hit ${target.name} with ${attack.name}! ${damageRollInfo} -> ${damage} damage (-${attack.staminaCost} stamina)`;
     this.combatState.combatLog.push(logMessage);
@@ -431,6 +441,7 @@ export class CombatSystem {
       
       for (const enemy of otherEnemies) {
         enemy.health = Math.max(0, enemy.health - cleaveDamage);
+        this.trackDamageToEnemy(enemy, cleaveDamage);
         this.combatState.combatLog.push(`${enemy.name} takes ${cleaveDamage} cleave damage`);
         
         if (enemy.health <= 0) {
@@ -646,6 +657,7 @@ export class CombatSystem {
     );
 
     target.health = Math.max(0, target.health - damage);
+    this.trackDamageToEnemy(target, damage);
     
     let logMessage = `Crimson Mist strikes ${target.name}! ${damageRollInfo} -> ${damage} damage`;
     this.combatState.combatLog.push(logMessage);
@@ -746,6 +758,7 @@ export class CombatSystem {
     }
 
     target.health = Math.max(0, target.health - damage);
+    this.trackDamageToEnemy(target, damage);
     
     let logMessage = `Savage Strike hits ${target.name}! ${damageRollInfo} -> ${damage} damage`;
     this.combatState.combatLog.push(logMessage);
@@ -879,6 +892,7 @@ export class CombatSystem {
     );
 
     target.health = Math.max(0, target.health - damage);
+    this.trackDamageToEnemy(target, damage);
     this.combatState.combatLog.push(`${label}: ${damage} damage to ${target.name}`);
 
     this.applyConditionFromAttack(target, attack);
@@ -913,6 +927,7 @@ export class CombatSystem {
     for (const enemy of otherEnemies) {
       const beforeHP = enemy.health;
       enemy.health = Math.max(0, enemy.health - cleaveDamage);
+      this.trackDamageToEnemy(enemy, cleaveDamage);
       console.log(`[CLEAVE DEBUG] ${enemy.name}: ${beforeHP} -> ${enemy.health} HP`);
       this.combatState.combatLog.push(`${enemy.name} takes ${cleaveDamage} cleave damage`);
 
@@ -1056,7 +1071,7 @@ export class CombatSystem {
     }
   }
 
-  private deductActions(actionCost: number): void {
+  deductActions(actionCost: number): void {
     if (!this.combatState) return;
     this.combatState.actionsRemaining -= actionCost;
   }
@@ -1067,6 +1082,16 @@ export class CombatSystem {
     if (this.combatState.actionsRemaining < 1) {
       this.endPlayerTurn();
     }
+  }
+
+  private trackDamageToEnemy(enemy: Enemy, damage: number): void {
+    if (!this.combatState) return;
+    if (!enemy.damageReceivedHistory) return;
+    
+    enemy.damageReceivedHistory.push({
+      round: this.combatState.currentRound || 0,
+      damage: damage
+    });
   }
 
   endPlayerTurn(): void {
@@ -1132,6 +1157,21 @@ export class CombatSystem {
         continue;
       }
 
+      if (enemy.name === 'Greater Void Spawn' && enemy.chronostepUsesRemaining && enemy.chronostepUsesRemaining > 0) {
+        const healthPercent = enemy.health / enemy.maxHealth;
+        if (healthPercent < 0.4 && Math.random() < 0.7) {
+          const chronostepLogs = this.useChronostep(enemy);
+          logs.push(...chronostepLogs);
+          continue;
+        }
+      }
+
+      if (enemy.name === 'Void Spawn' && Math.random() < 0.35) {
+        const sploogeLogs = this.useSplooge(enemy);
+        logs.push(...sploogeLogs);
+        continue;
+      }
+
       const attackResult = DiceRoller.rollAttack(3);
       const playerEvasion = this.combatState.player.stats.calculatedEvasion + 
                             ConditionManager.getEvasionBonus(this.combatState.player);
@@ -1184,8 +1224,51 @@ export class CombatSystem {
 
     if (!this.combatState.isComplete) {
       this.combatState.currentTurn = 'player';
+      if (this.combatState.currentRound !== undefined) {
+        this.combatState.currentRound++;
+      }
     }
 
+    return logs;
+  }
+
+  private useSplooge(enemy: Enemy): string[] {
+    if (!this.combatState) return [];
+    
+    const logs: string[] = [];
+    const duration = DiceRoller.rollD4();
+    
+    ConditionManager.applyCondition(this.combatState.player, 'slowed', duration, 1);
+    
+    const message = `${enemy.name} uses Splooge! You're covered in void-touched goo! (Slowed for ${duration} rounds)`;
+    this.combatState.combatLog.push(message);
+    logs.push(message);
+    
+    return logs;
+  }
+
+  private useChronostep(enemy: Enemy): string[] {
+    if (!this.combatState || !enemy.chronostepUsesRemaining || enemy.chronostepUsesRemaining <= 0) return [];
+    
+    const logs: string[] = [];
+    const lookbackRounds = DiceRoller.rollD4();
+    
+    let totalHealing = 0;
+    if (enemy.damageReceivedHistory) {
+      const currentRound = this.combatState.currentRound || 0;
+      const relevantDamage = enemy.damageReceivedHistory.filter(
+        entry => entry.round >= currentRound - lookbackRounds && entry.round < currentRound
+      );
+      totalHealing = relevantDamage.reduce((sum, entry) => sum + entry.damage, 0);
+    }
+    
+    enemy.health = Math.min(enemy.maxHealth, enemy.health + totalHealing);
+    enemy.chronostepUsesRemaining--;
+    
+    const message = `${enemy.name} uses Chronostep! Time reverses ${lookbackRounds} rounds, healing ${totalHealing} HP! (${enemy.chronostepUsesRemaining} uses remaining)`;
+    this.combatState.combatLog.push(message);
+    logs.push(message);
+    
     return logs;
   }
 

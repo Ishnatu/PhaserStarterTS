@@ -44,4 +44,8 @@ export class DiceRoller {
     const modifier = diceRoll.modifier >= 0 ? `+${diceRoll.modifier}` : `${diceRoll.modifier}`;
     return `${diceRoll.numDice}d${diceRoll.dieSize}${modifier}`;
   }
+
+  static rollD4(): number {
+    return Math.floor(Math.random() * 4) + 1;
+  }
 }

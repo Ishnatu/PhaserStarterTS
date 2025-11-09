@@ -8,7 +8,7 @@ export type ShieldType = 'steel_shield' | 'leather_shield';
 export type ArmorType = 'light' | 'heavy' | 'shield';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
-export type StatusConditionType = 'bleeding' | 'stunned' | 'poisoned' | 'dependable' | 'raise_evasion' | 'raise_defence' | 'vampiric' | 'decapitate';
+export type StatusConditionType = 'bleeding' | 'stunned' | 'poisoned' | 'dependable' | 'raise_evasion' | 'raise_defence' | 'vampiric' | 'decapitate' | 'slowed';
 
 export interface StatusCondition {
   type: StatusConditionType;
@@ -173,6 +173,8 @@ export interface Enemy {
   lootTable: { itemId: string; dropChance: number }[];
   statusConditions: StatusCondition[];
   backstabUsed?: boolean;
+  chronostepUsesRemaining?: number;
+  damageReceivedHistory?: { round: number; damage: number }[];
 }
 
 export interface AttackResult {
@@ -197,6 +199,7 @@ export interface CombatState {
   isWildEncounter: boolean;
   actionsRemaining: number;
   maxActionsPerTurn: number;
+  currentRound?: number;
 }
 
 export type GameScene = 'town' | 'explore' | 'delve' | 'combat';

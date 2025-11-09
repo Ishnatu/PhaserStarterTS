@@ -485,9 +485,24 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private attemptRun(): void {
+    const state = this.combatSystem.getCombatState();
+    let baseChance = 0.5;
+    
+    if (state && ConditionManager.hasCondition(state.player, 'slowed')) {
+      baseChance = 0.25;
+      this.showMessage('The void goo makes it harder to run! (25% flee chance)');
+      this.time.delayedCall(1000, () => {
+        this.executeRunAttempt(baseChance);
+      });
+    } else {
+      this.executeRunAttempt(baseChance);
+    }
+  }
+
+  private executeRunAttempt(successChance: number): void {
     const runChance = Math.random();
     
-    if (runChance > 0.5) {
+    if (runChance < successChance) {
       this.showMessage('Successfully escaped!');
       this.time.delayedCall(1500, () => {
         if (this.isWildEncounter) {
@@ -1206,7 +1221,8 @@ export class CombatScene extends Phaser.Scene {
   private enableEnemyTargeting(): void {
     this.enemyContainers.forEach((container, index) => {
       const enemyVisual = container.getAt(0);
-      if (enemyVisual && this.combatSystem.getCombatState()?.enemies[index].health > 0) {
+      const state = this.combatSystem.getCombatState();
+      if (enemyVisual && state && state.enemies[index]?.health > 0) {
         if (enemyVisual instanceof Phaser.GameObjects.Sprite) {
           enemyVisual.setTint(0xffff00);
         } else if (enemyVisual instanceof Phaser.GameObjects.Rectangle) {

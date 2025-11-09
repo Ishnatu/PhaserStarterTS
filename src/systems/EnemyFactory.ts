@@ -9,10 +9,14 @@ export class EnemyFactory {
   static createEnemy(tier: number, isBoss: boolean = false): Enemy {
     // Tier 1 specific stats
     if (tier === 1) {
-      const health = isBoss ? 60 : 22;
+      const health = isBoss ? 72 : 32;
       const evasion = isBoss ? 10 : 5;
       
-      const weaponDamage: DiceRoll = {
+      const weaponDamage: DiceRoll = isBoss ? {
+        numDice: 2,
+        dieSize: 6,
+        modifier: 3,
+      } : {
         numDice: 1,
         dieSize: 4,
         modifier: 2,
