@@ -1608,23 +1608,36 @@ export class TownScene extends Phaser.Scene {
       uiElements.push(selectBtn);
     });
 
+    // Repair All button
+    if (repairableItems.length > 0) {
+      const repairAllBtn = this.add.text(width / 2, height / 2 - 175, '[Repair All]', {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: '#88ff88',
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          this.showRepairAllConfirmation(repairableItems);
+        });
+      uiElements.push(repairAllBtn);
+    }
+
     if (selectedItem) {
       const detailY = height / 2 + 80;
-      const result = ForgingSystem.getRepairCost(selectedItem.item);
+      const cost = ForgingSystem.getRepairCost(selectedItem.item);
 
-      if (result) {
-        const detailPanel = this.add.rectangle(width / 2, detailY, 700, 100, 0x1a1a2e).setOrigin(0.5);
+      if (cost) {
+        const detailPanel = this.add.rectangle(width / 2, detailY, 700, 120, 0x1a1a2e).setOrigin(0.5);
         uiElements.push(detailPanel);
 
-        const detailTitle = this.add.text(width / 2, detailY - 40, `Repair ${ForgingSystem.getItemDisplayName(selectedItem.item)}`, {
+        const detailTitle = this.add.text(width / 2, detailY - 50, `Repair ${ForgingSystem.getItemDisplayName(selectedItem.item)}`, {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.medium,
           color: '#f0a020',
         }).setOrigin(0.5);
         uiElements.push(detailTitle);
 
-        const detailsText = this.add.text(width / 2, detailY - 10, 
-          `Durability: ${Math.floor(selectedItem.item.durability ?? 100)}/${selectedItem.item.maxDurability ?? 100} → ${selectedItem.item.maxDurability ?? 100}/${selectedItem.item.maxDurability ?? 100}\nCost: ${result.aa} AA + ${result.ca.toFixed(1)} CA`, {
+        const detailsText = this.add.text(width / 2, detailY - 20, 
+          `Durability: ${Math.floor(selectedItem.item.durability ?? 100)}/${selectedItem.item.maxDurability ?? 100} → ${selectedItem.item.maxDurability ?? 100}/${selectedItem.item.maxDurability ?? 100}\nPay ${cost.aa} AA  OR  ${cost.ca.toFixed(2)} CA`, {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.small,
           color: '#ffffff',
@@ -1632,16 +1645,22 @@ export class TownScene extends Phaser.Scene {
         }).setOrigin(0.5);
         uiElements.push(detailsText);
 
-        const repairBtn = this.createButton(width / 2, detailY + 35, 'Repair Item', () => {
-          this.attemptRepair(selectedItem!);
+        const repairAABtn = this.createButton(width / 2 - 180, detailY + 40, `Pay ${cost.aa} AA`, () => {
+          this.attemptRepair(selectedItem!, 'AA');
           onSelect(null);
         });
-        uiElements.push(repairBtn);
+        uiElements.push(repairAABtn);
+
+        const repairCABtn = this.createButton(width / 2 + 180, detailY + 40, `Pay ${cost.ca.toFixed(2)} CA`, () => {
+          this.attemptRepair(selectedItem!, 'CA');
+          onSelect(null);
+        });
+        uiElements.push(repairCABtn);
       }
     }
   }
 
-  private attemptRepair(itemData: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }): void {
+  private attemptRepair(itemData: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }, currency: 'AA' | 'CA'): void {
     const player = this.gameState.getPlayer();
     const cost = ForgingSystem.getRepairCost(itemData.item);
     
@@ -1650,14 +1669,21 @@ export class TownScene extends Phaser.Scene {
       return;
     }
     
-    if (player.arcaneAsh < cost.aa || player.crystallineAnimus < cost.ca) {
-      this.showMessage(`Insufficient funds! Need ${cost.aa} AA and ${cost.ca.toFixed(1)} CA`);
-      return;
+    if (currency === 'AA') {
+      if (player.arcaneAsh < cost.aa) {
+        this.showMessage(`Insufficient funds! Need ${cost.aa} AA`);
+        return;
+      }
+      player.arcaneAsh -= cost.aa;
+    } else {
+      if (player.crystallineAnimus < cost.ca) {
+        this.showMessage(`Insufficient funds! Need ${cost.ca.toFixed(2)} CA`);
+        return;
+      }
+      player.crystallineAnimus -= cost.ca;
     }
     
     ForgingSystem.repairItem(itemData.item);
-    player.arcaneAsh -= cost.aa;
-    player.crystallineAnimus -= cost.ca;
     
     if (itemData.equippedSlot) {
       player.equipment[itemData.equippedSlot] = itemData.item;
@@ -1665,8 +1691,114 @@ export class TownScene extends Phaser.Scene {
     
     this.gameState.updatePlayer(player);
     
-    this.showMessage(`Item repaired for ${cost.aa} AA and ${cost.ca.toFixed(1)} CA!`);
+    const costText = currency === 'AA' ? `${cost.aa} AA` : `${cost.ca.toFixed(2)} CA`;
+    this.showMessage(`Item repaired for ${costText}!`);
     this.infoText.setText(this.getPlayerInfo());
+  }
+
+  private showRepairAllConfirmation(repairableItems: Array<{ item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }>): void {
+    const { width, height } = this.cameras.main;
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    let totalAA = 0;
+    let totalCA = 0;
+    
+    for (const itemData of repairableItems) {
+      const cost = ForgingSystem.getRepairCost(itemData.item);
+      totalAA += cost.aa;
+      totalCA += cost.ca;
+    }
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.9).setOrigin(0);
+    const panel = this.add.rectangle(width / 2, height / 2, 500, 300, 0x2a2a3e).setOrigin(0.5);
+    uiElements.push(overlay, panel);
+
+    const title = this.add.text(width / 2, height / 2 - 100, 'Repair All Items', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#f0a020',
+    }).setOrigin(0.5);
+    uiElements.push(title);
+
+    const itemCountText = this.add.text(width / 2, height / 2 - 50, `${repairableItems.length} items need repair`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffffff',
+    }).setOrigin(0.5);
+    uiElements.push(itemCountText);
+
+    const costText = this.add.text(width / 2, height / 2, `Total Cost:\n${totalAA} AA  OR  ${totalCA.toFixed(2)} CA`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffff88',
+      align: 'center',
+    }).setOrigin(0.5);
+    uiElements.push(costText);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+    };
+
+    const repairAllAA = this.createButton(width / 2 - 180, height / 2 + 80, `Pay ${totalAA} AA`, () => {
+      this.executeRepairAll(repairableItems, 'AA');
+      destroyAll();
+    });
+    uiElements.push(repairAllAA);
+
+    const repairAllCA = this.createButton(width / 2 + 180, height / 2 + 80, `Pay ${totalCA.toFixed(2)} CA`, () => {
+      this.executeRepairAll(repairableItems, 'CA');
+      destroyAll();
+    });
+    uiElements.push(repairAllCA);
+
+    const cancelBtn = this.createButton(width / 2, height / 2 + 130, 'Cancel', () => {
+      destroyAll();
+    });
+    uiElements.push(cancelBtn);
+  }
+
+  private executeRepairAll(repairableItems: Array<{ item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }>, currency: 'AA' | 'CA'): void {
+    const player = this.gameState.getPlayer();
+    
+    let totalAA = 0;
+    let totalCA = 0;
+    
+    for (const itemData of repairableItems) {
+      const cost = ForgingSystem.getRepairCost(itemData.item);
+      totalAA += cost.aa;
+      totalCA += cost.ca;
+    }
+
+    if (currency === 'AA') {
+      if (player.arcaneAsh < totalAA) {
+        this.showMessage(`Insufficient funds! Need ${totalAA} AA`);
+        return;
+      }
+      player.arcaneAsh -= totalAA;
+    } else {
+      if (player.crystallineAnimus < totalCA) {
+        this.showMessage(`Insufficient funds! Need ${totalCA.toFixed(2)} CA`);
+        return;
+      }
+      player.crystallineAnimus -= totalCA;
+    }
+
+    let repairedCount = 0;
+    for (const itemData of repairableItems) {
+      ForgingSystem.repairItem(itemData.item);
+      if (itemData.equippedSlot) {
+        player.equipment[itemData.equippedSlot] = itemData.item;
+      }
+      repairedCount++;
+    }
+
+    this.gameState.updatePlayer(player);
+    
+    const costText = currency === 'AA' ? `${totalAA} AA` : `${totalCA.toFixed(2)} CA`;
+    this.showMessage(`Repaired ${repairedCount} items for ${costText}!`);
+    this.infoText.setText(this.getPlayerInfo());
+    
+    this.openForge();
   }
 
   private attemptForging(itemData: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }): void {

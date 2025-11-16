@@ -219,17 +219,18 @@ export class ForgingSystem {
       return { aa: 0, ca: 0 };
     }
 
-    // Base repair cost: 1 AA per durability point
-    // Enhanced items cost more: +10 AA per enhancement level
-    const baseCostPerPoint = 1 + (enhancementLevel * 10);
-    const totalAA = Math.ceil(missingDurability * baseCostPerPoint);
+    // New affordable repair costs:
+    // AA: 1 + (enhancement × 2) per durability point
+    // CA: (0.02 + enhancement × 0.01) per durability point
+    const aaCostPerPoint = 1 + (enhancementLevel * 2);
+    const caCostPerPoint = 0.02 + (enhancementLevel * 0.01);
     
-    // CA cost for enhanced items
-    const totalCA = enhancementLevel > 0 ? enhancementLevel * 0.05 * missingDurability : 0;
+    const totalAA = Math.ceil(missingDurability * aaCostPerPoint);
+    const totalCA = Number((missingDurability * caCostPerPoint).toFixed(2));
 
     return { 
       aa: totalAA, 
-      ca: Number(totalCA.toFixed(2))
+      ca: totalCA
     };
   }
 
