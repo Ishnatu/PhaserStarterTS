@@ -37,6 +37,7 @@ export class CombatScene extends Phaser.Scene {
   private actionCounterText!: Phaser.GameObjects.Text;
   private playerSprite!: Phaser.GameObjects.Sprite;
   private previousPlayerHealth: number = 0;
+  private escKey?: Phaser.Input.Keyboard.Key;
 
   constructor() {
     super('CombatScene');
@@ -112,6 +113,15 @@ export class CombatScene extends Phaser.Scene {
     this.renderEnemies(enemies);
     this.renderCombatLog();
     this.renderActionButtons();
+
+    // ESC key for settings menu
+    this.escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this.escKey.on('down', () => {
+      if (!this.isOverlayActive) {
+        this.scene.launch('SettingsMenuScene', { parentKey: this.scene.key });
+        this.scene.pause();
+      }
+    });
   }
 
   private generateEnemies(): Enemy[] {

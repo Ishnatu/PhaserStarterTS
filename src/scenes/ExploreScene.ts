@@ -1794,7 +1794,9 @@ export class ExploreScene extends Phaser.Scene {
         this.currentMenuCloseFunction();
       }
     } else {
-      this.openQuitMenu();
+      // No menu open, open settings
+      this.scene.launch('SettingsMenuScene', { parentKey: this.scene.key });
+      this.scene.pause();
     }
   }
 

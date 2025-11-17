@@ -3,8 +3,11 @@ import { SceneManager } from '../systems/SceneManager';
 import { GameStateManager } from '../systems/GameStateManager';
 import { ApiClient } from '../utils/ApiClient';
 import { FONTS } from '../config/fonts';
+import { AudioManager } from '../managers/AudioManager';
 
 export class MainMenuScene extends Phaser.Scene {
+  private escKey?: Phaser.Input.Keyboard.Key;
+
   constructor() {
     super('MainMenuScene');
   }
@@ -12,6 +15,7 @@ export class MainMenuScene extends Phaser.Scene {
   preload() {
     this.load.image('gemforge-logo', '/assets/ui/gemforge-logo.png');
     this.load.image('start-button', '/assets/ui/start-button.png');
+    this.load.audio('intro-music', '/assets/audio/intro-music.mp3');
   }
 
   async create() {
@@ -61,6 +65,17 @@ export class MainMenuScene extends Phaser.Scene {
       color: '#666666',
       fontFamily: FONTS.primary,
     }).setOrigin(0.5);
+
+    // Start playing intro music with fade in
+    const audioManager = AudioManager.getInstance();
+    audioManager.playMusic(this, 'intro-music', true);
+
+    // ESC key for settings menu
+    this.escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this.escKey.on('down', () => {
+      this.scene.launch('SettingsMenuScene', { parentKey: this.scene.key });
+      this.scene.pause();
+    });
   }
 
 }
