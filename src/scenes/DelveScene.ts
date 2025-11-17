@@ -7,6 +7,7 @@ import { Delve, DelveRoom } from '../types/GameTypes';
 import { FONTS } from '../config/fonts';
 import { ItemColorUtil } from '../utils/ItemColorUtil';
 import { GameConfig } from '../config/GameConfig';
+import { AudioManager } from '../managers/AudioManager';
 
 export class DelveScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -20,6 +21,10 @@ export class DelveScene extends Phaser.Scene {
 
   constructor() {
     super('DelveScene');
+  }
+
+  preload() {
+    this.load.audio('delve-music', '/assets/audio/delve-music.mp3');
   }
 
   init(data: { delve: Delve; returnToLocation?: { x: number; y: number } }) {
@@ -53,6 +58,10 @@ export class DelveScene extends Phaser.Scene {
     const menuBtn = this.createButton(width - 100, 20, 'Menu', () => {
       this.openMenu();
     });
+
+    // Play delve music
+    const audioManager = AudioManager.getInstance();
+    audioManager.switchMusic(this, 'delve-music', true);
   }
 
   private handleEscapeKey(): void {

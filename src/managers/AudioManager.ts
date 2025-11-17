@@ -8,6 +8,8 @@ export class AudioManager {
   private static instance: AudioManager;
   private settings: AudioSettings;
   private currentMusic: Phaser.Sound.BaseSound | null = null;
+  private currentMusicKey: string = '';
+  private previousMusicKey: string = '';
   private scene: Phaser.Scene | null = null;
 
   private constructor() {
@@ -80,11 +82,17 @@ export class AudioManager {
   }
 
   playMusic(scene: Phaser.Scene, key: string, fadeIn: boolean = true): void {
+    // Don't restart if same music is already playing
+    if (this.currentMusicKey === key && this.currentMusic && this.currentMusic.isPlaying) {
+      return;
+    }
+
     if (this.currentMusic && this.currentMusic.isPlaying) {
       this.stopMusic(true);
     }
 
     this.scene = scene;
+    this.currentMusicKey = key;
     const volume = this.settings.muted ? 0 : this.settings.musicVolume;
     
     this.currentMusic = scene.sound.add(key, {
@@ -104,6 +112,38 @@ export class AudioManager {
     }
   }
 
+  switchMusic(scene: Phaser.Scene, key: string, crossfade: boolean = true): void {
+    // Don't switch if same music is already playing
+    if (this.currentMusicKey === key && this.currentMusic && this.currentMusic.isPlaying) {
+      return;
+    }
+
+    if (crossfade) {
+      this.stopMusic(true);
+      setTimeout(() => {
+        this.playMusic(scene, key, true);
+      }, 1500);
+    } else {
+      this.stopMusic(false);
+      this.playMusic(scene, key, true);
+    }
+  }
+
+  savePreviousMusic(): void {
+    this.previousMusicKey = this.currentMusicKey;
+  }
+
+  restorePreviousMusic(scene: Phaser.Scene): void {
+    if (this.previousMusicKey) {
+      this.switchMusic(scene, this.previousMusicKey, true);
+      this.previousMusicKey = '';
+    }
+  }
+
+  getCurrentMusicKey(): string {
+    return this.currentMusicKey;
+  }
+
   stopMusic(fadeOut: boolean = true): void {
     if (!this.currentMusic || !this.currentMusic.isPlaying) return;
 
@@ -116,11 +156,13 @@ export class AudioManager {
         onComplete: () => {
           this.currentMusic?.stop();
           this.currentMusic = null;
+          this.currentMusicKey = '';
         },
       });
     } else {
       this.currentMusic.stop();
       this.currentMusic = null;
+      this.currentMusicKey = '';
     }
   }
 

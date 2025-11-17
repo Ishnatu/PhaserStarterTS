@@ -14,6 +14,7 @@ import { ItemColorUtil } from '../utils/ItemColorUtil';
 import { ItemSprites } from '../config/ItemSprites';
 import { ApiClient } from '../utils/ApiClient';
 import { GameConfig } from '../config/GameConfig';
+import { AudioManager } from '../managers/AudioManager';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -32,6 +33,7 @@ export class TownScene extends Phaser.Scene {
     this.load.image('equipment-panel', '/assets/ui/equipment-panel.png');
     this.load.image('blacksmith-button', '/assets/ui/shop-buttons/blacksmith-button.png');
     this.load.image('garthek-button', '/assets/ui/shop-buttons/garthek-button.png');
+    this.load.audio('town-music', '/assets/audio/town-music.mp3');
     
     const itemSprites = ItemSprites.getAllSpritePaths();
     itemSprites.forEach(({ itemId, path }) => {
@@ -95,6 +97,10 @@ export class TownScene extends Phaser.Scene {
     this.escKey.on('down', () => {
       this.handleEscapeKey();
     });
+
+    // Play town music
+    const audioManager = AudioManager.getInstance();
+    audioManager.playMusic(this, 'town-music', true);
 
     // Check for looted tombstones and prompt for karma return
     this.checkKarmaPrompt();

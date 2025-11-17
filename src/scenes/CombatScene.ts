@@ -14,6 +14,7 @@ import { ApiClient } from '../utils/ApiClient';
 import { WeaponAttackDatabase } from '../config/WeaponAttackDatabase';
 import { ConditionManager } from '../systems/ConditionManager';
 import { EquipmentManager } from '../systems/EquipmentManager';
+import { AudioManager } from '../managers/AudioManager';
 
 export class CombatScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -48,6 +49,7 @@ export class CombatScene extends Phaser.Scene {
     this.load.image('void-spawn', '/assets/enemies/void-spawn.png');
     this.load.image('greater-void-spawn', '/assets/enemies/greater-void-spawn.png');
     this.load.image('shadow-beast', '/assets/enemies/shadow-beast.png');
+    this.load.audio('combat-music', '/assets/audio/combat-music.mp3');
   }
 
   init(data: { delve: Delve; room: DelveRoom; wildEncounter?: boolean; wildEnemies?: Enemy[]; returnToLocation?: { x: number; y: number } }) {
@@ -122,6 +124,11 @@ export class CombatScene extends Phaser.Scene {
         this.scene.pause();
       }
     });
+
+    // Save previous music and switch to combat music
+    const audioManager = AudioManager.getInstance();
+    audioManager.savePreviousMusic();
+    audioManager.switchMusic(this, 'combat-music', true);
   }
 
   private generateEnemies(): Enemy[] {
@@ -918,6 +925,10 @@ export class CombatScene extends Phaser.Scene {
     }
 
     this.createMenuButton(width / 2, height / 2 + 120, 'Continue', () => {
+      // Restore previous music before leaving combat
+      const audioManager = AudioManager.getInstance();
+      audioManager.restorePreviousMusic(this);
+      
       if (this.isWildEncounter) {
         SceneManager.getInstance().transitionTo('explore', { returnToLocation: this.returnToLocation });
       } else {
@@ -958,6 +969,11 @@ export class CombatScene extends Phaser.Scene {
           health: player.maxHealth,
           stamina: player.maxStamina,
         });
+        
+        // Stop combat music before returning to town
+        const audioManager = AudioManager.getInstance();
+        audioManager.stopMusic(true);
+        
         SceneManager.getInstance().transitionTo('town');
       });
       return;
@@ -1020,6 +1036,11 @@ export class CombatScene extends Phaser.Scene {
         stamina: player.maxStamina,
         equipment: player.equipment,
       });
+      
+      // Stop combat music before returning to town
+      const audioManager = AudioManager.getInstance();
+      audioManager.stopMusic(true);
+      
       SceneManager.getInstance().transitionTo('town');
     });
   }

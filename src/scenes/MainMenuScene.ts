@@ -47,6 +47,10 @@ export class MainMenuScene extends Phaser.Scene {
     });
     
     startButton.on('pointerdown', async () => {
+      // Stop intro music before transitioning
+      const audioManager = AudioManager.getInstance();
+      audioManager.stopMusic(true);
+      
       const saveData = await ApiClient.loadGame();
       const gameState = GameStateManager.getInstance();
       

@@ -16,6 +16,7 @@ import { DurabilityManager } from '../systems/DurabilityManager';
 import { CurrencyDisplay } from '../utils/CurrencyDisplay';
 import { FONTS } from '../config/fonts';
 import { ApiClient } from '../utils/ApiClient';
+import { AudioManager } from '../managers/AudioManager';
 
 export class ExploreScene extends Phaser.Scene {
   // Helper functions for item enhancement display
@@ -83,6 +84,7 @@ export class ExploreScene extends Phaser.Scene {
     this.load.image('gemforge-logo', '/assets/ui/gemforge-logo.png');
     this.load.image('coin-aa', '/assets/ui/currency/arcane-ash-coin.png');
     this.load.image('coin-ca', '/assets/ui/currency/crystalline-animus-coin.png');
+    this.load.audio('wilderness-music', '/assets/audio/wilderness-music.mp3');
   }
 
   init(data?: { returnToLocation?: { x: number; y: number } }) {
@@ -151,6 +153,10 @@ export class ExploreScene extends Phaser.Scene {
       fontSize: FONTS.size.small,
       color: '#cccccc',
     }).setScrollFactor(0).setDepth(100);
+
+    // Play wilderness music
+    const audioManager = AudioManager.getInstance();
+    audioManager.switchMusic(this, 'wilderness-music', true);
   }
 
   private drainStaminaForMovement(pixelsMoved: number): void {
