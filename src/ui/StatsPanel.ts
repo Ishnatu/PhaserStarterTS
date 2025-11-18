@@ -76,16 +76,31 @@ export class StatsPanel {
     });
     this.container.add(this.levelText);
     
-    // Load stat icons
-    this.footIcon = scene.add.image(20, 152, 'foot-icon');
-    this.footIcon.setScale(0.8);
-    this.footIcon.setOrigin(0, 0.5);
-    this.container.add(this.footIcon);
+    // Load stat icons (temporarily using text placeholders until we get proper icons)
+    // this.footIcon = scene.add.image(20, 152, 'foot-icon');
+    // this.footIcon.setScale(0.8);
+    // this.footIcon.setOrigin(0, 0.5);
+    // this.container.add(this.footIcon);
     
-    this.shieldIcon = scene.add.image(220, 152, 'shield-icon');
-    this.shieldIcon.setScale(0.8);
-    this.shieldIcon.setOrigin(0, 0.5);
-    this.container.add(this.shieldIcon);
+    // this.shieldIcon = scene.add.image(220, 152, 'shield-icon');
+    // this.shieldIcon.setScale(0.8);
+    // this.shieldIcon.setOrigin(0, 0.5);
+    // this.container.add(this.shieldIcon);
+    
+    // Temporary text placeholders
+    const footPlaceholder = scene.add.text(20, 152, '🦶', {
+      fontSize: '16px',
+      color: '#ffffff',
+    });
+    footPlaceholder.setOrigin(0, 0.5);
+    this.container.add(footPlaceholder);
+    
+    const shieldPlaceholder = scene.add.text(220, 152, '🛡', {
+      fontSize: '16px', 
+      color: '#ffffff',
+    });
+    shieldPlaceholder.setOrigin(0, 0.5);
+    this.container.add(shieldPlaceholder);
     
     // Evasion text (next to foot icon)
     this.evasionText = scene.add.text(45, 152, '', {
