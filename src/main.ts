@@ -26,6 +26,7 @@ const config: Phaser.Types.Core.GameConfig = {
   },
   render: {
     pixelArt: true,
+    roundPixels: true,
   },
 };
 

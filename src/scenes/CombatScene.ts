@@ -103,6 +103,7 @@ export class CombatScene extends Phaser.Scene {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xlarge,
       color: this.currentRoom.type === 'boss' ? '#ff0000' : '#ff8844',
+      resolution: 2,
     }).setOrigin(0.5);
 
     this.tweens.add({
@@ -200,12 +201,14 @@ export class CombatScene extends Phaser.Scene {
       fontSize: FONTS.size.small,
       color: '#ffffff',
       fontStyle: 'bold',
+      resolution: 2,
     });
 
     this.add.text(80, plateY + 35, `Lv ${player.level}`, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffcc00',
+      resolution: 2,
     });
 
     this.playerHealthText = this.add.text(200, plateY + 10, 
@@ -213,6 +216,7 @@ export class CombatScene extends Phaser.Scene {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#00ff00',
+      resolution: 2,
     });
 
     this.playerStaminaText = this.add.text(200, plateY + 35, 
@@ -220,6 +224,7 @@ export class CombatScene extends Phaser.Scene {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffcc00',
+      resolution: 2,
     });
   }
 
@@ -286,6 +291,7 @@ export class CombatScene extends Phaser.Scene {
         fontSize: FONTS.size.small,
         color: '#ffffff',
         fontStyle: 'bold',
+        resolution: 2,
       }).setOrigin(0.5, 0);
 
       const healthText = this.add.text(x, plateY + 35, 
@@ -293,6 +299,7 @@ export class CombatScene extends Phaser.Scene {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: '#ff8888',
+        resolution: 2,
       }).setOrigin(0.5, 0);
 
       this.enemyHealthTexts.push(healthText);
@@ -339,6 +346,7 @@ export class CombatScene extends Phaser.Scene {
       color: '#ffffff',
       align: 'left',
       wordWrap: { width: 460 },
+      resolution: 2,
     });
   }
 

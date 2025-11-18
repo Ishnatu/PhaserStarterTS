@@ -59,12 +59,14 @@ export class TownScene extends Phaser.Scene {
       fontSize: FONTS.size.xlarge,
       color: '#f0a020',
       fontStyle: 'bold',
+      resolution: 2,
     }).setOrigin(0.5);
 
     this.add.text(width / 2, 120, 'ROBOKA - City of Steel', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.medium,
       color: '#cccccc',
+      resolution: 2,
     }).setOrigin(0.5);
     
     this.infoText = this.add.text(20, 20, this.getPlayerInfo(), {
@@ -72,6 +74,7 @@ export class TownScene extends Phaser.Scene {
       fontSize: FONTS.size.small,
       color: '#ffffff',
       lineSpacing: 4,
+      resolution: 2,
     });
 
     this.createNPCs();
