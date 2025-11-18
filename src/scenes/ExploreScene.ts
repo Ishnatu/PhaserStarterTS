@@ -665,6 +665,7 @@ export class ExploreScene extends Phaser.Scene {
 
   private triggerEncounter(): void {
     const encounterType = this.generateRandomEncounter();
+    console.log('[ENCOUNTER DEBUG] Generated encounter type:', encounterType.type);
     this.isOverlayActive = true;
 
     if (encounterType.type === 'combat') {
@@ -1488,6 +1489,7 @@ export class ExploreScene extends Phaser.Scene {
 
   private generateRandomEncounter(): any {
     const roll = Math.random();
+    console.log('[ENCOUNTER DEBUG] Random roll:', roll);
     
     if (roll < 0.38) {
       const numEnemies = Math.floor(Math.random() * 2) + 1;
