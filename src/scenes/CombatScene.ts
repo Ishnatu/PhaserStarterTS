@@ -168,8 +168,9 @@ export class CombatScene extends Phaser.Scene {
 
   private renderPlayer(): void {
     const { width, height } = this.cameras.main;
-    const playerX = 240;
-    const playerY = height - 200;
+    // Position player centered on the bottom green platform area
+    const playerX = 320;
+    const playerY = height - 220;
 
     this.playerSprite = this.add.sprite(playerX, playerY, 'player-combat');
     this.playerSprite.setScale(0.24);
@@ -218,14 +219,30 @@ export class CombatScene extends Phaser.Scene {
 
   private renderEnemies(enemies: Enemy[]): void {
     const { width, height } = this.cameras.main;
-    const spacing = 200;
-    const totalWidth = (enemies.length - 1) * spacing;
-    const startX = width - 300 - totalWidth / 2;
-    const startY = 200;
+    
+    // Position enemies centered on the top right platform area
+    const platformCenterX = width - 280;
+    const platformY = 230;
+    const spacing = 180;
+    
+    // Calculate positions based on enemy count
+    let enemyPositions: { x: number, y: number }[];
+    if (enemies.length === 1) {
+      // Single enemy: center on platform
+      enemyPositions = [{ x: platformCenterX, y: platformY }];
+    } else {
+      // Multiple enemies: distribute across platform
+      const totalWidth = (enemies.length - 1) * spacing;
+      const startX = platformCenterX - totalWidth / 2;
+      enemyPositions = enemies.map((_, index) => ({
+        x: startX + (index * spacing),
+        y: platformY
+      }));
+    }
 
     enemies.forEach((enemy, index) => {
-      const x = startX + (index * spacing);
-      const y = startY;
+      const x = enemyPositions[index].x;
+      const y = enemyPositions[index].y;
 
       const spriteKey = this.getEnemySpriteKey(enemy.name);
       let enemyVisual: Phaser.GameObjects.Sprite | Phaser.GameObjects.Rectangle;
