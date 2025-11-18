@@ -15,7 +15,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 
 ### UI/UX Decisions
 - **Visuals**: Pixel art for environments (city, wilderness, delve entrances, trees, bushes, grass), item sprites, player combat sprite, and enemy sprites (Void Spawn, Greater Void Spawn, Shadow Beast). NPCs are currently colored rectangles, except Blacksmith and Garthek the Stitcher which have custom circular shop button sprites with character portraits. Enemy sprites use 0.2 scale with tint effects for hover states.
-- **Combat Background**: Atmospheric void cavern pixel art background displaying a purple-tinted corrupted cave environment with glowing cyan crystals, perfectly matching the Void corruption theme. Automatically scales to cover the full combat screen.
+- **Combat Backgrounds**: Two distinct pixel art backgrounds that automatically adapt based on encounter type. Delve combat uses an atmospheric void cavern with purple-tinted corrupted caves and glowing cyan crystals. Wilderness combat uses a vibrant forest clearing with trees, grass, and rocks. Both scale automatically to cover the full combat screen. Player positioned on lower left platform (x=260, y=height-280), enemies on upper center-right platform (x=740, y=200).
 - **Combat Animations**: Player sprite has a lunge animation for attacks and a red hit flash when taking damage.
 - **Typography**: VT323 monospace font for all UI text and menus.
 - **Currency Icons**: Pixel art coin sprites for Arcane Ash (AA) and Crystalline Animus (CA).

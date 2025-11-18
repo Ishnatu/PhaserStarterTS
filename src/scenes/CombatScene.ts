@@ -50,6 +50,7 @@ export class CombatScene extends Phaser.Scene {
     this.load.image('greater-void-spawn', '/assets/enemies/greater-void-spawn.png');
     this.load.image('shadow-beast', '/assets/enemies/shadow-beast.png');
     this.load.image('combat-background', '/assets/combat-background.png');
+    this.load.image('wilderness-combat-background', '/assets/wilderness-combat-background.png');
     this.load.audio('combat-music', '/assets/audio/combat-music.mp3');
   }
 
@@ -88,8 +89,9 @@ export class CombatScene extends Phaser.Scene {
 
     const { width, height } = this.cameras.main;
 
-    // Add the void cavern background
-    const background = this.add.image(width / 2, height / 2, 'combat-background');
+    // Add the appropriate background based on encounter type
+    const backgroundKey = this.isWildEncounter ? 'wilderness-combat-background' : 'combat-background';
+    const background = this.add.image(width / 2, height / 2, backgroundKey);
     
     // Scale to cover the entire screen while maintaining aspect ratio
     const scaleX = width / background.width;
