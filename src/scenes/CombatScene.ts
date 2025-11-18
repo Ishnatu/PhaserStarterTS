@@ -177,8 +177,8 @@ export class CombatScene extends Phaser.Scene {
     
     if (this.isWildEncounter) {
       // Wilderness: position on left side of dirt path
-      playerX = 320;
-      playerY = height - 200;
+      playerX = 380;
+      playerY = height - 360;
     } else {
       // Delve: position on bottom left platform
       playerX = 260;
@@ -240,8 +240,8 @@ export class CombatScene extends Phaser.Scene {
     
     if (this.isWildEncounter) {
       // Wilderness: position on right side of dirt path
-      platformCenterX = 700;
-      platformY = height - 240;
+      platformCenterX = 730;
+      platformY = height - 300;
     } else {
       // Delve: position on top center-right platform
       platformCenterX = 740;
