@@ -170,9 +170,20 @@ export class CombatScene extends Phaser.Scene {
 
   private renderPlayer(): void {
     const { width, height } = this.cameras.main;
-    // Position player on the bottom left platform area
-    const playerX = 260;
-    const playerY = height - 280;
+    
+    // Different positioning for wilderness vs delve combat
+    let playerX: number;
+    let playerY: number;
+    
+    if (this.isWildEncounter) {
+      // Wilderness: position on left side of dirt path
+      playerX = 320;
+      playerY = height - 200;
+    } else {
+      // Delve: position on bottom left platform
+      playerX = 260;
+      playerY = height - 280;
+    }
 
     this.playerSprite = this.add.sprite(playerX, playerY, 'player-combat');
     this.playerSprite.setScale(0.24);
@@ -222,10 +233,20 @@ export class CombatScene extends Phaser.Scene {
   private renderEnemies(enemies: Enemy[]): void {
     const { width, height } = this.cameras.main;
     
-    // Position enemies centered on the top center-right platform area
-    const platformCenterX = 740;
-    const platformY = 200;
+    // Different positioning for wilderness vs delve combat
+    let platformCenterX: number;
+    let platformY: number;
     const spacing = 180;
+    
+    if (this.isWildEncounter) {
+      // Wilderness: position on right side of dirt path
+      platformCenterX = 700;
+      platformY = height - 240;
+    } else {
+      // Delve: position on top center-right platform
+      platformCenterX = 740;
+      platformY = 200;
+    }
     
     // Calculate positions based on enemy count
     let enemyPositions: { x: number, y: number }[];
