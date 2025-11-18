@@ -17,6 +17,7 @@ import { CurrencyDisplay } from '../utils/CurrencyDisplay';
 import { FONTS } from '../config/fonts';
 import { ApiClient } from '../utils/ApiClient';
 import { AudioManager } from '../managers/AudioManager';
+import { PixelArtBar } from '../utils/PixelArtBar';
 
 export class ExploreScene extends Phaser.Scene {
   // Helper functions for item enhancement display
@@ -41,12 +42,8 @@ export class ExploreScene extends Phaser.Scene {
   private delveMarkers: Phaser.GameObjects.Container[] = [];
   private tombstoneMarkers: Map<number, Phaser.GameObjects.Container> = new Map();
   private townPortal!: Phaser.GameObjects.Container;
-  private healthBarFill!: Phaser.GameObjects.Rectangle;
-  private healthBarBg!: Phaser.GameObjects.Rectangle;
-  private staminaBarFill!: Phaser.GameObjects.Rectangle;
-  private staminaBarBg!: Phaser.GameObjects.Rectangle;
-  private healthTooltip!: Phaser.GameObjects.Text;
-  private staminaTooltip!: Phaser.GameObjects.Text;
+  private healthBar!: PixelArtBar;
+  private staminaBar!: PixelArtBar;
   private currencyDisplay!: Phaser.GameObjects.Container;
   private movementStepCounter: number = 0;
   private encounterCooldown: boolean = false;
@@ -152,6 +149,7 @@ export class ExploreScene extends Phaser.Scene {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#cccccc',
+      resolution: 2,
     }).setScrollFactor(0).setDepth(100);
 
     // Play wilderness music
@@ -1629,57 +1627,45 @@ export class ExploreScene extends Phaser.Scene {
   }
 
   private createHealthAndStaminaBars(): void {
-    const barWidth = 300;
-    const barHeight = 30;
     const startX = 20;
     const startY = 40;
+    const barWidth = 400;
+    const barHeight = 32;
 
-    // Health Bar (no label - shows on hover)
-    this.healthBarBg = this.add.rectangle(startX, startY, barWidth, barHeight, 0x330000)
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(100)
-      .setInteractive({ useHandCursor: true });
+    // Create pixel art health bar
+    this.healthBar = new PixelArtBar(
+      this,
+      startX,
+      startY,
+      'HP',
+      0xcc3333,  // Red fill
+      0x4a5a8a,  // Blue-gray empty
+      barWidth,
+      barHeight
+    );
+    this.healthBar.setScrollFactor(0, 0);
+    this.healthBar.setDepth(100);
 
-    this.healthBarFill = this.add.rectangle(startX + 2, startY + 2, barWidth - 4, barHeight - 4, 0xff0000)
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(101);
-
-    this.healthTooltip = this.add.text(startX + barWidth / 2, startY + barHeight / 2, '', {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
-      color: '#ffffff',
-      backgroundColor: '#000000cc',
-      padding: { x: 8, y: 4 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setVisible(false);
-
-    // Stamina Bar (no label - shows on hover)
-    this.staminaBarBg = this.add.rectangle(startX, startY + barHeight + 10, barWidth, barHeight, 0x333300)
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(100)
-      .setInteractive({ useHandCursor: true });
-
-    this.staminaBarFill = this.add.rectangle(startX + 2, startY + barHeight + 12, barWidth - 4, barHeight - 4, 0xffff00)
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(101);
-
-    this.staminaTooltip = this.add.text(startX + barWidth / 2, startY + barHeight + 10 + barHeight / 2, '', {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
-      color: '#ffffff',
-      backgroundColor: '#000000cc',
-      padding: { x: 8, y: 4 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102).setVisible(false);
+    // Create pixel art stamina bar
+    this.staminaBar = new PixelArtBar(
+      this,
+      startX,
+      startY + barHeight + 10,
+      'SP',
+      0xccaa33,  // Yellow-gold fill
+      0x4a5a6a,  // Gray empty
+      barWidth,
+      barHeight
+    );
+    this.staminaBar.setScrollFactor(0, 0);
+    this.staminaBar.setDepth(100);
 
     // Currency display
     const player = this.gameState.getPlayer();
     this.currencyDisplay = CurrencyDisplay.createInlineCurrency(
       this,
       startX,
-      startY + barHeight * 2 + 20,
+      startY + (barHeight + 10) * 2 + 10,
       player.arcaneAsh,
       player.crystallineAnimus,
       'small'
@@ -1687,42 +1673,28 @@ export class ExploreScene extends Phaser.Scene {
     this.currencyDisplay.setScrollFactor(0);
     this.currencyDisplay.setDepth(102);
 
-    // Hover events
-    this.healthBarBg.on('pointerover', () => {
-      this.healthTooltip.setVisible(true);
-    });
-    this.healthBarBg.on('pointerout', () => {
-      this.healthTooltip.setVisible(false);
-    });
-
-    this.staminaBarBg.on('pointerover', () => {
-      this.staminaTooltip.setVisible(true);
-    });
-    this.staminaBarBg.on('pointerout', () => {
-      this.staminaTooltip.setVisible(false);
-    });
+    // Initialize bars with current player stats
+    this.healthBar.update(player.health, player.maxHealth);
+    this.staminaBar.update(player.stamina, player.maxStamina);
   }
 
   private updateInfo(): void {
     const player = this.gameState.getPlayer();
-    const healthPercent = player.health / player.maxHealth;
-    const staminaPercent = player.stamina / player.maxStamina;
     
-    // Update bar widths
-    const maxBarWidth = 296;
-    this.healthBarFill.width = Math.max(0, maxBarWidth * healthPercent);
-    this.staminaBarFill.width = Math.max(0, maxBarWidth * staminaPercent);
-
-    // Update tooltips
-    this.healthTooltip.setText(`${player.health} / ${player.maxHealth} HP`);
-    this.staminaTooltip.setText(`${player.stamina} / ${player.maxStamina} Stamina`);
+    // Update pixel art bars (with safety check)
+    if (this.healthBar) {
+      this.healthBar.update(player.health, player.maxHealth);
+    }
+    if (this.staminaBar) {
+      this.staminaBar.update(player.stamina, player.maxStamina);
+    }
 
     // Update currency display
     this.currencyDisplay.destroy();
     this.currencyDisplay = CurrencyDisplay.createInlineCurrency(
       this,
       20,
-      68,
+      124,
       player.arcaneAsh,
       player.crystallineAnimus,
       'small'
@@ -1730,35 +1702,49 @@ export class ExploreScene extends Phaser.Scene {
     this.currencyDisplay.setScrollFactor(0);
     this.currencyDisplay.setDepth(102);
 
-    // Pulsing effect when below 15%
-    if (healthPercent < 0.15) {
-      if (!this.tweens.getTweensOf(this.healthBarFill).length) {
-        this.tweens.add({
-          targets: this.healthBarFill,
-          alpha: 0.3,
-          duration: 500,
-          yoyo: true,
-          repeat: -1,
-        });
+    // Pulsing effect when below 15% (with safety checks)
+    if (this.healthBar) {
+      const healthPercent = player.health / player.maxHealth;
+      if (healthPercent < 0.15) {
+        const barContainer = this.healthBar.getContainer();
+        if (barContainer && !this.tweens.getTweensOf(barContainer).length) {
+          this.tweens.add({
+            targets: barContainer,
+            alpha: 0.3,
+            duration: 500,
+            yoyo: true,
+            repeat: -1,
+          });
+        }
+      } else {
+        const barContainer = this.healthBar.getContainer();
+        if (barContainer) {
+          this.tweens.killTweensOf(barContainer);
+          barContainer.setAlpha(1);
+        }
       }
-    } else {
-      this.tweens.killTweensOf(this.healthBarFill);
-      this.healthBarFill.setAlpha(1);
     }
 
-    if (staminaPercent < 0.15) {
-      if (!this.tweens.getTweensOf(this.staminaBarFill).length) {
-        this.tweens.add({
-          targets: this.staminaBarFill,
-          alpha: 0.3,
-          duration: 500,
-          yoyo: true,
-          repeat: -1,
-        });
+    if (this.staminaBar) {
+      const staminaPercent = player.stamina / player.maxStamina;
+      if (staminaPercent < 0.15) {
+        const barContainer = this.staminaBar.getContainer();
+        if (barContainer && !this.tweens.getTweensOf(barContainer).length) {
+          this.tweens.add({
+            targets: barContainer,
+            alpha: 0.3,
+            duration: 500,
+            yoyo: true,
+            repeat: -1,
+          });
+        }
+      } else {
+        const barContainer = this.staminaBar.getContainer();
+        if (barContainer) {
+          this.tweens.killTweensOf(barContainer);
+          barContainer.setAlpha(1);
+        }
       }
-    } else {
-      this.tweens.killTweensOf(this.staminaBarFill);
-      this.staminaBarFill.setAlpha(1);
     }
   }
 
