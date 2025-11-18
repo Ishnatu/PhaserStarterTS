@@ -168,9 +168,9 @@ export class CombatScene extends Phaser.Scene {
 
   private renderPlayer(): void {
     const { width, height } = this.cameras.main;
-    // Position player centered on the bottom green platform area
-    const playerX = 320;
-    const playerY = height - 220;
+    // Position player on the bottom left platform area
+    const playerX = 260;
+    const playerY = height - 280;
 
     this.playerSprite = this.add.sprite(playerX, playerY, 'player-combat');
     this.playerSprite.setScale(0.24);
@@ -220,9 +220,9 @@ export class CombatScene extends Phaser.Scene {
   private renderEnemies(enemies: Enemy[]): void {
     const { width, height } = this.cameras.main;
     
-    // Position enemies centered on the top right platform area
-    const platformCenterX = width - 280;
-    const platformY = 230;
+    // Position enemies centered on the top center-right platform area
+    const platformCenterX = 740;
+    const platformY = 200;
     const spacing = 180;
     
     // Calculate positions based on enemy count
