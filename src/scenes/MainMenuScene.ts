@@ -74,10 +74,10 @@ export class MainMenuScene extends Phaser.Scene {
     const audioManager = AudioManager.getInstance();
     audioManager.playMusic(this, 'intro-music', true);
 
-    // ESC key for settings menu
+    // ESC key for menu
     this.escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.escKey.on('down', () => {
-      this.scene.launch('SettingsMenuScene', { parentKey: this.scene.key });
+      this.scene.launch('EscMenuScene', { parentKey: this.scene.key });
       this.scene.pause();
     });
   }

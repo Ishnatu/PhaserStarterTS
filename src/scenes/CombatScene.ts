@@ -116,11 +116,11 @@ export class CombatScene extends Phaser.Scene {
     this.renderCombatLog();
     this.renderActionButtons();
 
-    // ESC key for settings menu
+    // ESC key for menu
     this.escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.escKey.on('down', () => {
       if (!this.isOverlayActive) {
-        this.scene.launch('SettingsMenuScene', { parentKey: this.scene.key });
+        this.scene.launch('EscMenuScene', { parentKey: this.scene.key });
         this.scene.pause();
       }
     });

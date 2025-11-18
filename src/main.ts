@@ -4,7 +4,8 @@ import { TownScene } from './scenes/TownScene';
 import { ExploreScene } from './scenes/ExploreScene';
 import { DelveScene } from './scenes/DelveScene';
 import { CombatScene } from './scenes/CombatScene';
-import { SettingsMenuScene } from './scenes/SettingsMenuScene';
+import { EscMenuScene } from './scenes/EscMenuScene';
+import { InterfaceMenuScene } from './scenes/InterfaceMenuScene';
 import { SceneManager } from './systems/SceneManager';
 import { GameStateManager } from './systems/GameStateManager';
 import { ItemDatabase } from './config/ItemDatabase';
@@ -18,7 +19,7 @@ const config: Phaser.Types.Core.GameConfig = {
   backgroundColor: '#0f0f13',
   pixelArt: true,
   antialias: false,
-  scene: [MainMenuScene, TownScene, ExploreScene, DelveScene, CombatScene, SettingsMenuScene],
+  scene: [MainMenuScene, TownScene, ExploreScene, DelveScene, CombatScene, EscMenuScene, InterfaceMenuScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

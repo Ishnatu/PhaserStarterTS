@@ -110,8 +110,8 @@ export class TownScene extends Phaser.Scene {
     if (this.currentMenuCloseFunction) {
       this.currentMenuCloseFunction();
     } else {
-      // No menu open, open settings
-      this.scene.launch('SettingsMenuScene', { parentKey: this.scene.key });
+      // No menu open, open ESC menu
+      this.scene.launch('EscMenuScene', { parentKey: this.scene.key });
       this.scene.pause();
     }
   }
