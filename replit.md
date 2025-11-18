@@ -42,6 +42,8 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Buff System**: Time-based temporary effects managed by BuffManager.
 - **Wilderness Exploration**: 3000x3000 world with camera-follow, procedural terrain (grass, dirt, trees, bushes, grass tufts), Y-sorted rendering, and fog of war. Limited rests per wilderness trip.
 - **UI System**: Viewport-locked, interactive, blocking overlays with hierarchical ESC key navigation.
+- **Menu System**: Dual-menu architecture separating concerns: ESC menu for system functions (Interface settings, Exit Game), M key for character functions (Equipment, Inventory, Short Rest). Interface menu has tabbed design with Music controls and Controls reference.
+- **Audio System**: 5-track music system with smart transitions and combat memory. Tracks: intro (main menu), town, wilderness, delve, combat. AudioManager handles crossfades, volume control, mute toggle, and saves/restores previous track when combat ends. Gracefully handles missing audio files.
 - **Modular Architecture**: Separated concerns using TypeScript and singleton patterns.
 - **Services**: Innkeeper for health/stamina rest, Vault Keeper for footlocker access, Blacksmith for forging and enhancement.
 - **Forging & Enhancement System**: Allows +1 to +9 enhancements with success rates, costs, and failure penalties (downgrade/destruction). Features a "Shiny System" for rare, prestige variant items immune to destruction.
