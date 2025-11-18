@@ -87,6 +87,12 @@ export class AudioManager {
       return;
     }
 
+    // Check if audio file exists in cache
+    if (!scene.cache.audio.exists(key)) {
+      console.warn(`Audio key "${key}" not found - skipping music playback`);
+      return;
+    }
+
     if (this.currentMusic && this.currentMusic.isPlaying) {
       this.stopMusic(true);
     }
@@ -115,6 +121,12 @@ export class AudioManager {
   switchMusic(scene: Phaser.Scene, key: string, crossfade: boolean = true): void {
     // Don't switch if same music is already playing
     if (this.currentMusicKey === key && this.currentMusic && this.currentMusic.isPlaying) {
+      return;
+    }
+
+    // Check if audio file exists in cache
+    if (!scene.cache.audio.exists(key)) {
+      console.warn(`Audio key "${key}" not found - skipping music switch`);
       return;
     }
 
