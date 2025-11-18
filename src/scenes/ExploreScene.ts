@@ -17,7 +17,7 @@ import { CurrencyDisplay } from '../utils/CurrencyDisplay';
 import { FONTS } from '../config/fonts';
 import { ApiClient } from '../utils/ApiClient';
 import { AudioManager } from '../managers/AudioManager';
-import { PixelArtBar } from '../utils/PixelArtBar';
+import { StatsPanel } from '../ui/StatsPanel';
 
 export class ExploreScene extends Phaser.Scene {
   // Helper functions for item enhancement display
@@ -42,9 +42,7 @@ export class ExploreScene extends Phaser.Scene {
   private delveMarkers: Phaser.GameObjects.Container[] = [];
   private tombstoneMarkers: Map<number, Phaser.GameObjects.Container> = new Map();
   private townPortal!: Phaser.GameObjects.Container;
-  private healthBar!: PixelArtBar;
-  private staminaBar!: PixelArtBar;
-  private currencyDisplay!: Phaser.GameObjects.Container;
+  private statsPanel!: StatsPanel;
   private movementStepCounter: number = 0;
   private encounterCooldown: boolean = false;
   private staminaDebt: number = 0;
@@ -81,6 +79,8 @@ export class ExploreScene extends Phaser.Scene {
     this.load.image('gemforge-logo', '/assets/ui/gemforge-logo.png');
     this.load.image('coin-aa', '/assets/ui/currency/arcane-ash-coin.png');
     this.load.image('coin-ca', '/assets/ui/currency/crystalline-animus-coin.png');
+    this.load.image('foot-icon', '/assets/ui/foot-icon.png');
+    this.load.image('shield-icon', '/assets/ui/shield-icon.png');
     this.load.audio('wilderness-music', '/assets/audio/wilderness-music.mp3');
   }
 
@@ -143,7 +143,11 @@ export class ExploreScene extends Phaser.Scene {
       }
     });
 
-    this.createHealthAndStaminaBars();
+    // Create stats panel
+    this.statsPanel = new StatsPanel(this, 20, 40);
+    this.statsPanel.setDepth(100);
+    this.statsPanel.getContainer().setScrollFactor(0);
+    this.statsPanel.update(playerData);
 
     this.add.text(20, height - 40, 'Arrow keys to move • Approach markers to interact • M to open menu', {
       fontFamily: FONTS.primary,
@@ -1626,90 +1630,22 @@ export class ExploreScene extends Phaser.Scene {
     });
   }
 
-  private createHealthAndStaminaBars(): void {
-    const startX = 20;
-    const startY = 40;
-    const barWidth = 400;
-    const barHeight = 32;
-
-    // Create pixel art health bar
-    this.healthBar = new PixelArtBar(
-      this,
-      startX,
-      startY,
-      'HP',
-      0xcc3333,  // Red fill
-      0x4a5a8a,  // Blue-gray empty
-      barWidth,
-      barHeight
-    );
-    this.healthBar.setScrollFactor(0, 0);
-    this.healthBar.setDepth(100);
-
-    // Create pixel art stamina bar
-    this.staminaBar = new PixelArtBar(
-      this,
-      startX,
-      startY + barHeight + 10,
-      'SP',
-      0xccaa33,  // Yellow-gold fill
-      0x4a5a6a,  // Gray empty
-      barWidth,
-      barHeight
-    );
-    this.staminaBar.setScrollFactor(0, 0);
-    this.staminaBar.setDepth(100);
-
-    // Currency display
-    const player = this.gameState.getPlayer();
-    this.currencyDisplay = CurrencyDisplay.createInlineCurrency(
-      this,
-      startX,
-      startY + (barHeight + 10) * 2 + 10,
-      player.arcaneAsh,
-      player.crystallineAnimus,
-      'small'
-    );
-    this.currencyDisplay.setScrollFactor(0);
-    this.currencyDisplay.setDepth(102);
-
-    // Initialize bars with current player stats
-    this.healthBar.update(player.health, player.maxHealth);
-    this.staminaBar.update(player.stamina, player.maxStamina);
-  }
-
   private updateInfo(): void {
     const player = this.gameState.getPlayer();
     
-    // Update pixel art bars (with safety check)
-    if (this.healthBar) {
-      this.healthBar.update(player.health, player.maxHealth);
-    }
-    if (this.staminaBar) {
-      this.staminaBar.update(player.stamina, player.maxStamina);
+    // Update stats panel
+    if (this.statsPanel) {
+      this.statsPanel.update(player);
     }
 
-    // Update currency display
-    this.currencyDisplay.destroy();
-    this.currencyDisplay = CurrencyDisplay.createInlineCurrency(
-      this,
-      20,
-      124,
-      player.arcaneAsh,
-      player.crystallineAnimus,
-      'small'
-    );
-    this.currencyDisplay.setScrollFactor(0);
-    this.currencyDisplay.setDepth(102);
-
-    // Pulsing effect when below 15% (with safety checks)
-    if (this.healthBar) {
+    // Pulsing effect when below 15%
+    if (this.statsPanel) {
       const healthPercent = player.health / player.maxHealth;
+      const panelContainer = this.statsPanel.getContainer();
       if (healthPercent < 0.15) {
-        const barContainer = this.healthBar.getContainer();
-        if (barContainer && !this.tweens.getTweensOf(barContainer).length) {
+        if (panelContainer && !this.tweens.getTweensOf(panelContainer).length) {
           this.tweens.add({
-            targets: barContainer,
+            targets: panelContainer,
             alpha: 0.3,
             duration: 500,
             yoyo: true,
@@ -1717,32 +1653,9 @@ export class ExploreScene extends Phaser.Scene {
           });
         }
       } else {
-        const barContainer = this.healthBar.getContainer();
-        if (barContainer) {
-          this.tweens.killTweensOf(barContainer);
-          barContainer.setAlpha(1);
-        }
-      }
-    }
-
-    if (this.staminaBar) {
-      const staminaPercent = player.stamina / player.maxStamina;
-      if (staminaPercent < 0.15) {
-        const barContainer = this.staminaBar.getContainer();
-        if (barContainer && !this.tweens.getTweensOf(barContainer).length) {
-          this.tweens.add({
-            targets: barContainer,
-            alpha: 0.3,
-            duration: 500,
-            yoyo: true,
-            repeat: -1,
-          });
-        }
-      } else {
-        const barContainer = this.staminaBar.getContainer();
-        if (barContainer) {
-          this.tweens.killTweensOf(barContainer);
-          barContainer.setAlpha(1);
+        if (panelContainer) {
+          this.tweens.killTweensOf(panelContainer);
+          panelContainer.setAlpha(1);
         }
       }
     }

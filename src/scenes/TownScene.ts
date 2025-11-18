@@ -15,14 +15,11 @@ import { ItemSprites } from '../config/ItemSprites';
 import { ApiClient } from '../utils/ApiClient';
 import { GameConfig } from '../config/GameConfig';
 import { AudioManager } from '../managers/AudioManager';
-import { PixelArtBar } from '../utils/PixelArtBar';
+import { StatsPanel } from '../ui/StatsPanel';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
-  private healthBar!: PixelArtBar;
-  private staminaBar!: PixelArtBar;
-  private currencyDisplay!: Phaser.GameObjects.Container;
-  private statsText!: Phaser.GameObjects.Text;
+  private statsPanel!: StatsPanel;
   private menuState: 'none' | 'inventory' | 'equipment' | 'shop' | 'forge' | 'inn' | 'footlocker' = 'none';
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
@@ -37,6 +34,8 @@ export class TownScene extends Phaser.Scene {
     this.load.image('equipment-panel', '/assets/ui/equipment-panel.png');
     this.load.image('blacksmith-button', '/assets/ui/shop-buttons/blacksmith-button.png');
     this.load.image('garthek-button', '/assets/ui/shop-buttons/garthek-button.png');
+    this.load.image('foot-icon', '/assets/ui/foot-icon.png');
+    this.load.image('shield-icon', '/assets/ui/shield-icon.png');
     this.load.audio('town-music', '/assets/audio/town-music.mp3');
     
     const itemSprites = ItemSprites.getAllSpritePaths();
@@ -73,8 +72,9 @@ export class TownScene extends Phaser.Scene {
       resolution: 2,
     }).setOrigin(0.5);
     
-    // Create pixel art health and stamina bars
-    this.createHealthAndStaminaBars();
+    // Create stats panel
+    this.statsPanel = new StatsPanel(this, 20, 40);
+    this.statsPanel.update(player);
 
     this.createNPCs();
 
@@ -323,101 +323,10 @@ export class TownScene extends Phaser.Scene {
     });
   }
 
-  private createHealthAndStaminaBars(): void {
-    const startX = 20;
-    const startY = 40;
-    const barWidth = 400;
-    const barHeight = 32;
-    const player = this.gameState.getPlayer();
-
-    // Create pixel art health bar
-    this.healthBar = new PixelArtBar(
-      this,
-      startX,
-      startY,
-      'HP',
-      0xcc3333,  // Red fill
-      0x4a5a8a,  // Blue-gray empty
-      barWidth,
-      barHeight
-    );
-    this.healthBar.setDepth(100);
-
-    // Create pixel art stamina bar
-    this.staminaBar = new PixelArtBar(
-      this,
-      startX,
-      startY + barHeight + 10,
-      'SP',
-      0xccaa33,  // Yellow-gold fill
-      0x4a5a6a,  // Gray empty
-      barWidth,
-      barHeight
-    );
-    this.staminaBar.setDepth(100);
-
-    // Currency display below bars
-    this.currencyDisplay = CurrencyDisplay.createInlineCurrency(
-      this,
-      startX,
-      startY + (barHeight + 10) * 2 + 10,
-      player.arcaneAsh,
-      player.crystallineAnimus,
-      'small'
-    );
-    this.currencyDisplay.setDepth(102);
-
-    // Stats text below currency
-    this.statsText = this.add.text(startX, startY + (barHeight + 10) * 2 + 45, this.getStatsInfo(), {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
-      color: '#ffffff',
-      lineSpacing: 4,
-      resolution: 2,
-    });
-
-    // Initialize bars with current player stats
-    this.healthBar.update(player.health, player.maxHealth);
-    this.staminaBar.update(player.stamina, player.maxStamina);
-  }
-
-  private getStatsInfo(): string {
-    const player = this.gameState.getPlayer();
-    return [
-      `Level: ${player.level}`,
-      `Evasion: ${player.stats.calculatedEvasion}`,
-      `Damage Reduction: ${Math.floor(player.stats.damageReduction * 100)}%`,
-    ].join('\n');
-  }
-
   private updatePlayerDisplay(): void {
     const player = this.gameState.getPlayer();
-    
-    // Update bars
-    if (this.healthBar) {
-      this.healthBar.update(player.health, player.maxHealth);
-    }
-    if (this.staminaBar) {
-      this.staminaBar.update(player.stamina, player.maxStamina);
-    }
-
-    // Update currency
-    if (this.currencyDisplay) {
-      this.currencyDisplay.destroy();
-      this.currencyDisplay = CurrencyDisplay.createInlineCurrency(
-        this,
-        20,
-        124,
-        player.arcaneAsh,
-        player.crystallineAnimus,
-        'small'
-      );
-      this.currencyDisplay.setDepth(102);
-    }
-
-    // Update stats text
-    if (this.statsText) {
-      this.statsText.setText(this.getStatsInfo());
+    if (this.statsPanel) {
+      this.statsPanel.update(player);
     }
   }
 
