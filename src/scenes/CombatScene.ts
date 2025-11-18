@@ -49,6 +49,7 @@ export class CombatScene extends Phaser.Scene {
     this.load.image('void-spawn', '/assets/enemies/void-spawn.png');
     this.load.image('greater-void-spawn', '/assets/enemies/greater-void-spawn.png');
     this.load.image('shadow-beast', '/assets/enemies/shadow-beast.png');
+    this.load.image('combat-background', '/assets/combat-background.png');
     this.load.audio('combat-music', '/assets/audio/combat-music.mp3');
   }
 
@@ -87,7 +88,14 @@ export class CombatScene extends Phaser.Scene {
 
     const { width, height } = this.cameras.main;
 
-    this.add.rectangle(0, 0, width, height, 0x0f0f1f).setOrigin(0);
+    // Add the void cavern background
+    const background = this.add.image(width / 2, height / 2, 'combat-background');
+    
+    // Scale to cover the entire screen while maintaining aspect ratio
+    const scaleX = width / background.width;
+    const scaleY = height / background.height;
+    const scale = Math.max(scaleX, scaleY);
+    background.setScale(scale);
 
     const titleText = this.add.text(width / 2, height / 2, this.currentRoom.type === 'boss' ? 'BOSS BATTLE!' : 'Combat Begins!', {
       fontFamily: FONTS.primary,
