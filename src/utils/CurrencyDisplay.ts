@@ -22,6 +22,7 @@ export class CurrencyDisplay {
       fontSize: FONTS.size[fontSize],
       color: '#ffffff',
       fontFamily: FONTS.primary,
+      resolution: 2,
     });
     text.setOrigin(0, 0.5);
     
@@ -47,6 +48,7 @@ export class CurrencyDisplay {
       fontSize: FONTS.size[fontSize],
       color: '#ffffff',
       fontFamily: FONTS.primary,
+      resolution: 2,
     });
     aaText.setOrigin(0, 0.5);
     
@@ -61,6 +63,7 @@ export class CurrencyDisplay {
       fontSize: FONTS.size[fontSize],
       color: '#ffffff',
       fontFamily: FONTS.primary,
+      resolution: 2,
     });
     caText.setOrigin(0, 0.5);
     

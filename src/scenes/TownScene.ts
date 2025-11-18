@@ -15,10 +15,14 @@ import { ItemSprites } from '../config/ItemSprites';
 import { ApiClient } from '../utils/ApiClient';
 import { GameConfig } from '../config/GameConfig';
 import { AudioManager } from '../managers/AudioManager';
+import { PixelArtBar } from '../utils/PixelArtBar';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
-  private infoText!: Phaser.GameObjects.Text;
+  private healthBar!: PixelArtBar;
+  private staminaBar!: PixelArtBar;
+  private currencyDisplay!: Phaser.GameObjects.Container;
+  private statsText!: Phaser.GameObjects.Text;
   private menuState: 'none' | 'inventory' | 'equipment' | 'shop' | 'forge' | 'inn' | 'footlocker' = 'none';
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
@@ -69,13 +73,8 @@ export class TownScene extends Phaser.Scene {
       resolution: 2,
     }).setOrigin(0.5);
     
-    this.infoText = this.add.text(20, 20, this.getPlayerInfo(), {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
-      color: '#ffffff',
-      lineSpacing: 4,
-      resolution: 2,
-    });
+    // Create pixel art health and stamina bars
+    this.createHealthAndStaminaBars();
 
     this.createNPCs();
 
@@ -324,19 +323,102 @@ export class TownScene extends Phaser.Scene {
     });
   }
 
-  private getPlayerInfo(): string {
+  private createHealthAndStaminaBars(): void {
+    const startX = 20;
+    const startY = 40;
+    const barWidth = 400;
+    const barHeight = 32;
+    const player = this.gameState.getPlayer();
+
+    // Create pixel art health bar
+    this.healthBar = new PixelArtBar(
+      this,
+      startX,
+      startY,
+      'HP',
+      0xcc3333,  // Red fill
+      0x4a5a8a,  // Blue-gray empty
+      barWidth,
+      barHeight
+    );
+    this.healthBar.setDepth(100);
+
+    // Create pixel art stamina bar
+    this.staminaBar = new PixelArtBar(
+      this,
+      startX,
+      startY + barHeight + 10,
+      'SP',
+      0xccaa33,  // Yellow-gold fill
+      0x4a5a6a,  // Gray empty
+      barWidth,
+      barHeight
+    );
+    this.staminaBar.setDepth(100);
+
+    // Currency display below bars
+    this.currencyDisplay = CurrencyDisplay.createInlineCurrency(
+      this,
+      startX,
+      startY + (barHeight + 10) * 2 + 10,
+      player.arcaneAsh,
+      player.crystallineAnimus,
+      'small'
+    );
+    this.currencyDisplay.setDepth(102);
+
+    // Stats text below currency
+    this.statsText = this.add.text(startX, startY + (barHeight + 10) * 2 + 45, this.getStatsInfo(), {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+      lineSpacing: 4,
+      resolution: 2,
+    });
+
+    // Initialize bars with current player stats
+    this.healthBar.update(player.health, player.maxHealth);
+    this.staminaBar.update(player.stamina, player.maxStamina);
+  }
+
+  private getStatsInfo(): string {
     const player = this.gameState.getPlayer();
     return [
-      `Health: ${player.health} / ${player.maxHealth}`,
-      `Stamina: ${player.stamina} / ${player.maxStamina}`,
       `Level: ${player.level}`,
-      ``,
       `Evasion: ${player.stats.calculatedEvasion}`,
       `Damage Reduction: ${Math.floor(player.stats.damageReduction * 100)}%`,
-      ``,
-      `Arcane Ash (AA): ${player.arcaneAsh}`,
-      `Crystalline Animus (CA): ${player.crystallineAnimus.toFixed(1)}`,
     ].join('\n');
+  }
+
+  private updatePlayerDisplay(): void {
+    const player = this.gameState.getPlayer();
+    
+    // Update bars
+    if (this.healthBar) {
+      this.healthBar.update(player.health, player.maxHealth);
+    }
+    if (this.staminaBar) {
+      this.staminaBar.update(player.stamina, player.maxStamina);
+    }
+
+    // Update currency
+    if (this.currencyDisplay) {
+      this.currencyDisplay.destroy();
+      this.currencyDisplay = CurrencyDisplay.createInlineCurrency(
+        this,
+        20,
+        124,
+        player.arcaneAsh,
+        player.crystallineAnimus,
+        'small'
+      );
+      this.currencyDisplay.setDepth(102);
+    }
+
+    // Update stats text
+    if (this.statsText) {
+      this.statsText.setText(this.getStatsInfo());
+    }
   }
 
   private createButton(
@@ -540,7 +622,7 @@ export class TownScene extends Phaser.Scene {
 
     const closeBtn = this.createButton(width / 2, height / 2 + 220, 'Close', () => {
       destroyAll();
-      this.infoText.setText(this.getPlayerInfo());
+      this.updatePlayerDisplay();
     });
     uiElements.push(closeBtn);
   }
@@ -593,7 +675,7 @@ export class TownScene extends Phaser.Scene {
 
     this.gameState.removeItemFromInventory(itemId, 1);
     this.gameState.updatePlayer(player);
-    this.infoText.setText(this.getPlayerInfo());
+    this.updatePlayerDisplay();
   }
 
   private storeItem(itemId: string): void {
@@ -1058,7 +1140,7 @@ export class TownScene extends Phaser.Scene {
 
     const closeBtn = this.createButton(width / 2, statsY + 70, 'Close', () => {
       destroyAll();
-      this.infoText.setText(this.getPlayerInfo());
+      this.updatePlayerDisplay();
     });
     uiElements.push(closeBtn);
   }
@@ -1281,7 +1363,7 @@ export class TownScene extends Phaser.Scene {
 
       const closeBtn = this.createButton(width / 2, height / 2 + 240, 'Close', () => {
         destroyAll();
-        this.infoText.setText(this.getPlayerInfo());
+        this.updatePlayerDisplay();
       });
       uiElements.push(closeBtn);
     };
@@ -1332,7 +1414,7 @@ export class TownScene extends Phaser.Scene {
     
     const item = ItemDatabase.getItem(itemId);
     this.showMessage(`Purchased ${item?.name || 'item'} for ${price} ${currency}!`);
-    this.infoText.setText(this.getPlayerInfo());
+    this.updatePlayerDisplay();
   }
 
   private openForge(): void {
@@ -1706,7 +1788,7 @@ export class TownScene extends Phaser.Scene {
     
     const costText = currency === 'AA' ? `${cost.aa} AA` : `${cost.ca.toFixed(2)} CA`;
     this.showMessage(`Item repaired for ${costText}!`);
-    this.infoText.setText(this.getPlayerInfo());
+    this.updatePlayerDisplay();
   }
 
   private showRepairAllConfirmation(repairableItems: Array<{ item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }>): void {
@@ -1809,7 +1891,7 @@ export class TownScene extends Phaser.Scene {
     
     const costText = currency === 'AA' ? `${totalAA} AA` : `${totalCA.toFixed(2)} CA`;
     this.showMessage(`Repaired ${repairedCount} items for ${costText}!`);
-    this.infoText.setText(this.getPlayerInfo());
+    this.updatePlayerDisplay();
     
     this.openForge();
   }
@@ -1842,7 +1924,7 @@ export class TownScene extends Phaser.Scene {
       }
       this.gameState.updatePlayer(player);
       this.showMessage(result.message);
-      this.infoText.setText(this.getPlayerInfo());
+      this.updatePlayerDisplay();
       return;
     }
 
@@ -1854,7 +1936,7 @@ export class TownScene extends Phaser.Scene {
     
     this.gameState.updatePlayer(player);
     this.showMessage(result.message);
-    this.infoText.setText(this.getPlayerInfo());
+    this.updatePlayerDisplay();
   }
 
   private openInn(): void {
@@ -1924,7 +2006,7 @@ export class TownScene extends Phaser.Scene {
         player.stamina = player.maxStamina;
         this.gameState.updatePlayer(player);
         this.showMessage('You feel refreshed and restored!');
-        this.infoText.setText(this.getPlayerInfo());
+        this.updatePlayerDisplay();
         destroyAll();
       });
       uiElements.push(restBtn);
