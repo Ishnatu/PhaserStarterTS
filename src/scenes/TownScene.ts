@@ -218,7 +218,7 @@ export class TownScene extends Phaser.Scene {
   private createNPCs(): void {
     const { width } = this.cameras.main;
     const npcY = 240;
-    const npcSpacing = 90;
+    const npcSpacing = 120;  // Increased from 90 to 120 for more horizontal breathing room
 
     const npcs = [
       { name: 'Blacksmith', color: 0xff6633, description: 'Forges and upgrades equipment', sprite: 'blacksmith-button' },

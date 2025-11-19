@@ -1,6 +1,7 @@
 export const FONTS = {
   primary: '"Press Start 2P", monospace',
   size: {
+    xsmall: '14px',     // Extra small for stats and UI details
     small: '20px',      // Was 16px, increased by 25%
     medium: '25px',     // Was 20px, increased by 25%
     large: '35px',      // Was 28px, increased by 25%

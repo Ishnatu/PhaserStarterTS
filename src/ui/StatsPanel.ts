@@ -78,7 +78,7 @@ export class StatsPanel {
     yPos += 35;  // Currency height + spacing
     this.levelText = scene.add.text(panelPadding + 5, yPos, '', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
+      fontSize: FONTS.size.xsmall,  // Changed from small to xsmall (14px)
       color: '#ffffff',
       resolution: 2,
     });
@@ -96,7 +96,7 @@ export class StatsPanel {
     // Evasion text (next to foot icon with gap)
     this.evasionText = scene.add.text(panelPadding + 47, yPos, '', {  // Increased gap from 40 to 47
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
+      fontSize: FONTS.size.xsmall,  // Changed from small to xsmall (14px)
       color: '#ffffff',
       resolution: 2,
     });
@@ -112,7 +112,7 @@ export class StatsPanel {
     // Damage Reduction text (next to shield icon with gap)
     this.drText = scene.add.text(panelWidth / 2 + 52, yPos, '', {  // Increased gap
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
+      fontSize: FONTS.size.xsmall,  // Changed from small to xsmall (14px)
       color: '#ffffff',
       resolution: 2,
     });

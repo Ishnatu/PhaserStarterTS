@@ -32,13 +32,14 @@ export class PixelArtBar {
     
     this.container = scene.add.container(x, y);
     
-    // Label text (e.g., "HP") - slightly smaller
-    this.labelText = scene.add.text(8, -32, label, {
+    // No label text needed - tooltips show the values on hover
+    this.labelText = scene.add.text(0, 0, '', {
       fontFamily: FONTS.primary,
       fontSize: '24px',
       color: '#e8d4a0',
       resolution: 2,
     });
+    this.labelText.setVisible(false);
     
     // Create graphics for the bars
     this.fillBar = scene.add.graphics();
