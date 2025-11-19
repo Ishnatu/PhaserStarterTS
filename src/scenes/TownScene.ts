@@ -1337,22 +1337,26 @@ export class TownScene extends Phaser.Scene {
     const panel = this.add.rectangle(width / 2, height / 2, 900, 550, 0x2a2a3e).setOrigin(0.5);
     uiElements.push(overlay, panel);
 
+    // Header layout with improved spacing
+    const headerBaseY = height / 2 - 240;
+    const verticalGap = 65;  // Increased from 40px for better breathing room
+
     // Row 1: Title
-    const title = this.add.text(width / 2, height / 2 - 240, 'Blacksmith\'s Forge', {
+    const title = this.add.text(width / 2, headerBaseY, 'Blacksmith\'s Forge', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#f0a020',
     }).setOrigin(0.5);
     uiElements.push(title);
 
-    // Row 2: Currencies (centered)
+    // Row 2: Currencies (centered, consistent with StatsPanel)
     const balanceDisplay = CurrencyDisplay.createInlineCurrency(
       this,
       width / 2,
-      height / 2 - 200,
+      headerBaseY + verticalGap,
       player.arcaneAsh,
       player.crystallineAnimus,
-      'small'
+      'xsmall'  // Changed from 'small' to match StatsPanel
     );
     balanceDisplay.setScrollFactor(0);
     balanceDisplay.x -= balanceDisplay.getBounds().width / 2;
@@ -1371,21 +1375,9 @@ export class TownScene extends Phaser.Scene {
       uiElements.slice(4).forEach(el => el.destroy());
       uiElements.splice(4);
 
-      // Row 3: Tab buttons (centered horizontally with proper spacing)
-      const tabY = height / 2 - 160;
-      const tabSpacing = 150;
-
-      const enhanceTab = this.add.text(width / 2 - tabSpacing, tabY, '[Enhance]', {
-        fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
-        color: mode === 'enhance' ? '#f0a020' : '#888888',
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => {
-          mode = 'enhance';
-          selectedItem = null;
-          renderForge();
-        });
-      uiElements.push(enhanceTab);
+      // Row 3: Tab buttons (centered horizontally with increased spacing)
+      const tabY = headerBaseY + (verticalGap * 2);  // Two gaps down from title
+      const tabSpacing = 220;  // Increased from 150px to prevent overlap
 
       // Check if there are any repairable items to show Repair All button
       const player = this.gameState.getPlayer();
@@ -1399,29 +1391,70 @@ export class TownScene extends Phaser.Scene {
         }
       });
 
+      // Layout tabs with consistent spacing
       if (repairableItems.length > 0) {
+        // Three-button layout: [Enhance] [Repair All] [Repair]
+        const enhanceTab = this.add.text(width / 2 - tabSpacing, tabY, '[Enhance]', {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.xsmall,
+          color: mode === 'enhance' ? '#f0a020' : '#888888',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            mode = 'enhance';
+            selectedItem = null;
+            renderForge();
+          });
+        uiElements.push(enhanceTab);
+
         const repairAllTab = this.add.text(width / 2, tabY, '[Repair All]', {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
+          fontSize: FONTS.size.xsmall,
           color: '#88ff88',
         }).setOrigin(0.5).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
             this.showRepairAllConfirmation(repairableItems);
           });
         uiElements.push(repairAllTab);
-      }
 
-      const repairTab = this.add.text(width / 2 + tabSpacing, tabY, '[Repair]', {
-        fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
-        color: mode === 'repair' ? '#f0a020' : '#888888',
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => {
-          mode = 'repair';
-          selectedItem = null;
-          renderForge();
-        });
-      uiElements.push(repairTab);
+        const repairTab = this.add.text(width / 2 + tabSpacing, tabY, '[Repair]', {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.xsmall,
+          color: mode === 'repair' ? '#f0a020' : '#888888',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            mode = 'repair';
+            selectedItem = null;
+            renderForge();
+          });
+        uiElements.push(repairTab);
+      } else {
+        // Two-button layout: [Enhance] [Repair] (centered)
+        const twoButtonSpacing = 110;  // Half of tabSpacing for two-button layout
+        
+        const enhanceTab = this.add.text(width / 2 - twoButtonSpacing, tabY, '[Enhance]', {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.xsmall,
+          color: mode === 'enhance' ? '#f0a020' : '#888888',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            mode = 'enhance';
+            selectedItem = null;
+            renderForge();
+          });
+        uiElements.push(enhanceTab);
+
+        const repairTab = this.add.text(width / 2 + twoButtonSpacing, tabY, '[Repair]', {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.xsmall,
+          color: mode === 'repair' ? '#f0a020' : '#888888',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            mode = 'repair';
+            selectedItem = null;
+            renderForge();
+          });
+        uiElements.push(repairTab);
+      }
 
       if (mode === 'enhance') {
         this.renderEnhanceMode(uiElements, selectedItem, (item) => {
