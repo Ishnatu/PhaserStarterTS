@@ -1,11 +1,11 @@
 export const FONTS = {
-  primary: 'VT323, monospace',
+  primary: '"Press Start 2P", monospace',
   size: {
-    small: '16px',
-    medium: '20px',
-    large: '28px',
-    xlarge: '36px',
-    title: '48px',
+    small: '20px',      // Was 16px, increased by 25%
+    medium: '25px',     // Was 20px, increased by 25%
+    large: '35px',      // Was 28px, increased by 25%
+    xlarge: '45px',     // Was 36px, increased by 25%
+    title: '60px',      // Was 48px, increased by 25%
   }
 };
 
