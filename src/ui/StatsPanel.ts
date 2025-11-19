@@ -15,8 +15,7 @@ export class StatsPanel {
   private levelText: Phaser.GameObjects.Text;
   private evasionText: Phaser.GameObjects.Text;
   private drText: Phaser.GameObjects.Text;
-  private footIcon: Phaser.GameObjects.Image;
-  private shieldIcon: Phaser.GameObjects.Image;
+  private evasionIcon: Phaser.GameObjects.Image;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     this.scene = scene;
@@ -76,25 +75,13 @@ export class StatsPanel {
     });
     this.container.add(this.levelText);
     
-    // Load stat icons (temporarily using text placeholders until we get proper icons)
-    // this.footIcon = scene.add.image(20, 152, 'foot-icon');
-    // this.footIcon.setScale(0.8);
-    // this.footIcon.setOrigin(0, 0.5);
-    // this.container.add(this.footIcon);
+    // Load evasion icon (pixel art running person)
+    this.evasionIcon = scene.add.image(20, 152, 'evasion-icon');
+    this.evasionIcon.setScale(0.15);  // Scale down the pixel art
+    this.evasionIcon.setOrigin(0, 0.5);
+    this.container.add(this.evasionIcon);
     
-    // this.shieldIcon = scene.add.image(220, 152, 'shield-icon');
-    // this.shieldIcon.setScale(0.8);
-    // this.shieldIcon.setOrigin(0, 0.5);
-    // this.container.add(this.shieldIcon);
-    
-    // Temporary text placeholders
-    const footPlaceholder = scene.add.text(20, 152, '🦶', {
-      fontSize: '16px',
-      color: '#ffffff',
-    });
-    footPlaceholder.setOrigin(0, 0.5);
-    this.container.add(footPlaceholder);
-    
+    // Shield placeholder (waiting for pixel art icon)
     const shieldPlaceholder = scene.add.text(220, 152, '🛡', {
       fontSize: '16px', 
       color: '#ffffff',
