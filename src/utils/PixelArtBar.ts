@@ -22,7 +22,7 @@ export class PixelArtBar {
     fillColor: number,
     emptyColor: number,
     barWidth: number = 400,
-    barHeight: number = 32
+    barHeight: number = 36  // Increased from 32px to 36px for better visibility
   ) {
     this.scene = scene;
     this.barWidth = barWidth;
@@ -31,17 +31,17 @@ export class PixelArtBar {
     this.container = scene.add.container(x, y);
     
     // Label text (e.g., "HP")
-    this.labelText = scene.add.text(8, -28, label, {
+    this.labelText = scene.add.text(8, -35, label, {
       fontFamily: FONTS.primary,
-      fontSize: '24px',
+      fontSize: '30px',  // Increased from 24px (25% increase)
       color: '#e8d4a0',
       resolution: 2,
     });
     
     // Value text (e.g., "150/164")
-    this.valueText = scene.add.text(60, -28, '0/0', {
+    this.valueText = scene.add.text(80, -35, '0/0', {
       fontFamily: FONTS.primary,
-      fontSize: '24px',
+      fontSize: '30px',  // Increased from 24px (25% increase)
       color: '#e8d4a0',
       resolution: 2,
     });
