@@ -44,7 +44,7 @@ export class CurrencyDisplay {
     aaIcon.setScale(0.06);  // Increased from 0.044 for better readability
     aaIcon.setOrigin(0, 0.5);
     
-    const aaText = scene.add.text(42, 0, `${aaAmount}`, {  // Increased gap from 35 to 42
+    const aaText = scene.add.text(57, 0, `${aaAmount}`, {  // Increased gap from 42 to 57 (added 15px)
       fontSize: FONTS.size[fontSize],
       color: '#ffffff',
       fontFamily: FONTS.primary,
@@ -53,13 +53,13 @@ export class CurrencyDisplay {
     aaText.setOrigin(0, 0.5);
     
     const spacing = 30;  // Increased from 20 for more breathing room
-    const caXOffset = 42 + aaText.width + spacing;
+    const caXOffset = 57 + aaText.width + spacing;
     
     const caIcon = scene.add.image(caXOffset, 0, 'coin-ca');
     caIcon.setScale(0.06);  // Increased from 0.044 for better readability
     caIcon.setOrigin(0, 0.5);
     
-    const caText = scene.add.text(caXOffset + 42, 0, `${caAmount.toFixed(1)}`, {  // Increased gap from 35 to 42
+    const caText = scene.add.text(caXOffset + 57, 0, `${caAmount.toFixed(1)}`, {  // Increased gap from 42 to 57 (added 15px)
       fontSize: FONTS.size[fontSize],
       color: '#ffffff',
       fontFamily: FONTS.primary,

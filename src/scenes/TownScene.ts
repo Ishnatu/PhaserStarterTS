@@ -1496,7 +1496,7 @@ export class TownScene extends Phaser.Scene {
     if (forgeableItems.length === 0) {
       const noItemsText = this.add.text(width / 2, height / 2, 'No forgeable items in inventory or equipped.\n(Weapons and armor can be enhanced)', {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: '#cccccc',
         align: 'center',
       }).setOrigin(0.5);
@@ -1504,8 +1504,8 @@ export class TownScene extends Phaser.Scene {
       return;
     }
 
-    const itemsStartY = height / 2 - 140;
-    const itemHeight = 35;
+    const itemsStartY = height / 2 - 70;  // Positioned with proper spacing below tabs
+    const itemHeight = 28;  // Reduced from 35 to match smaller font
     const maxDisplay = 7;
     
     // Fixed column positions for grid-like alignment
@@ -1530,7 +1530,7 @@ export class TownScene extends Phaser.Scene {
       // Column 1: Item name
       const itemText = this.add.text(colNameX, y, itemNameText, {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,  // Changed from 'small' to match tab buttons
         color: itemColor,
       });
       uiElements.push(itemText);
@@ -1538,7 +1538,7 @@ export class TownScene extends Phaser.Scene {
       // Column 2: Enhancement value
       const levelText = this.add.text(colValueX, y, currentLevel === maxLevel ? 'MAX' : `+${currentLevel}`, {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,  // Changed from 'small' to match tab buttons
         color: currentLevel === maxLevel ? '#ff8800' : '#88ff88',
       });
       uiElements.push(levelText);
@@ -1547,7 +1547,7 @@ export class TownScene extends Phaser.Scene {
       if (currentLevel < maxLevel) {
         const selectBtn = this.add.text(colButtonX, y, '[Select]', {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
+          fontSize: FONTS.size.xsmall,  // Changed from 'small' to match tab buttons
           color: selectedItem === itemData ? '#ff8800' : '#8888ff',
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => onSelect(itemData));
@@ -1629,7 +1629,7 @@ export class TownScene extends Phaser.Scene {
     if (repairableItems.length === 0) {
       const noItemsText = this.add.text(width / 2, height / 2, 'No items need repair!\nAll your equipment is in perfect condition.', {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: '#cccccc',
         align: 'center',
       }).setOrigin(0.5);
@@ -1637,8 +1637,8 @@ export class TownScene extends Phaser.Scene {
       return;
     }
 
-    const itemsStartY = height / 2 - 140;
-    const itemHeight = 35;
+    const itemsStartY = height / 2 - 70;  // Positioned with proper spacing below tabs
+    const itemHeight = 28;  // Reduced from 35 to match smaller font
     const maxDisplay = 7;
     
     // Fixed column positions for grid-like alignment (same as Enhancement tab)
@@ -1669,7 +1669,7 @@ export class TownScene extends Phaser.Scene {
       // Column 1: Item name
       const itemText = this.add.text(colNameX, y, itemNameText, {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,  // Changed from 'small' to match tab buttons
         color: itemColor,
       });
       uiElements.push(itemText);
@@ -1677,7 +1677,7 @@ export class TownScene extends Phaser.Scene {
       // Column 2: Durability value
       const durabilityText = this.add.text(colValueX, y, `${Math.floor(currentDurability)}/${maxDurability}`, {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,  // Changed from 'small' to match tab buttons
         color: durabilityColor,
       });
       uiElements.push(durabilityText);
@@ -1685,7 +1685,7 @@ export class TownScene extends Phaser.Scene {
       // Column 3: [Select] button
       const selectBtn = this.add.text(colButtonX, y, '[Select]', {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,  // Changed from 'small' to match tab buttons
         color: selectedItem === itemData ? '#ff8800' : '#8888ff',
       }).setInteractive({ useHandCursor: true })
         .on('pointerdown', () => onSelect(itemData));
