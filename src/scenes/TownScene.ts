@@ -1334,7 +1334,7 @@ export class TownScene extends Phaser.Scene {
     let mode: 'enhance' | 'repair' = 'enhance';
 
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
-    const panel = this.add.rectangle(width / 2, height / 2, 750, 550, 0x2a2a3e).setOrigin(0.5);
+    const panel = this.add.rectangle(width / 2, height / 2, 900, 550, 0x2a2a3e).setOrigin(0.5);
     uiElements.push(overlay, panel);
 
     const title = this.add.text(width / 2, height / 2 - 250, 'Blacksmith\'s Forge', {
@@ -1445,6 +1445,8 @@ export class TownScene extends Phaser.Scene {
     const itemsStartY = height / 2 - 140;
     const itemHeight = 35;
     const maxDisplay = 7;
+    const spacing = 20;  // 20px spacing between sections
+    const startX = width / 2 - 420;  // Start position for item names
 
     forgeableItems.slice(0, maxDisplay).forEach((itemData, index) => {
       const y = itemsStartY + index * itemHeight;
@@ -1459,22 +1461,27 @@ export class TownScene extends Phaser.Scene {
         itemNameText += ' [E]';
       }
       
-      const itemText = this.add.text(width / 2 - 330, y, itemNameText, {
+      // Create item name text
+      const itemText = this.add.text(startX, y, itemNameText, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: itemColor,
       });
       uiElements.push(itemText);
 
-      const levelText = this.add.text(width / 2 + 80, y, currentLevel === maxLevel ? 'MAX' : `+${currentLevel}`, {
+      // Position stats text 20px after item name using actual width
+      const statsX = itemText.x + itemText.width + spacing;
+      const levelText = this.add.text(statsX, y, currentLevel === maxLevel ? 'MAX' : `+${currentLevel}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: currentLevel === maxLevel ? '#ff8800' : '#88ff88',
       });
       uiElements.push(levelText);
 
+      // Position [Select] button 20px after stats using actual width
       if (currentLevel < maxLevel) {
-        const selectBtn = this.add.text(width / 2 + 150, y, '[Select]', {
+        const actionX = levelText.x + levelText.width + spacing;
+        const selectBtn = this.add.text(actionX, y, '[Select]', {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.small,
           color: selectedItem === itemData ? '#ff8800' : '#8888ff',
@@ -1569,6 +1576,8 @@ export class TownScene extends Phaser.Scene {
     const itemsStartY = height / 2 - 140;
     const itemHeight = 35;
     const maxDisplay = 7;
+    const spacing = 20;  // 20px spacing between sections (same as Enhancement tab)
+    const startX = width / 2 - 420;  // Start position for item names
 
     repairableItems.slice(0, maxDisplay).forEach((itemData, index) => {
       const y = itemsStartY + index * itemHeight;
@@ -1589,21 +1598,26 @@ export class TownScene extends Phaser.Scene {
         itemNameText += ' [E]';
       }
       
-      const itemText = this.add.text(width / 2 - 330, y, itemNameText, {
+      // Create item name text
+      const itemText = this.add.text(startX, y, itemNameText, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: itemColor,
       });
       uiElements.push(itemText);
 
-      const durabilityText = this.add.text(width / 2 + 80, y, `${Math.floor(currentDurability)}/${maxDurability}`, {
+      // Position durability text 20px after item name using actual width
+      const statsX = itemText.x + itemText.width + spacing;
+      const durabilityText = this.add.text(statsX, y, `${Math.floor(currentDurability)}/${maxDurability}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: durabilityColor,
       });
       uiElements.push(durabilityText);
 
-      const selectBtn = this.add.text(width / 2 + 200, y, '[Select]', {
+      // Position [Select] button 20px after durability using actual width
+      const actionX = durabilityText.x + durabilityText.width + spacing;
+      const selectBtn = this.add.text(actionX, y, '[Select]', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: selectedItem === itemData ? '#ff8800' : '#8888ff',
