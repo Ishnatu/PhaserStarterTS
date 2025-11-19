@@ -24,10 +24,10 @@ export class StatsPanel {
     this.container = scene.add.container(x, y);
     
     // Layout constants
-    const barWidth = 600;
+    const barWidth = 360;  // Reduced width to match user's cutoff line
     const iconScale = 0.06;
     const iconGap = 22;  // 22px gap between icons
-    const textOffset = 42;  // Gap between icon and text
+    const textOffset = 50;  // Increased gap so text doesn't overlap icons
     const iconX = 5;  // X position for all icons
     const textX = iconX + textOffset;  // X position for all text
     
