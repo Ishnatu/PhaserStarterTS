@@ -22,9 +22,11 @@ export class StatsPanel {
     this.scene = scene;
     this.container = scene.add.container(x, y);
     
-    // Create dark panel background (matching inventory style)
-    const panelWidth = 420;
-    const panelHeight = 200;
+    // Create dark panel background with proper padding
+    const panelWidth = 440;  // Slightly wider to accommodate larger icons
+    const panelPadding = 15;
+    const panelHeight = 220;  // Slightly taller for better spacing
+    
     this.panel = scene.add.rectangle(0, 0, panelWidth, panelHeight, 0x2a2a3e);
     this.panel.setOrigin(0, 0);
     
@@ -39,36 +41,42 @@ export class StatsPanel {
     
     this.container.add([this.panel, this.border]);
     
-    // Create health bar (taller, 36px)
+    // Vertical spacing between elements
+    let yPos = panelPadding;
+    
+    // Create health bar
     this.healthBar = new PixelArtBar(
       scene,
-      15,
-      15,
+      panelPadding,
+      yPos,
       'HP',
       0xcc3333,  // Red fill
       0x4a5a8a,  // Blue-gray empty
-      390,
-      36  // Taller bars
+      panelWidth - (panelPadding * 2),
+      36
     );
     this.container.add(this.healthBar.getContainer());
+    yPos += 48;  // Bar height + spacing
     
-    // Create stamina bar (taller, 36px)
+    // Create stamina bar
     this.staminaBar = new PixelArtBar(
       scene,
-      15,
-      60,  // Adjusted for taller bars
+      panelPadding,
+      yPos,
       'SP',
       0xccaa33,  // Yellow-gold fill
       0x4a5a6a,  // Gray empty
-      390,
-      36  // Taller bars
+      panelWidth - (panelPadding * 2),
+      36
     );
     this.container.add(this.staminaBar.getContainer());
+    yPos += 55;  // Bar height + more spacing before currency
     
-    // Currency display (will be created in update)
+    // Currency will be added in update() at yPos
     
     // Level text
-    this.levelText = scene.add.text(20, 145, '', {
+    yPos += 35;  // Currency height + spacing
+    this.levelText = scene.add.text(panelPadding + 5, yPos, '', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
@@ -76,20 +84,17 @@ export class StatsPanel {
     });
     this.container.add(this.levelText);
     
+    // Stats row with icons
+    yPos += 30;  // Spacing after level
+    
     // Load evasion icon (pixel art running person)
-    this.evasionIcon = scene.add.image(20, 153, 'evasion-icon');
-    this.evasionIcon.setScale(0.044);  // Consistent with currency icons
+    this.evasionIcon = scene.add.image(panelPadding + 5, yPos, 'evasion-icon');
+    this.evasionIcon.setScale(0.06);  // Increased from 0.044 for better visibility
     this.evasionIcon.setOrigin(0, 0.5);
     this.container.add(this.evasionIcon);
     
-    // Load shield icon (pixel art shield)
-    this.shieldIcon = scene.add.image(220, 153, 'shield-icon');
-    this.shieldIcon.setScale(0.044);  // Consistent with currency icons
-    this.shieldIcon.setOrigin(0, 0.5);
-    this.container.add(this.shieldIcon);
-    
-    // Evasion text (next to foot icon)
-    this.evasionText = scene.add.text(55, 153, '', {
+    // Evasion text (next to foot icon with gap)
+    this.evasionText = scene.add.text(panelPadding + 47, yPos, '', {  // Increased gap from 40 to 47
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
@@ -98,8 +103,14 @@ export class StatsPanel {
     this.evasionText.setOrigin(0, 0.5);
     this.container.add(this.evasionText);
     
-    // Damage Reduction text (next to shield icon)
-    this.drText = scene.add.text(255, 153, '', {
+    // Load shield icon (pixel art shield)
+    this.shieldIcon = scene.add.image(panelWidth / 2 + 10, yPos, 'shield-icon');
+    this.shieldIcon.setScale(0.06);  // Increased from 0.044 for better visibility
+    this.shieldIcon.setOrigin(0, 0.5);
+    this.container.add(this.shieldIcon);
+    
+    // Damage Reduction text (next to shield icon with gap)
+    this.drText = scene.add.text(panelWidth / 2 + 52, yPos, '', {  // Increased gap
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
@@ -123,7 +134,7 @@ export class StatsPanel {
     this.currencyDisplay = CurrencyDisplay.createInlineCurrency(
       this.scene,
       20,
-      110,  // Adjusted for taller bars
+      118,  // Position after stamina bar
       player.arcaneAsh,
       player.crystallineAnimus,
       'small'

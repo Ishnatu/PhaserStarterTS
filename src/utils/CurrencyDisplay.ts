@@ -14,11 +14,11 @@ export class CurrencyDisplay {
     
     const iconKey = currencyType === 'AA' ? 'coin-aa' : 'coin-ca';
     const icon = scene.add.image(0, 0, iconKey);
-    icon.setScale(0.044);  // Increased from 0.035 (25% increase)
+    icon.setScale(0.06);  // Increased from 0.044 for better readability
     icon.setOrigin(0, 0.5);
     
     const displayAmount = currencyType === 'CA' ? amount.toFixed(1) : amount.toString();
-    const text = scene.add.text(28, 0, displayAmount, {
+    const text = scene.add.text(40, 0, displayAmount, {  // Increased gap from 28 to 40
       fontSize: FONTS.size[fontSize],
       color: '#ffffff',
       fontFamily: FONTS.primary,
@@ -41,10 +41,10 @@ export class CurrencyDisplay {
     const container = scene.add.container(x, y);
     
     const aaIcon = scene.add.image(0, 0, 'coin-aa');
-    aaIcon.setScale(0.044);  // Increased from 0.035 (25% increase)
+    aaIcon.setScale(0.06);  // Increased from 0.044 for better readability
     aaIcon.setOrigin(0, 0.5);
     
-    const aaText = scene.add.text(35, 0, `${aaAmount}`, {
+    const aaText = scene.add.text(42, 0, `${aaAmount}`, {  // Increased gap from 35 to 42
       fontSize: FONTS.size[fontSize],
       color: '#ffffff',
       fontFamily: FONTS.primary,
@@ -52,14 +52,14 @@ export class CurrencyDisplay {
     });
     aaText.setOrigin(0, 0.5);
     
-    const spacing = 20;
-    const caXOffset = 35 + aaText.width + spacing;
+    const spacing = 30;  // Increased from 20 for more breathing room
+    const caXOffset = 42 + aaText.width + spacing;
     
     const caIcon = scene.add.image(caXOffset, 0, 'coin-ca');
-    caIcon.setScale(0.044);  // Increased from 0.035 (25% increase)
+    caIcon.setScale(0.06);  // Increased from 0.044 for better readability
     caIcon.setOrigin(0, 0.5);
     
-    const caText = scene.add.text(caXOffset + 35, 0, `${caAmount.toFixed(1)}`, {
+    const caText = scene.add.text(caXOffset + 42, 0, `${caAmount.toFixed(1)}`, {  // Increased gap from 35 to 42
       fontSize: FONTS.size[fontSize],
       color: '#ffffff',
       fontFamily: FONTS.primary,

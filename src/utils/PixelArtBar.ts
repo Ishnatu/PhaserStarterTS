@@ -5,9 +5,11 @@ export class PixelArtBar {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
   private labelText: Phaser.GameObjects.Text;
-  private valueText: Phaser.GameObjects.Text;
+  private tooltipText: Phaser.GameObjects.Text | null = null;
+  private tooltipBg: Phaser.GameObjects.Rectangle | null = null;
   private fillBar: Phaser.GameObjects.Graphics;
   private emptyBar: Phaser.GameObjects.Graphics;
+  private interactiveZone: Phaser.GameObjects.Zone;
   
   private barWidth: number;
   private barHeight: number;
@@ -22,7 +24,7 @@ export class PixelArtBar {
     fillColor: number,
     emptyColor: number,
     barWidth: number = 400,
-    barHeight: number = 36  // Increased from 32px to 36px for better visibility
+    barHeight: number = 36
   ) {
     this.scene = scene;
     this.barWidth = barWidth;
@@ -30,18 +32,10 @@ export class PixelArtBar {
     
     this.container = scene.add.container(x, y);
     
-    // Label text (e.g., "HP")
-    this.labelText = scene.add.text(8, -35, label, {
+    // Label text (e.g., "HP") - slightly smaller
+    this.labelText = scene.add.text(8, -32, label, {
       fontFamily: FONTS.primary,
-      fontSize: '30px',  // Increased from 24px (25% increase)
-      color: '#e8d4a0',
-      resolution: 2,
-    });
-    
-    // Value text (e.g., "150/164")
-    this.valueText = scene.add.text(80, -35, '0/0', {
-      fontFamily: FONTS.primary,
-      fontSize: '30px',  // Increased from 24px (25% increase)
+      fontSize: '24px',
       color: '#e8d4a0',
       resolution: 2,
     });
@@ -75,20 +69,75 @@ export class PixelArtBar {
     frame.fillRect(4, barHeight - 6, barWidth - 8, 2); // Bottom shadow
     frame.fillRect(barWidth - 6, 4, 2, barHeight - 8); // Right shadow
     
+    // Create interactive zone for hover tooltips
+    this.interactiveZone = scene.add.zone(0, 0, barWidth, barHeight)
+      .setOrigin(0, 0)
+      .setInteractive({ useHandCursor: false });
+    
+    // Add hover events
+    this.interactiveZone.on('pointerover', () => this.showTooltip());
+    this.interactiveZone.on('pointerout', () => this.hideTooltip());
+    this.interactiveZone.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (this.tooltipText && this.tooltipBg) {
+        // Position tooltip near mouse
+        const localX = pointer.x - this.container.x - x;
+        const localY = pointer.y - this.container.y - y;
+        this.tooltipText.setPosition(localX + 15, localY - 25);
+        this.tooltipBg.setPosition(localX + 15, localY - 25);
+      }
+    });
+    
     // Add components to container
-    this.container.add([frame, this.emptyBar, this.fillBar, this.labelText, this.valueText]);
+    this.container.add([frame, this.emptyBar, this.fillBar, this.labelText, this.interactiveZone]);
     
     // Store colors for later use
     this.container.setData('fillColor', fillColor);
     this.container.setData('emptyColor', emptyColor);
+    this.container.setData('label', label);
+  }
+  
+  private showTooltip(): void {
+    if (!this.tooltipText) {
+      const label = this.container.getData('label');
+      
+      // Create tooltip background
+      this.tooltipBg = this.scene.add.rectangle(0, 0, 120, 32, 0x1a1a2e, 0.95)
+        .setOrigin(0, 0.5)
+        .setStrokeStyle(2, 0x4a4a6a);
+      
+      // Create tooltip text
+      this.tooltipText = this.scene.add.text(8, 0, `${label} ${this.currentValue}/${this.maxValue}`, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: '#ffffff',
+        resolution: 2,
+      }).setOrigin(0, 0.5);
+      
+      this.container.add([this.tooltipBg, this.tooltipText]);
+      this.tooltipBg.setDepth(1000);
+      this.tooltipText.setDepth(1001);
+    } else {
+      this.tooltipText.setVisible(true);
+      this.tooltipBg!.setVisible(true);
+    }
+  }
+  
+  private hideTooltip(): void {
+    if (this.tooltipText) {
+      this.tooltipText.setVisible(false);
+      this.tooltipBg!.setVisible(false);
+    }
   }
   
   public update(current: number, max: number): void {
     this.currentValue = current;
     this.maxValue = max;
     
-    // Update value text
-    this.valueText.setText(`${current}/${max}`);
+    // Update tooltip if it exists
+    if (this.tooltipText) {
+      const label = this.container.getData('label');
+      this.tooltipText.setText(`${label} ${current}/${max}`);
+    }
     
     // Calculate fill percentage
     const fillPercent = Math.max(0, Math.min(1, current / max));

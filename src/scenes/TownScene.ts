@@ -59,15 +59,15 @@ export class TownScene extends Phaser.Scene {
 
     this.add.text(width / 2, 60, 'Gemforge Chronicles', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.xlarge,
+      fontSize: FONTS.size.large,  // Reduced from xlarge for better balance
       color: '#f0a020',
       fontStyle: 'bold',
       resolution: 2,
     }).setOrigin(0.5);
 
-    this.add.text(width / 2, 120, 'ROBOKA - City of Steel', {
+    this.add.text(width / 2, 110, 'ROBOKA - City of Steel', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.medium,
+      fontSize: FONTS.size.small,  // Reduced from medium for better balance
       color: '#cccccc',
       resolution: 2,
     }).setOrigin(0.5);
@@ -239,20 +239,20 @@ export class TownScene extends Phaser.Scene {
       const row = Math.floor(index / columns);
       const col = index % columns;
       const x = startX + col * (npcSpacing * 2);
-      const y = npcY + row * 100;
+      const y = npcY + row * 145;  // Increased from 100 to 145 for 120px avatars + label spacing
 
       let npcVisual: Phaser.GameObjects.GameObject;
 
       if (npc.sprite) {
         const npcSprite = this.add.image(x, y, npc.sprite)
-          .setDisplaySize(100, 100)  // Enlarged by 25%
+          .setDisplaySize(120, 120)  // Increased for better readability
           .setInteractive({ useHandCursor: true })
           .on('pointerover', () => npcSprite.setTint(0xdddddd))
           .on('pointerout', () => npcSprite.clearTint())
           .on('pointerdown', () => this.interactWithNPC(npc.name, npc.description));
         npcVisual = npcSprite;
       } else {
-        const npcBox = this.add.rectangle(x, y, 100, 100, npc.color)  // Enlarged by 25%
+        const npcBox = this.add.rectangle(x, y, 120, 120, npc.color)  // Increased for better readability
           .setInteractive({ useHandCursor: true })
           .on('pointerover', () => npcBox.setFillStyle(npc.color, 0.7))
           .on('pointerout', () => npcBox.setFillStyle(npc.color, 1))
@@ -260,7 +260,7 @@ export class TownScene extends Phaser.Scene {
         npcVisual = npcBox;
       }
 
-      this.add.text(x, y + 60, npc.name, {
+      this.add.text(x, y + 72, npc.name, {  // Increased spacing from 60 to 72 for breathing room
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: '#ffffff',
