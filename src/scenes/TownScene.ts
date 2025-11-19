@@ -1445,8 +1445,12 @@ export class TownScene extends Phaser.Scene {
     const itemsStartY = height / 2 - 140;
     const itemHeight = 35;
     const maxDisplay = 7;
-    const spacing = 20;  // 20px spacing between sections
-    const startX = width / 2 - 420;  // Start position for item names
+    
+    // Fixed column positions for grid-like alignment
+    // Panel is 900px wide (width/2 ± 450), so we have plenty of space
+    const colNameX = width / 2 - 420;      // Column 1: Item names (~420px width)
+    const colValueX = width / 2;           // Column 2: Enhancement values (~150px width)
+    const colButtonX = width / 2 + 150;    // Column 3: [Select] buttons
 
     forgeableItems.slice(0, maxDisplay).forEach((itemData, index) => {
       const y = itemsStartY + index * itemHeight;
@@ -1461,27 +1465,25 @@ export class TownScene extends Phaser.Scene {
         itemNameText += ' [E]';
       }
       
-      // Create item name text
-      const itemText = this.add.text(startX, y, itemNameText, {
+      // Column 1: Item name
+      const itemText = this.add.text(colNameX, y, itemNameText, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: itemColor,
       });
       uiElements.push(itemText);
 
-      // Position stats text 20px after item name using actual width
-      const statsX = itemText.x + itemText.width + spacing;
-      const levelText = this.add.text(statsX, y, currentLevel === maxLevel ? 'MAX' : `+${currentLevel}`, {
+      // Column 2: Enhancement value
+      const levelText = this.add.text(colValueX, y, currentLevel === maxLevel ? 'MAX' : `+${currentLevel}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: currentLevel === maxLevel ? '#ff8800' : '#88ff88',
       });
       uiElements.push(levelText);
 
-      // Position [Select] button 20px after stats using actual width
+      // Column 3: [Select] button
       if (currentLevel < maxLevel) {
-        const actionX = levelText.x + levelText.width + spacing;
-        const selectBtn = this.add.text(actionX, y, '[Select]', {
+        const selectBtn = this.add.text(colButtonX, y, '[Select]', {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.small,
           color: selectedItem === itemData ? '#ff8800' : '#8888ff',
@@ -1576,8 +1578,12 @@ export class TownScene extends Phaser.Scene {
     const itemsStartY = height / 2 - 140;
     const itemHeight = 35;
     const maxDisplay = 7;
-    const spacing = 20;  // 20px spacing between sections (same as Enhancement tab)
-    const startX = width / 2 - 420;  // Start position for item names
+    
+    // Fixed column positions for grid-like alignment (same as Enhancement tab)
+    // Panel is 900px wide (width/2 ± 450), so we have plenty of space
+    const colNameX = width / 2 - 420;      // Column 1: Item names (~420px width)
+    const colValueX = width / 2;           // Column 2: Durability values (~150px width)
+    const colButtonX = width / 2 + 150;    // Column 3: [Select] buttons
 
     repairableItems.slice(0, maxDisplay).forEach((itemData, index) => {
       const y = itemsStartY + index * itemHeight;
@@ -1598,26 +1604,24 @@ export class TownScene extends Phaser.Scene {
         itemNameText += ' [E]';
       }
       
-      // Create item name text
-      const itemText = this.add.text(startX, y, itemNameText, {
+      // Column 1: Item name
+      const itemText = this.add.text(colNameX, y, itemNameText, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: itemColor,
       });
       uiElements.push(itemText);
 
-      // Position durability text 20px after item name using actual width
-      const statsX = itemText.x + itemText.width + spacing;
-      const durabilityText = this.add.text(statsX, y, `${Math.floor(currentDurability)}/${maxDurability}`, {
+      // Column 2: Durability value
+      const durabilityText = this.add.text(colValueX, y, `${Math.floor(currentDurability)}/${maxDurability}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: durabilityColor,
       });
       uiElements.push(durabilityText);
 
-      // Position [Select] button 20px after durability using actual width
-      const actionX = durabilityText.x + durabilityText.width + spacing;
-      const selectBtn = this.add.text(actionX, y, '[Select]', {
+      // Column 3: [Select] button
+      const selectBtn = this.add.text(colButtonX, y, '[Select]', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: selectedItem === itemData ? '#ff8800' : '#8888ff',
