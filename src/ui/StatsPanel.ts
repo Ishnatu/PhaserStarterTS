@@ -30,14 +30,14 @@ export class StatsPanel {
     this.panel = scene.add.rectangle(0, 0, panelWidth, panelHeight, 0x2a2a3e);
     this.panel.setOrigin(0, 0);
     
-    // Create pixel art border
+    // Create pixel art border with thicker outer border
     this.border = scene.add.graphics();
-    this.border.lineStyle(2, 0x4a4a6a, 1);
+    this.border.lineStyle(4, 0x4a4a6a, 1);  // Increased from 2 to 4
     this.border.strokeRect(0, 0, panelWidth, panelHeight);
     
     // Add inner border for depth
-    this.border.lineStyle(1, 0x5a5a7a, 0.5);
-    this.border.strokeRect(2, 2, panelWidth - 4, panelHeight - 4);
+    this.border.lineStyle(2, 0x5a5a7a, 0.5);  // Increased from 1 to 2
+    this.border.strokeRect(4, 4, panelWidth - 8, panelHeight - 8);
     
     this.container.add([this.panel, this.border]);
     
@@ -127,17 +127,18 @@ export class StatsPanel {
     this.healthBar.update(player.health, player.maxHealth);
     this.staminaBar.update(player.stamina, player.maxStamina);
     
-    // Update currency display
+    // Update currency display (stacked vertically)
     if (this.currencyDisplay) {
       this.currencyDisplay.destroy();
     }
-    this.currencyDisplay = CurrencyDisplay.createInlineCurrency(
+    this.currencyDisplay = CurrencyDisplay.createStackedCurrency(
       this.scene,
       20,
       118,  // Position after stamina bar
       player.arcaneAsh,
       player.crystallineAnimus,
-      'small'
+      'xsmall',  // Match font size with evasion/DR
+      22  // Vertical spacing between AA and CA
     );
     this.container.add(this.currencyDisplay);
     

@@ -70,4 +70,45 @@ export class CurrencyDisplay {
     container.add([aaIcon, aaText, caIcon, caText]);
     return container;
   }
+
+  static createStackedCurrency(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    aaAmount: number,
+    caAmount: number,
+    fontSize: keyof typeof FONTS.size = 'xsmall',
+    verticalSpacing: number = 22
+  ): Phaser.GameObjects.Container {
+    const container = scene.add.container(x, y);
+    
+    // AA (top row)
+    const aaIcon = scene.add.image(0, 0, 'coin-aa');
+    aaIcon.setScale(0.06);
+    aaIcon.setOrigin(0, 0.5);
+    
+    const aaText = scene.add.text(42, 0, `${aaAmount}`, {
+      fontSize: FONTS.size[fontSize],
+      color: '#ffffff',
+      fontFamily: FONTS.primary,
+      resolution: 2,
+    });
+    aaText.setOrigin(0, 0.5);
+    
+    // CA (bottom row)
+    const caIcon = scene.add.image(0, verticalSpacing, 'coin-ca');
+    caIcon.setScale(0.06);
+    caIcon.setOrigin(0, 0.5);
+    
+    const caText = scene.add.text(42, verticalSpacing, `${caAmount.toFixed(1)}`, {
+      fontSize: FONTS.size[fontSize],
+      color: '#ffffff',
+      fontFamily: FONTS.primary,
+      resolution: 2,
+    });
+    caText.setOrigin(0, 0.5);
+    
+    container.add([aaIcon, aaText, caIcon, caText]);
+    return container;
+  }
 }
