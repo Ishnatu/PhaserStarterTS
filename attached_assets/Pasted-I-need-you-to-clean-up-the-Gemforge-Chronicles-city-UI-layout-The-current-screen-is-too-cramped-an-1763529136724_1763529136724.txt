@@ -1,0 +1,63 @@
+I need you to clean up the Gemforge Chronicles city UI layout.
+The current screen is too cramped and mis-scaled. Please adjust the HTML/CSS (and any React components if needed) with the following rules:
+
+GENERAL LAYOUT
+
+Increase spacing between elements so nothing feels squashed.
+
+Use consistent vertical spacing between lines of text (line-height) and add padding inside panels.
+
+The main top-left status panel should automatically expand to fit all its content (no text overlapping or clipping).
+
+FONTS
+
+Reduce the font size of the HP/SP labels and the “Gemforge Chronicles / ROBOAKA – City of Steel” text slightly so they don’t dominate the screen.
+
+Use one consistent font size for labels (HP, SP, Evasion, DR, etc.) and a slightly larger size only for the main game title.
+
+HP / SP BARS
+
+HP and SP should not show “100/100” as text by default.
+
+Instead, show only the bars.
+
+On hover over each bar, show a tooltip (or small floating label) with the numeric values (e.g. “HP 100/100”, “SP 56/100”).
+
+Make sure the bars stay the same pixel height and width, only the text behaviour changes.
+
+RESOURCE ICONS (AA / CA etc.)
+
+Slightly increase the icon size for the resource orbs so they’re more readable.
+
+Add more horizontal spacing (margin or gap) between the icon and its number so the text isn’t touching the icon.
+
+The AA and CA values should line up nicely under the HP/SP panel without overlapping other elements.
+
+EVASION & DAMAGE REDUCTION ROW
+
+Increase the icon size for Evasion and DR slightly.
+
+Add a small horizontal gap between the icon and the label text (“Evasion:”, “DR: 14%”).
+
+Ensure the icons and text sit on one clean line each with enough padding from the edges of the panel.
+
+SHOPKEEP / NPC AVATARS (CENTER OF SCREEN)
+
+Increase the avatar icon size slightly so they read better as interactive elements.
+
+Add more vertical spacing between the NPC name text and the coloured column blocks so the text isn’t cramped.
+
+Make sure each NPC avatar is centered over its block and has enough padding around it so it looks clickable.
+
+STATUS PANEL BOX
+
+The box that contains HP/SP, resources, evasion, DR, etc. should have:
+
+padding inside the box so content doesn’t touch the edges
+
+automatic height based on content (no fixed height that clips)
+
+enough width so long labels don’t wrap awkwardly.
+
+Please refactor the CSS to use flexbox or grid with sensible gap, margin, and padding values instead of hard-coding awkward pixel offsets.
+After changes, nothing should overlap, text should be easy to read, and the layout should feel airy and deliberate.
