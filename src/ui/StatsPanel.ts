@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PixelArtBar } from '../utils/PixelArtBar';
+import { CurrencyDisplay } from '../utils/CurrencyDisplay';
 import { FONTS } from '../config/fonts';
 import type { PlayerData } from '../types/GameTypes';
 
@@ -10,27 +11,20 @@ export class StatsPanel {
   private border: Phaser.GameObjects.Graphics;
   private healthBar: PixelArtBar;
   private staminaBar: PixelArtBar;
-  
-  // Currency elements
-  private aaIcon: Phaser.GameObjects.Image;
-  private aaText: Phaser.GameObjects.Text;
-  private caIcon: Phaser.GameObjects.Image;
-  private caText: Phaser.GameObjects.Text;
-  
-  // Stat elements
-  private evasionIcon: Phaser.GameObjects.Image;
-  private evasionText: Phaser.GameObjects.Text;
-  private shieldIcon: Phaser.GameObjects.Image;
-  private drText: Phaser.GameObjects.Text;
+  private currencyDisplay: Phaser.GameObjects.Container | null = null;
   private levelText: Phaser.GameObjects.Text;
+  private evasionText: Phaser.GameObjects.Text;
+  private drText: Phaser.GameObjects.Text;
+  private evasionIcon: Phaser.GameObjects.Image;
+  private shieldIcon: Phaser.GameObjects.Image;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     this.scene = scene;
     this.container = scene.add.container(x, y);
     
-    // Create dark panel background - taller for vertical layout
+    // Create dark panel background (matching inventory style)
     const panelWidth = 420;
-    const panelHeight = 380;  // Taller to accommodate vertical layout
+    const panelHeight = 200;
     this.panel = scene.add.rectangle(0, 0, panelWidth, panelHeight, 0x2a2a3e);
     this.panel.setOrigin(0, 0);
     
@@ -45,14 +39,11 @@ export class StatsPanel {
     
     this.container.add([this.panel, this.border]);
     
-    // Vertical spacing
-    let yPos = 15;
-    
-    // 1. HP Bar
+    // Create health bar (taller, 36px)
     this.healthBar = new PixelArtBar(
       scene,
       15,
-      yPos,
+      15,
       'HP',
       0xcc3333,  // Red fill
       0x4a5a8a,  // Blue-gray empty
@@ -60,13 +51,12 @@ export class StatsPanel {
       36  // Taller bars
     );
     this.container.add(this.healthBar.getContainer());
-    yPos += 60;  // Bar height + spacing
     
-    // 2. SP Bar
+    // Create stamina bar (taller, 36px)
     this.staminaBar = new PixelArtBar(
       scene,
       15,
-      yPos,
+      60,  // Adjusted for taller bars
       'SP',
       0xccaa33,  // Yellow-gold fill
       0x4a5a6a,  // Gray empty
@@ -74,47 +64,32 @@ export class StatsPanel {
       36  // Taller bars
     );
     this.container.add(this.staminaBar.getContainer());
-    yPos += 70;  // Bar height + more spacing before currency
     
-    // 3. AA Currency (icon + text)
-    this.aaIcon = scene.add.image(20, yPos, 'coin-aa');
-    this.aaIcon.setScale(0.044);
-    this.aaIcon.setOrigin(0, 0.5);
-    this.container.add(this.aaIcon);
+    // Currency display (will be created in update)
     
-    this.aaText = scene.add.text(55, yPos, '0', {
+    // Level text
+    this.levelText = scene.add.text(20, 145, '', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
       resolution: 2,
     });
-    this.aaText.setOrigin(0, 0.5);
-    this.container.add(this.aaText);
-    yPos += 35;  // Spacing between currency rows
+    this.container.add(this.levelText);
     
-    // 4. CA Currency (icon + text)
-    this.caIcon = scene.add.image(20, yPos, 'coin-ca');
-    this.caIcon.setScale(0.044);
-    this.caIcon.setOrigin(0, 0.5);
-    this.container.add(this.caIcon);
-    
-    this.caText = scene.add.text(55, yPos, '0.0', {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
-      color: '#ffffff',
-      resolution: 2,
-    });
-    this.caText.setOrigin(0, 0.5);
-    this.container.add(this.caText);
-    yPos += 45;  // More spacing before stats
-    
-    // 5. Evasion (icon + text)
-    this.evasionIcon = scene.add.image(20, yPos, 'evasion-icon');
-    this.evasionIcon.setScale(0.044);  // Match currency icon size
+    // Load evasion icon (pixel art running person)
+    this.evasionIcon = scene.add.image(20, 153, 'evasion-icon');
+    this.evasionIcon.setScale(0.044);  // Consistent with currency icons
     this.evasionIcon.setOrigin(0, 0.5);
     this.container.add(this.evasionIcon);
     
-    this.evasionText = scene.add.text(55, yPos, 'Evasion: 0', {
+    // Load shield icon (pixel art shield)
+    this.shieldIcon = scene.add.image(220, 153, 'shield-icon');
+    this.shieldIcon.setScale(0.044);  // Consistent with currency icons
+    this.shieldIcon.setOrigin(0, 0.5);
+    this.container.add(this.shieldIcon);
+    
+    // Evasion text (next to foot icon)
+    this.evasionText = scene.add.text(55, 153, '', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
@@ -122,15 +97,9 @@ export class StatsPanel {
     });
     this.evasionText.setOrigin(0, 0.5);
     this.container.add(this.evasionText);
-    yPos += 35;  // Spacing between stat rows
     
-    // 6. Damage Reduction (icon + text)
-    this.shieldIcon = scene.add.image(20, yPos, 'shield-icon');
-    this.shieldIcon.setScale(0.044);  // Match currency icon size
-    this.shieldIcon.setOrigin(0, 0.5);
-    this.container.add(this.shieldIcon);
-    
-    this.drText = scene.add.text(55, yPos, 'DR: 0%', {
+    // Damage Reduction text (next to shield icon)
+    this.drText = scene.add.text(255, 153, '', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
@@ -138,16 +107,6 @@ export class StatsPanel {
     });
     this.drText.setOrigin(0, 0.5);
     this.container.add(this.drText);
-    yPos += 45;  // More spacing before level
-    
-    // 7. Level
-    this.levelText = scene.add.text(20, yPos, 'Level: 1', {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
-      color: '#ffffff',
-      resolution: 2,
-    });
-    this.container.add(this.levelText);
     
     this.container.setDepth(100);
   }
@@ -157,17 +116,29 @@ export class StatsPanel {
     this.healthBar.update(player.health, player.maxHealth);
     this.staminaBar.update(player.stamina, player.maxStamina);
     
-    // Update currency
-    this.aaText.setText(`${player.arcaneAsh}`);
-    this.caText.setText(`${player.crystallineAnimus.toFixed(1)}`);
-    
-    // Update stats
-    this.evasionText.setText(`Evasion: ${player.stats.calculatedEvasion}`);
-    const drPercent = Math.floor(player.stats.damageReduction * 100);
-    this.drText.setText(`DR: ${drPercent}%`);
+    // Update currency display
+    if (this.currencyDisplay) {
+      this.currencyDisplay.destroy();
+    }
+    this.currencyDisplay = CurrencyDisplay.createInlineCurrency(
+      this.scene,
+      20,
+      110,  // Adjusted for taller bars
+      player.arcaneAsh,
+      player.crystallineAnimus,
+      'small'
+    );
+    this.container.add(this.currencyDisplay);
     
     // Update level
     this.levelText.setText(`Level: ${player.level}`);
+    
+    // Update evasion
+    this.evasionText.setText(`Evasion: ${player.stats.calculatedEvasion}`);
+    
+    // Update damage reduction
+    const drPercent = Math.floor(player.stats.damageReduction * 100);
+    this.drText.setText(`DR: ${drPercent}%`);
   }
   
   public setDepth(depth: number): void {
@@ -175,6 +146,9 @@ export class StatsPanel {
   }
   
   public destroy(): void {
+    if (this.currencyDisplay) {
+      this.currencyDisplay.destroy();
+    }
     this.healthBar.destroy();
     this.staminaBar.destroy();
     this.container.destroy();

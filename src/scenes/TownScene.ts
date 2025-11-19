@@ -245,14 +245,14 @@ export class TownScene extends Phaser.Scene {
 
       if (npc.sprite) {
         const npcSprite = this.add.image(x, y, npc.sprite)
-          .setDisplaySize(80, 80)
+          .setDisplaySize(100, 100)  // Enlarged by 25%
           .setInteractive({ useHandCursor: true })
           .on('pointerover', () => npcSprite.setTint(0xdddddd))
           .on('pointerout', () => npcSprite.clearTint())
           .on('pointerdown', () => this.interactWithNPC(npc.name, npc.description));
         npcVisual = npcSprite;
       } else {
-        const npcBox = this.add.rectangle(x, y, 80, 80, npc.color)
+        const npcBox = this.add.rectangle(x, y, 100, 100, npc.color)  // Enlarged by 25%
           .setInteractive({ useHandCursor: true })
           .on('pointerover', () => npcBox.setFillStyle(npc.color, 0.7))
           .on('pointerout', () => npcBox.setFillStyle(npc.color, 1))
@@ -260,7 +260,7 @@ export class TownScene extends Phaser.Scene {
         npcVisual = npcBox;
       }
 
-      this.add.text(x, y + 50, npc.name, {
+      this.add.text(x, y + 60, npc.name, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: '#ffffff',
