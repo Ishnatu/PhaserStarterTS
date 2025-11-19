@@ -1159,31 +1159,38 @@ export class TownScene extends Phaser.Scene {
       const panel = this.add.rectangle(width / 2, height / 2, 750, 550, 0x2a2a3e).setOrigin(0.5);
       uiElements.push(overlay, panel);
 
-      const title = this.add.text(width / 2, height / 2 - 250, 'Merchant\'s Shop', {
+      // Header layout with improved spacing (matching Blacksmith's Forge)
+      const headerBaseY = height / 2 - 240;
+      const verticalGap = 65;  // Consistent with forge
+
+      // Row 1: Title
+      const title = this.add.text(width / 2, headerBaseY, 'Merchant\'s Shop', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.large,
         color: '#f0a020',
       }).setOrigin(0.5);
       uiElements.push(title);
 
+      // Row 2: Currencies (centered, consistent with StatsPanel)
       const currencyDisplay = CurrencyDisplay.createInlineCurrency(
         this,
         width / 2,
-        height / 2 - 210,
+        headerBaseY + verticalGap,
         player.arcaneAsh,
         player.crystallineAnimus,
-        'small'
+        'xsmall'  // Changed from 'small' to match forge and sidebar
       );
       currencyDisplay.setScrollFactor(0);
       currencyDisplay.x -= currencyDisplay.getBounds().width / 2;
       uiElements.push(currencyDisplay);
 
-      const tabY = height / 2 - 170;
-      const tabSpacing = 120;
+      // Row 3: Category tabs (increased spacing)
+      const tabY = headerBaseY + (verticalGap * 2);
+      const tabSpacing = 220;  // Increased from 120 to match forge
 
       const weaponsTab = this.add.text(width / 2 - tabSpacing, tabY, 'Weapons', {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,  // Changed from 'small' for consistency
         color: currentCategory === 'weapons' ? '#ffffff' : '#888888',
         backgroundColor: currentCategory === 'weapons' ? '#444466' : '#2a2a3e',
         padding: { x: 15, y: 8 },
@@ -1196,7 +1203,7 @@ export class TownScene extends Phaser.Scene {
 
       const armorTab = this.add.text(width / 2, tabY, 'Armor', {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,  // Changed from 'small' for consistency
         color: currentCategory === 'armor' ? '#ffffff' : '#888888',
         backgroundColor: currentCategory === 'armor' ? '#444466' : '#2a2a3e',
         padding: { x: 15, y: 8 },
@@ -1209,7 +1216,7 @@ export class TownScene extends Phaser.Scene {
 
       const potionsTab = this.add.text(width / 2 + tabSpacing, tabY, 'Potions', {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,  // Changed from 'small' for consistency
         color: currentCategory === 'potions' ? '#ffffff' : '#888888',
         backgroundColor: currentCategory === 'potions' ? '#444466' : '#2a2a3e',
         padding: { x: 15, y: 8 },
@@ -1229,7 +1236,8 @@ export class TownScene extends Phaser.Scene {
         shopItems = ShopData.getPotionShopItems();
       }
 
-      const itemsStartY = height / 2 - 130;
+      // Item list positioned with proper spacing below tabs
+      const itemsStartY = height / 2 - 70;  // Matching forge spacing
       const itemHeight = 28;
 
       shopItems.forEach((shopItem, index) => {
@@ -1241,7 +1249,7 @@ export class TownScene extends Phaser.Scene {
         const itemColor = ItemColorUtil.getItemColor(undefined, undefined);
         const itemLabel = this.add.text(width / 2 - 340, y, item.name, {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
+          fontSize: FONTS.size.xsmall,  // Changed from 'small' for consistency
           color: itemColor,
         });
         uiElements.push(itemLabel);
@@ -1249,7 +1257,7 @@ export class TownScene extends Phaser.Scene {
         const currencyLabel = shopItem.currency === 'AA' ? 'AA' : 'CA';
         const priceLabel = this.add.text(width / 2 + 80, y, `${shopItem.price} ${currencyLabel}`, {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
+          fontSize: FONTS.size.xsmall,  // Changed from 'small' for consistency
           color: shopItem.currency === 'AA' ? '#ffcc00' : '#cc66ff',
         });
         uiElements.push(priceLabel);
@@ -1258,7 +1266,7 @@ export class TownScene extends Phaser.Scene {
         const canAfford = playerCurrency >= shopItem.price;
         const buyBtn = this.add.text(width / 2 + 200, y, '[Buy]', {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
+          fontSize: FONTS.size.xsmall,  // Changed from 'small' for consistency
           color: canAfford ? '#88ff88' : '#666666',
         }).setInteractive({ useHandCursor: canAfford })
           .on('pointerdown', () => {
