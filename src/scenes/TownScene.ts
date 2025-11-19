@@ -1337,17 +1337,19 @@ export class TownScene extends Phaser.Scene {
     const panel = this.add.rectangle(width / 2, height / 2, 900, 550, 0x2a2a3e).setOrigin(0.5);
     uiElements.push(overlay, panel);
 
-    const title = this.add.text(width / 2, height / 2 - 250, 'Blacksmith\'s Forge', {
+    // Row 1: Title
+    const title = this.add.text(width / 2, height / 2 - 240, 'Blacksmith\'s Forge', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#f0a020',
     }).setOrigin(0.5);
     uiElements.push(title);
 
+    // Row 2: Currencies (centered)
     const balanceDisplay = CurrencyDisplay.createInlineCurrency(
       this,
       width / 2,
-      height / 2 - 210,
+      height / 2 - 200,
       player.arcaneAsh,
       player.crystallineAnimus,
       'small'
@@ -1369,8 +1371,11 @@ export class TownScene extends Phaser.Scene {
       uiElements.slice(4).forEach(el => el.destroy());
       uiElements.splice(4);
 
-      // Tab buttons
-      const enhanceTab = this.add.text(width / 2 - 120, height / 2 - 175, '[Enhance]', {
+      // Row 3: Tab buttons (centered horizontally with proper spacing)
+      const tabY = height / 2 - 160;
+      const tabSpacing = 150;
+
+      const enhanceTab = this.add.text(width / 2 - tabSpacing, tabY, '[Enhance]', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: mode === 'enhance' ? '#f0a020' : '#888888',
@@ -1382,7 +1387,31 @@ export class TownScene extends Phaser.Scene {
         });
       uiElements.push(enhanceTab);
 
-      const repairTab = this.add.text(width / 2 + 120, height / 2 - 175, '[Repair]', {
+      // Check if there are any repairable items to show Repair All button
+      const player = this.gameState.getPlayer();
+      const repairableItems: Array<{ item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }> = [];
+      player.inventory.filter(item => ForgingSystem.needsRepair(item)).forEach(item => {
+        repairableItems.push({ item, equippedSlot: null });
+      });
+      Object.entries(player.equipment).forEach(([slot, item]) => {
+        if (item && ForgingSystem.needsRepair(item)) {
+          repairableItems.push({ item, equippedSlot: slot as keyof PlayerEquipment });
+        }
+      });
+
+      if (repairableItems.length > 0) {
+        const repairAllTab = this.add.text(width / 2, tabY, '[Repair All]', {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.small,
+          color: '#88ff88',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            this.showRepairAllConfirmation(repairableItems);
+          });
+        uiElements.push(repairAllTab);
+      }
+
+      const repairTab = this.add.text(width / 2 + tabSpacing, tabY, '[Repair]', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: mode === 'repair' ? '#f0a020' : '#888888',
@@ -1629,19 +1658,6 @@ export class TownScene extends Phaser.Scene {
         .on('pointerdown', () => onSelect(itemData));
       uiElements.push(selectBtn);
     });
-
-    // Repair All button
-    if (repairableItems.length > 0) {
-      const repairAllBtn = this.add.text(width / 2, height / 2 - 175, '[Repair All]', {
-        fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
-        color: '#88ff88',
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => {
-          this.showRepairAllConfirmation(repairableItems);
-        });
-      uiElements.push(repairAllBtn);
-    }
 
     if (selectedItem) {
       const detailY = height / 2 + 80;

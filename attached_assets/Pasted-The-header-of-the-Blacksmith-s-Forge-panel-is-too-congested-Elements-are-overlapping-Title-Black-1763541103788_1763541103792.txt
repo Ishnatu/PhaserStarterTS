@@ -1,0 +1,89 @@
+The header of the Blacksmith’s Forge panel is too congested. Elements are overlapping:
+
+Title: Blacksmith's Forge
+
+Currency icons + values
+
+Mode toggles: [Enhance] [Repair All] [Repair]
+
+I want these arranged in three clear rows, with consistent spacing and no overlap:
+
+Row 1 – Title
+
+Centered: Blacksmith's Forge
+
+Row 2 – Currencies
+
+Centered under the title
+
+Layout: [AA icon] 210 [CA icon] 92.1
+
+Add horizontal gap between the two currency blocks so they don’t touch
+
+Row 3 – Tabs
+
+Centered under the currencies
+
+Text buttons: [Enhance] [Repair All] [Repair]
+
+Each spaced out with a small horizontal gap, no overlapping, no wrapping
+
+Please:
+
+Wrap these three rows in a header container, e.g.:
+
+<div class="forge-header">
+  <div class="forge-title">Blacksmith's Forge</div>
+  <div class="forge-currencies">
+    <span class="currency">
+      <img ...> 210
+    </span>
+    <span class="currency">
+      <img ...> 92.1
+    </span>
+  </div>
+  <div class="forge-tabs">
+    <span class="tab active">[Enhance]</span>
+    <span class="tab">[Repair All]</span>
+    <span class="tab">[Repair]</span>
+  </div>
+</div>
+
+
+Use flexbox to space these rows and items cleanly, for example:
+
+.forge-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;              /* vertical spacing between title, currencies, tabs */
+  margin-bottom: 12px;   /* space before the item list */
+}
+
+.forge-currencies {
+  display: flex;
+  align-items: center;
+  gap: 16px;             /* space between AA and CA blocks */
+}
+
+.currency img {
+  margin-right: 4px;     /* space between icon and number */
+}
+
+.forge-tabs {
+  display: flex;
+  gap: 12px;             /* space between [Enhance], [Repair All], [Repair] */
+}
+
+
+Remove any absolute positioning or negative margins currently used in this header. All spacing should come from gap, margin and padding, not overlapping elements.
+
+The goal:
+
+Title on its own line
+
+Currencies on their own line, centered, not touching
+
+Tabs on their own line, spaced out
+
+No overlapping text or icons, everything readable at a glance.
