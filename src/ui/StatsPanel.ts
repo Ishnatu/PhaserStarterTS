@@ -16,6 +16,7 @@ export class StatsPanel {
   private evasionText: Phaser.GameObjects.Text;
   private drText: Phaser.GameObjects.Text;
   private evasionIcon: Phaser.GameObjects.Image;
+  private shieldIcon: Phaser.GameObjects.Image;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     this.scene = scene;
@@ -81,13 +82,11 @@ export class StatsPanel {
     this.evasionIcon.setOrigin(0, 0.5);
     this.container.add(this.evasionIcon);
     
-    // Shield placeholder (waiting for pixel art icon)
-    const shieldPlaceholder = scene.add.text(220, 152, '🛡', {
-      fontSize: '16px', 
-      color: '#ffffff',
-    });
-    shieldPlaceholder.setOrigin(0, 0.5);
-    this.container.add(shieldPlaceholder);
+    // Load shield icon (pixel art shield)
+    this.shieldIcon = scene.add.image(220, 152, 'shield-icon');
+    this.shieldIcon.setScale(0.15);  // Scale down the pixel art
+    this.shieldIcon.setOrigin(0, 0.5);
+    this.container.add(this.shieldIcon);
     
     // Evasion text (next to foot icon)
     this.evasionText = scene.add.text(45, 152, '', {

@@ -35,6 +35,7 @@ export class TownScene extends Phaser.Scene {
     this.load.image('blacksmith-button', '/assets/ui/shop-buttons/blacksmith-button.png');
     this.load.image('garthek-button', '/assets/ui/shop-buttons/garthek-button.png');
     this.load.image('evasion-icon', '/assets/ui/evasion-icon.png');
+    this.load.image('shield-icon', '/assets/ui/shield-icon.png');
     this.load.audio('town-music', '/assets/audio/town-music.mp3');
     
     const itemSprites = ItemSprites.getAllSpritePaths();

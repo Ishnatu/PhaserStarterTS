@@ -47,25 +47,20 @@ export class MainMenuScene extends Phaser.Scene {
     });
     
     startButton.on('pointerdown', async () => {
-      console.log('Start button clicked!');
       // Stop intro music before transitioning
       const audioManager = AudioManager.getInstance();
       audioManager.stopMusic(true);
       
-      console.log('Loading game data...');
       const saveData = await ApiClient.loadGame();
       const gameState = GameStateManager.getInstance();
       
       if (saveData) {
-        console.log('Loading from server save data');
         gameState.loadFromObject(saveData);
       } else {
-        console.log('Loading from local storage');
         gameState.loadFromLocalStorage();
       }
       
       gameState.enableAutoSave(30);
-      console.log('Transitioning to town...');
       SceneManager.getInstance().transitionTo('town');
     });
 
