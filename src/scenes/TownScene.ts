@@ -1148,8 +1148,15 @@ export class TownScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const uiElements: Phaser.GameObjects.GameObject[] = [];
     let currentCategory: 'weapons' | 'armor' | 'potions' = 'weapons';
+    let wheelHandler: ((pointer: any, gameObjects: any, deltaX: number, deltaY: number) => void) | null = null;
 
     const renderShop = () => {
+      // Clean up previous wheel handler if exists
+      if (wheelHandler) {
+        this.input.off('wheel', wheelHandler);
+        wheelHandler = null;
+      }
+
       uiElements.forEach(el => el.destroy());
       uiElements.length = 0;
 
@@ -1236,47 +1243,124 @@ export class TownScene extends Phaser.Scene {
         shopItems = ShopData.getPotionShopItems();
       }
 
-      // Item list positioned with proper spacing below tabs
-      const itemsStartY = height / 2 - 70;  // Matching forge spacing
+      // Scrollable item list setup
+      const scrollAreaTop = height / 2 - 70;  // Start of visible area
+      const scrollAreaBottom = height / 2 + 210;  // End of visible area (just above Close button)
+      const scrollAreaHeight = scrollAreaBottom - scrollAreaTop;
       const itemHeight = 28;
 
+      // Create container for all items
+      const itemsContainer = this.add.container(0, 0);
+      uiElements.push(itemsContainer);
+
+      // Create all items in the container
+      const itemElements: Phaser.GameObjects.GameObject[] = [];
       shopItems.forEach((shopItem, index) => {
         const item = ItemDatabase.getItem(shopItem.itemId);
         if (!item) return;
 
-        const y = itemsStartY + index * itemHeight;
+        const y = scrollAreaTop + index * itemHeight;
 
         const itemColor = ItemColorUtil.getItemColor(undefined, undefined);
         const itemLabel = this.add.text(width / 2 - 340, y, item.name, {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.xsmall,  // Changed from 'small' for consistency
+          fontSize: FONTS.size.xsmall,
           color: itemColor,
         });
-        uiElements.push(itemLabel);
+        itemsContainer.add(itemLabel);
+        itemElements.push(itemLabel);
 
         const currencyLabel = shopItem.currency === 'AA' ? 'AA' : 'CA';
         const priceLabel = this.add.text(width / 2 + 80, y, `${shopItem.price} ${currencyLabel}`, {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.xsmall,  // Changed from 'small' for consistency
+          fontSize: FONTS.size.xsmall,
           color: shopItem.currency === 'AA' ? '#ffcc00' : '#cc66ff',
         });
-        uiElements.push(priceLabel);
+        itemsContainer.add(priceLabel);
+        itemElements.push(priceLabel);
 
         const playerCurrency = shopItem.currency === 'AA' ? player.arcaneAsh : player.crystallineAnimus;
         const canAfford = playerCurrency >= shopItem.price;
         const buyBtn = this.add.text(width / 2 + 200, y, '[Buy]', {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.xsmall,  // Changed from 'small' for consistency
+          fontSize: FONTS.size.xsmall,
           color: canAfford ? '#88ff88' : '#666666',
         }).setInteractive({ useHandCursor: canAfford })
-          .on('pointerdown', () => {
+          .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            // Only process click if pointer is within visible scroll area
+            if (pointer.worldY < scrollAreaTop || pointer.worldY > scrollAreaBottom) {
+              return; // Pointer is outside visible area, ignore click
+            }
+            
             if (canAfford) {
               this.purchaseItem(shopItem.itemId, shopItem.price, shopItem.currency);
               renderShop();
             }
           });
-        uiElements.push(buyBtn);
+        itemsContainer.add(buyBtn);
+        itemElements.push(buyBtn);
       });
+
+      // Create mask for scrollable area
+      const maskShape = this.make.graphics({});
+      maskShape.fillStyle(0xffffff);
+      maskShape.fillRect(width / 2 - 375, scrollAreaTop, 750, scrollAreaHeight);
+      const mask = maskShape.createGeometryMask();
+      itemsContainer.setMask(mask);
+      uiElements.push(maskShape);
+
+      // Calculate scroll bounds
+      const totalContentHeight = shopItems.length * itemHeight;
+      const maxScroll = Math.max(0, totalContentHeight - scrollAreaHeight);
+      let currentScroll = 0;
+
+      // Visual scrollbar (only show if content is scrollable)
+      let scrollbarThumb: Phaser.GameObjects.Rectangle | null = null;
+      if (maxScroll > 0) {
+        const scrollbarX = width / 2 + 350;
+        const scrollbarTrackHeight = scrollAreaHeight - 10;
+        
+        // Scrollbar track
+        const scrollbarTrack = this.add.rectangle(
+          scrollbarX,
+          scrollAreaTop + scrollAreaHeight / 2,
+          8,
+          scrollbarTrackHeight,
+          0x444444,
+          0.5
+        );
+        uiElements.push(scrollbarTrack);
+        
+        // Scrollbar thumb (movable)
+        const thumbHeight = Math.max(30, (scrollAreaHeight / totalContentHeight) * scrollbarTrackHeight);
+        scrollbarThumb = this.add.rectangle(
+          scrollbarX,
+          scrollAreaTop + 5 + thumbHeight / 2,
+          8,
+          thumbHeight,
+          0x888888,
+          0.8
+        );
+        uiElements.push(scrollbarThumb);
+      }
+
+      // Mouse wheel scroll handler
+      wheelHandler = (pointer: any, gameObjects: any, deltaX: number, deltaY: number) => {
+        currentScroll = Phaser.Math.Clamp(currentScroll + deltaY * 0.5, 0, maxScroll);
+        itemsContainer.y = -currentScroll;
+        
+        // Update scrollbar position
+        if (scrollbarThumb && maxScroll > 0) {
+          const scrollPercent = currentScroll / maxScroll;
+          const scrollbarTrackHeight = scrollAreaHeight - 10;
+          const thumbHeight = scrollbarThumb.height;
+          const maxThumbY = scrollAreaTop + 5 + scrollbarTrackHeight - thumbHeight;
+          const minThumbY = scrollAreaTop + 5 + thumbHeight / 2;
+          scrollbarThumb.y = minThumbY + (scrollPercent * (maxThumbY - minThumbY));
+        }
+      };
+
+      this.input.on('wheel', wheelHandler);
 
       const closeBtn = this.createButton(width / 2, height / 2 + 240, 'Close', () => {
         destroyAll();
@@ -1286,6 +1370,11 @@ export class TownScene extends Phaser.Scene {
     };
 
     const destroyAll = () => {
+      // Clean up wheel handler
+      if (wheelHandler) {
+        this.input.off('wheel', wheelHandler);
+        wheelHandler = null;
+      }
       uiElements.forEach(el => el.destroy());
       this.menuState = 'none';
       this.currentMenuCloseFunction = null;
