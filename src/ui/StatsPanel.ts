@@ -27,7 +27,7 @@ export class StatsPanel {
     const barWidth = 360;  // Reduced width to match user's cutoff line
     const iconScale = 0.06;
     const iconGap = 22;  // 22px gap between icons
-    const textOffset = 50;  // Increased gap so text doesn't overlap icons
+    const textOffset = 60;  // Increased gap so text doesn't overlap icons
     const iconX = 5;  // X position for all icons
     const textX = iconX + textOffset;  // X position for all text
     
