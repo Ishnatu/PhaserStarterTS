@@ -1,4 +1,4 @@
-import { Enemy, DiceRoll, WeaponType } from '../types/GameTypes';
+import { Enemy, DiceRoll, WeaponType, EnemyAttackDefinition, EnemyAttackState } from '../types/GameTypes';
 import { CsvParser } from '../utils/CsvParser';
 
 interface EnemyData {
@@ -18,6 +18,7 @@ interface EnemyData {
 
 export class EnemyFactory {
   private static enemyDatabase: Map<string, EnemyData> = new Map();
+  private static attackDatabase: Map<string, EnemyAttackDefinition[]> = new Map();
   private static isLoaded = false;
 
   static async loadEnemyDatabase(): Promise<void> {
@@ -49,6 +50,10 @@ export class EnemyFactory {
       const key = `${enemyData.tier}_${enemyData.isBoss ? 'boss' : 'mob'}`;
       this.enemyDatabase.set(key, enemyData);
     }
+
+    // Load attacks
+    this.attackDatabase = await CsvParser.parseEnemyAttacks('/ENEMY_ATTACKS.csv');
+    console.log('Enemy attack database loaded:', this.attackDatabase.size, 'enemy types with attacks');
 
     this.isLoaded = true;
     console.log('Enemy database loaded:', this.enemyDatabase.size, 'enemy types');
@@ -99,6 +104,22 @@ export class EnemyFactory {
       modifier: enemyData.weaponDamageModifier,
     };
 
+    // Get attacks for this enemy
+    const attacks = this.attackDatabase.get(enemyData.name);
+    
+    // Initialize attack states
+    const attackStates = new Map<string, EnemyAttackState>();
+    if (attacks) {
+      for (const attack of attacks) {
+        if (attack.maxUses !== undefined) {
+          attackStates.set(attack.name, {
+            attackName: attack.name,
+            usesRemaining: attack.maxUses
+          });
+        }
+      }
+    }
+
     return {
       id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       name: enemyData.name,
@@ -111,6 +132,8 @@ export class EnemyFactory {
       lootTable: enemyData.lootTable,
       statusConditions: [],
       backstabUsed: false,
+      attacks: attacks,
+      attackStates: attackStates.size > 0 ? attackStates : undefined,
     };
   }
 
