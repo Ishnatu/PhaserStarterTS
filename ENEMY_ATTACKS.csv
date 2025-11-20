@@ -1,0 +1,5 @@
+Enemy Name,Attack Name,Category,Priority Weight,Trigger Type,Trigger Value,Max Uses,Damage Dice,Damage Die Size,Damage Modifier,Effect Type,Effect Params,Description
+Void Spawn,Void Tendrils,basic,65,always,1.0,,1,4,2,none,,"A basic lashing attack with void-touched tendrils"
+Void Spawn,Splooge,special,35,chance,0.35,,0,0,0,apply_condition,"condition=slowed;duration_dice=1;duration_die=4","Covers the target in void-touched goo, slowing their movements"
+Greater Void Spawn,Rending Strike,basic,60,always,1.0,,2,6,3,none,,"A powerful melee attack that rends flesh"
+Greater Void Spawn,Chronostep,special,40,health_threshold,0.4,2,0,0,0,heal_from_history,"lookback_dice=1;lookback_die=4","Reverses time to undo recent damage (limited uses)"
