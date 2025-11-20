@@ -1,163 +1,224 @@
-import { Enemy, DiceRoll, WeaponType, EnemyAttackDefinition, EnemyAttackState } from '../types/GameTypes';
-import { CsvParser } from '../utils/CsvParser';
-
-interface EnemyData {
-  name: string;
-  tier: number;
-  isBoss: boolean;
-  health: number;
-  evasion: number;
-  damageReduction: number;
-  weaponDamageDice: number;
-  weaponDamageDieSize: number;
-  weaponDamageModifier: number;
-  spritePath: string;
-  hasSprite: boolean;
-  lootTable: { itemId: string; dropChance: number }[];
-}
+import { Enemy, DiceRoll, WeaponType } from '../types/GameTypes';
 
 export class EnemyFactory {
-  private static enemyDatabase: Map<string, EnemyData> = new Map();
-  private static attackDatabase: Map<string, EnemyAttackDefinition[]> = new Map();
-  private static isLoaded = false;
-
-  static async loadEnemyDatabase(): Promise<void> {
-    if (this.isLoaded) return;
-
-    const rows = await CsvParser.parseCsv('/ENEMY_DATABASE.csv');
-    
-    if (rows.length === 0) {
-      throw new Error('Failed to load enemy database: CSV file is empty or missing');
-    }
-    
-    for (const row of rows) {
-      const enemyData: EnemyData = {
-        name: row['Enemy Name'],
-        tier: parseInt(row['Tier']),
-        isBoss: row['Boss'] === 'YES',
-        health: parseInt(row['Health']),
-        evasion: parseInt(row['Evasion']),
-        damageReduction: parseFloat(row['Damage Reduction'].replace('%', '')) / 100,
-        weaponDamageDice: parseInt(row['Weapon Damage Dice']),
-        weaponDamageDieSize: parseInt(row['Weapon Damage Die Size']),
-        weaponDamageModifier: parseInt(row['Weapon Damage Modifier']),
-        spritePath: row['Sprite Path'],
-        hasSprite: row['Has Sprite Asset'] === 'YES',
-        lootTable: this.parseLootTable(row['Loot Table']),
-      };
-
-      // Create a key using tier and boss status
-      const key = `${enemyData.tier}_${enemyData.isBoss ? 'boss' : 'mob'}`;
-      this.enemyDatabase.set(key, enemyData);
-    }
-
-    // Load attacks
-    this.attackDatabase = await CsvParser.parseEnemyAttacks('/ENEMY_ATTACKS.csv');
-    console.log('Enemy attack database loaded:', this.attackDatabase.size, 'enemy types with attacks');
-
-    this.isLoaded = true;
-    console.log('Enemy database loaded:', this.enemyDatabase.size, 'enemy types');
-  }
-
-  private static parseLootTable(lootString: string): { itemId: string; dropChance: number }[] {
-    const lootTable: { itemId: string; dropChance: number }[] = [];
-    
-    // Parse format: "potion_health (30%); potion_stamina (25%)"
-    const items = lootString.split(';').map(s => s.trim());
-    
-    for (const item of items) {
-      const match = item.match(/(.+?)\s*\((\d+(?:\.\d+)?)%\)/);
-      if (match) {
-        lootTable.push({
-          itemId: match[1].trim(),
-          dropChance: parseFloat(match[2]) / 100,
-        });
-      }
-    }
-    
-    return lootTable;
-  }
-
   private static randomWeaponType(): WeaponType {
     const weaponTypes: WeaponType[] = ['dagger', 'shortsword', 'longsword', 'battleaxe', 'mace', 'warhammer', 'greatsword', 'greataxe', 'spear', 'rapier'];
     return weaponTypes[Math.floor(Math.random() * weaponTypes.length)];
   }
 
   static createEnemy(tier: number, isBoss: boolean = false): Enemy {
-    // Ensure database is loaded (defensive programming)
-    if (!this.isLoaded) {
-      console.error('Enemy database not loaded! Using fallback enemy.');
-      return this.createFallbackEnemy(tier, isBoss);
+    if (tier === 1 && !isBoss) {
+      return this.createVoidSpawn();
+    } else if (tier === 1 && isBoss) {
+      return this.createGreaterVoidSpawn();
+    } else if (tier === 2 && !isBoss) {
+      return this.createShadowBeast();
+    } else if (tier === 2 && isBoss) {
+      return this.createVoidStalker();
+    } else if (tier === 3 && !isBoss) {
+      return this.createCorruptedSentinel();
+    } else if (tier === 3 && isBoss) {
+      return this.createVoidHarbinger();
+    } else if (tier === 4 && !isBoss) {
+      return this.createAbyssalHunter();
+    } else if (tier === 4 && isBoss) {
+      return this.createEternalVoid();
+    } else if (tier === 5 && !isBoss) {
+      return this.createChaosWraith();
+    } else if (tier === 5 && isBoss) {
+      return this.createVoidEmperor();
     }
 
-    const key = `${tier}_${isBoss ? 'boss' : 'mob'}`;
-    const enemyData = this.enemyDatabase.get(key);
+    return this.createVoidSpawn();
+  }
 
-    if (!enemyData) {
-      console.error(`No enemy data found for tier ${tier}, boss: ${isBoss}`);
-      return this.createFallbackEnemy(tier, isBoss);
-    }
-
-    const weaponDamage: DiceRoll = {
-      numDice: enemyData.weaponDamageDice,
-      dieSize: enemyData.weaponDamageDieSize,
-      modifier: enemyData.weaponDamageModifier,
-    };
-
-    // Get attacks for this enemy
-    const attacks = this.attackDatabase.get(enemyData.name);
-    
-    // Initialize attack states
-    const attackStates = new Map<string, EnemyAttackState>();
-    if (attacks) {
-      for (const attack of attacks) {
-        if (attack.maxUses !== undefined) {
-          attackStates.set(attack.name, {
-            attackName: attack.name,
-            usesRemaining: attack.maxUses
-          });
-        }
-      }
-    }
-
+  private static createVoidSpawn(): Enemy {
     return {
       id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-      name: enemyData.name,
-      health: enemyData.health,
-      maxHealth: enemyData.health,
-      evasion: enemyData.evasion,
-      damageReduction: enemyData.damageReduction,
-      weaponDamage,
+      name: 'Void Spawn',
+      health: 45,
+      maxHealth: 45,
+      evasion: 12,
+      damageReduction: 0.05,
+      weaponDamage: { numDice: 1, dieSize: 4, modifier: 2 },
       weaponType: this.randomWeaponType(),
-      lootTable: enemyData.lootTable,
+      lootTable: [
+        { itemId: 'potion_health', dropChance: 0.30 },
+        { itemId: 'potion_stamina', dropChance: 0.25 }
+      ],
       statusConditions: [],
       backstabUsed: false,
-      attacks: attacks,
-      attackStates: attackStates.size > 0 ? attackStates : undefined,
     };
   }
 
-  private static createFallbackEnemy(tier: number, isBoss: boolean): Enemy {
-    const multiplier = isBoss ? 2.0 : 1.0;
-    const baseHealth = 30 + (tier * 15);
-    const health = Math.floor(baseHealth * multiplier);
-
-    const weaponDamage: DiceRoll = {
-      numDice: 1,
-      dieSize: 6,
-      modifier: 2,
-    };
-
+  private static createGreaterVoidSpawn(): Enemy {
     return {
       id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-      name: isBoss ? 'Unknown Boss' : 'Unknown Enemy',
-      health,
-      maxHealth: health,
-      evasion: 10,
-      damageReduction: 0,
-      weaponDamage,
+      name: 'Greater Void Spawn',
+      health: 90,
+      maxHealth: 90,
+      evasion: 14,
+      damageReduction: 0.10,
+      weaponDamage: { numDice: 2, dieSize: 6, modifier: 3 },
       weaponType: this.randomWeaponType(),
-      lootTable: [],
+      lootTable: [
+        { itemId: 'potion_health', dropChance: 0.50 },
+        { itemId: 'potion_stamina', dropChance: 0.40 }
+      ],
+      statusConditions: [],
+      backstabUsed: false,
+      chronostepUsesRemaining: 2,
+      damageReceivedHistory: [],
+    };
+  }
+
+  private static createShadowBeast(): Enemy {
+    return {
+      id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      name: 'Shadow Beast',
+      health: 65,
+      maxHealth: 65,
+      evasion: 15,
+      damageReduction: 0.08,
+      weaponDamage: { numDice: 1, dieSize: 8, modifier: 3 },
+      weaponType: this.randomWeaponType(),
+      lootTable: [
+        { itemId: 'potion_health', dropChance: 0.35 },
+        { itemId: 'potion_stamina', dropChance: 0.30 }
+      ],
+      statusConditions: [],
+      backstabUsed: false,
+    };
+  }
+
+  private static createVoidStalker(): Enemy {
+    return {
+      id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      name: 'Void Stalker',
+      health: 130,
+      maxHealth: 130,
+      evasion: 16,
+      damageReduction: 0.15,
+      weaponDamage: { numDice: 2, dieSize: 8, modifier: 4 },
+      weaponType: this.randomWeaponType(),
+      lootTable: [
+        { itemId: 'potion_health', dropChance: 0.60 },
+        { itemId: 'potion_stamina', dropChance: 0.50 }
+      ],
+      statusConditions: [],
+      backstabUsed: false,
+    };
+  }
+
+  private static createCorruptedSentinel(): Enemy {
+    return {
+      id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      name: 'Corrupted Sentinel',
+      health: 95,
+      maxHealth: 95,
+      evasion: 17,
+      damageReduction: 0.20,
+      weaponDamage: { numDice: 2, dieSize: 6, modifier: 5 },
+      weaponType: this.randomWeaponType(),
+      lootTable: [
+        { itemId: 'potion_health', dropChance: 0.40 },
+        { itemId: 'potion_stamina', dropChance: 0.35 }
+      ],
+      statusConditions: [],
+      backstabUsed: false,
+    };
+  }
+
+  private static createVoidHarbinger(): Enemy {
+    return {
+      id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      name: 'Void Harbinger',
+      health: 180,
+      maxHealth: 180,
+      evasion: 18,
+      damageReduction: 0.25,
+      weaponDamage: { numDice: 3, dieSize: 8, modifier: 5 },
+      weaponType: this.randomWeaponType(),
+      lootTable: [
+        { itemId: 'potion_health', dropChance: 0.70 },
+        { itemId: 'potion_stamina', dropChance: 0.60 }
+      ],
+      statusConditions: [],
+      backstabUsed: false,
+    };
+  }
+
+  private static createAbyssalHunter(): Enemy {
+    return {
+      id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      name: 'Abyssal Hunter',
+      health: 120,
+      maxHealth: 120,
+      evasion: 19,
+      damageReduction: 0.22,
+      weaponDamage: { numDice: 2, dieSize: 10, modifier: 6 },
+      weaponType: this.randomWeaponType(),
+      lootTable: [
+        { itemId: 'potion_health', dropChance: 0.45 },
+        { itemId: 'potion_stamina', dropChance: 0.40 }
+      ],
+      statusConditions: [],
+      backstabUsed: false,
+    };
+  }
+
+  private static createEternalVoid(): Enemy {
+    return {
+      id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      name: 'Eternal Void',
+      health: 240,
+      maxHealth: 240,
+      evasion: 20,
+      damageReduction: 0.30,
+      weaponDamage: { numDice: 3, dieSize: 10, modifier: 7 },
+      weaponType: this.randomWeaponType(),
+      lootTable: [
+        { itemId: 'potion_health', dropChance: 0.80 },
+        { itemId: 'potion_stamina', dropChance: 0.70 }
+      ],
+      statusConditions: [],
+      backstabUsed: false,
+    };
+  }
+
+  private static createChaosWraith(): Enemy {
+    return {
+      id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      name: 'Chaos Wraith',
+      health: 150,
+      maxHealth: 150,
+      evasion: 21,
+      damageReduction: 0.28,
+      weaponDamage: { numDice: 3, dieSize: 8, modifier: 7 },
+      weaponType: this.randomWeaponType(),
+      lootTable: [
+        { itemId: 'potion_health', dropChance: 0.50 },
+        { itemId: 'potion_stamina', dropChance: 0.45 }
+      ],
+      statusConditions: [],
+      backstabUsed: false,
+    };
+  }
+
+  private static createVoidEmperor(): Enemy {
+    return {
+      id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      name: 'Void Emperor',
+      health: 300,
+      maxHealth: 300,
+      evasion: 22,
+      damageReduction: 0.35,
+      weaponDamage: { numDice: 4, dieSize: 10, modifier: 8 },
+      weaponType: this.randomWeaponType(),
+      lootTable: [
+        { itemId: 'potion_health', dropChance: 0.90 },
+        { itemId: 'potion_stamina', dropChance: 0.80 }
+      ],
       statusConditions: [],
       backstabUsed: false,
     };
@@ -181,14 +242,12 @@ export class EnemyFactory {
   }
 
   static getSpriteKey(enemyName: string): string | null {
-    // Find enemy data by name
-    for (const enemyData of this.enemyDatabase.values()) {
-      if (enemyData.name === enemyName && enemyData.hasSprite) {
-        // Convert sprite path to key: /assets/enemies/void-spawn.png -> void-spawn
-        const match = enemyData.spritePath.match(/\/([^/]+)\.png$/);
-        return match ? match[1] : null;
-      }
-    }
-    return null;
+    const spriteMap: Record<string, string> = {
+      'Void Spawn': 'void-spawn',
+      'Greater Void Spawn': 'greater-void-spawn',
+      'Shadow Beast': 'shadow-beast'
+    };
+
+    return spriteMap[enemyName] || null;
   }
 }

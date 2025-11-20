@@ -33,43 +33,11 @@ const config: Phaser.Types.Core.GameConfig = {
 
 ItemDatabase.initialize();
 
-// Initialize game after enemy database loads
-async function initializeGame() {
-  try {
-    await EnemyFactory.loadEnemyDatabase();
-    console.log('Enemy database loaded successfully');
-    
-    const game = new Phaser.Game(config);
-    SceneManager.initialize(game);
-    GameStateManager.getInstance();
-  } catch (error) {
-    console.error('CRITICAL: Failed to load enemy database:', error);
-    
-    // Show error to user
-    const errorDiv = document.createElement('div');
-    errorDiv.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #2a2a3e;
-      color: #ff4444;
-      padding: 40px;
-      border: 2px solid #ff4444;
-      font-family: 'Press Start 2P', monospace;
-      font-size: 16px;
-      text-align: center;
-      z-index: 9999;
-    `;
-    errorDiv.innerHTML = `
-      <div style="margin-bottom: 20px;">FAILED TO LOAD ENEMY DATA</div>
-      <div style="font-size: 12px; color: #ffffff;">Please refresh the page</div>
-    `;
-    document.body.appendChild(errorDiv);
-  }
-}
-
-initializeGame();
+// Initialize game
+console.log('Initializing Gemforge Chronicles...');
+const game = new Phaser.Game(config);
+SceneManager.initialize(game);
+GameStateManager.getInstance();
 
 // Function to show blocking modal for duplicate instances
 function showDuplicateInstanceModal(): void {
