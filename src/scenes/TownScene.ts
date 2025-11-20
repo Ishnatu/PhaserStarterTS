@@ -53,6 +53,9 @@ export class TownScene extends Phaser.Scene {
     BuffManager.clearTownBuffs(player);
     player.wildernessRestsRemaining = GameConfig.STAMINA.MAX_WILDERNESS_RESTS;
     this.gameState.updatePlayer(player);
+    
+    // Clear explored tiles so each wilderness expedition starts with fresh fog of war
+    this.gameState.clearExploredTiles();
 
     const { width, height } = this.cameras.main;
 
