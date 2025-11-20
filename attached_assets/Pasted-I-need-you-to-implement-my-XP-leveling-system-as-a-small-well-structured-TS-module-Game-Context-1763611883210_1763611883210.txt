@@ -1,0 +1,159 @@
+I need you to implement my XP & leveling system as a small, well-structured TS module.
+
+Game Context (for you to understand)
+
+Levels are 1–10.
+
+Levels are permanent (they persist through death).
+
+XP is ONLY earned from:
+
+Killing mobs
+
+Killing bosses
+
+Disarming traps
+
+Solving puzzles
+
+Completing a delve
+
+No time-based or passive XP. Everything must be action-based.
+
+1. XP REQUIRED PER LEVEL
+
+Use this exact table:
+
+Level 1 → 2: 500 XP (Total: 500)
+
+Level 2 → 3: 1,000 XP (Total: 1,500)
+
+Level 3 → 4: 2,000 XP (Total: 3,500)
+
+Level 4 → 5: 4,000 XP (Total: 7,500)
+
+Level 5 → 6: 8,000 XP (Total: 15,500)
+
+Level 6 → 7: 16,000 XP (Total: 31,500)
+
+Level 7 → 8: 32,000 XP (Total: 63,500)
+
+Level 8 → 9: 64,000 XP (Total: 127,500)
+
+Level 9 → 10: 128,000 XP (Total: 255,500)
+
+I want these stored in a simple data structure you can query by level.
+
+2. XP REWARD PER ACTION BY TIER
+
+There are 5 delve tiers. XP values scale per tier like this:
+
+Tier 1 (Shallow Ruins)
+
+Mob: 5 XP
+
+Boss: 15 XP
+
+Trap disarmed: 5 XP
+
+Puzzle solved: 5 XP
+
+Delve completion bonus: 15 XP
+
+Tier 2 (Fungal Hollows)
+
+Mob: 8 XP
+
+Boss: 23 XP
+
+Trap disarmed: 8 XP
+
+Puzzle solved: 8 XP
+
+Delve completion bonus: 23 XP
+
+Tier 3 (Crystal Groves)
+
+Mob: 11 XP
+
+Boss: 34 XP
+
+Trap disarmed: 11 XP
+
+Puzzle solved: 11 XP
+
+Delve completion bonus: 34 XP
+
+Tier 4 (The Borderlands)
+
+Mob: 17 XP
+
+Boss: 50 XP
+
+Trap disarmed: 17 XP
+
+Puzzle solved: 17 XP
+
+Delve completion bonus: 50 XP
+
+Tier 5 (Shattered Forge Core)
+
+Mob: 25 XP
+
+Boss: 75 XP
+
+Trap disarmed: 25 XP
+
+Puzzle solved: 25 XP
+
+Delve completion bonus: 75 XP
+
+Please store this in a clean, typed structure (e.g. a const XP_REWARDS map keyed by tier + action type).
+
+3. What I Want You to Build
+
+Create a TypeScript module (e.g. xpSystem.ts) that provides:
+
+A data structure for:
+
+XP required per level
+
+XP reward per (tier, actionType)
+
+These functions (with good typings and comments):
+
+getLevelFromXp(totalXp: number): number
+
+Returns the player’s current level (1–10) based on total XP.
+
+getXpForNextLevel(level: number): number | null
+
+Returns XP required to go from this level to the next, or null if at max level (10).
+
+getTotalXpForLevel(level: number): number
+
+Returns the cumulative XP needed to reach that level.
+
+getXpReward(tier: number, action: 'mob' | 'boss' | 'trap' | 'puzzle' | 'delveCompletion'): number
+
+Returns the correct XP reward using the tables above.
+
+getLevelProgress(level: number, totalXp: number): { current: number; required: number; progress: number }
+
+progress should be a 0–1 float showing how far through this level the player is.
+
+Basic validation:
+
+Clamp levels between 1 and 10 internally.
+
+Throw or handle gracefully if someone requests an invalid tier or action.
+
+Make the code:
+
+Idiomatic TypeScript
+
+Easy to hook into a Phaser scene later
+
+With clear comments so I can extend it
+
+Please generate the full xpSystem.ts implementation according to this spec.
