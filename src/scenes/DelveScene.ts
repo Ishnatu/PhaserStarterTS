@@ -8,6 +8,7 @@ import { FONTS } from '../config/fonts';
 import { ItemColorUtil } from '../utils/ItemColorUtil';
 import { GameConfig } from '../config/GameConfig';
 import { AudioManager } from '../managers/AudioManager';
+import { getXpReward, getNewLevel } from '../systems/xpSystem';
 
 export class DelveScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -192,22 +193,31 @@ export class DelveScene extends Phaser.Scene {
   private showDelveCompletion(): void {
     const { width, height } = this.cameras.main;
 
-    this.add.rectangle(width / 2, height / 2, 700, 300, 0x2a2a4e, 0.9).setOrigin(0.5);
+    this.add.rectangle(width / 2, height / 2, 700, 350, 0x2a2a4e, 0.9).setOrigin(0.5);
 
-    this.add.text(width / 2, height / 2 - 80, 'Congratulations!', {
+    this.add.text(width / 2, height / 2 - 100, 'Congratulations!', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xlarge,
       color: '#ffaa00',
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    this.add.text(width / 2, height / 2 - 20, `You have cleared the Tier ${this.currentDelve.tier} Delve!`, {
+    this.add.text(width / 2, height / 2 - 40, `You have cleared the Tier ${this.currentDelve.tier} Delve!`, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.medium,
       color: '#ffffff',
     }).setOrigin(0.5);
+    
+    // Show completion bonus XP
+    const xpReward = getXpReward(this.currentDelve.tier, 'delveCompletion');
+    this.add.text(width / 2, height / 2 + 10, `Completion Bonus: +${xpReward} XP`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#33aacc',
+      resolution: 2,
+    }).setOrigin(0.5);
 
-    this.createButton(width / 2, height / 2 + 60, 'Exit Delve', () => {
+    this.createButton(width / 2, height / 2 + 80, 'Exit Delve', () => {
       this.exitDelve();
     });
   }
@@ -215,6 +225,21 @@ export class DelveScene extends Phaser.Scene {
   private exitDelve(): void {
     const player = this.gameState.getPlayer();
     player.wildernessRestsRemaining = GameConfig.STAMINA.MAX_WILDERNESS_RESTS;
+    
+    // Award XP for delve completion
+    const xpReward = getXpReward(this.currentDelve.tier, 'delveCompletion');
+    const oldXp = player.experience;
+    const newXp = oldXp + xpReward;
+    const newLevel = getNewLevel(oldXp, newXp);
+    
+    // Update player XP and level
+    if (newLevel !== null) {
+      player.experience = newXp;
+      player.level = newLevel;
+    } else {
+      player.experience = newXp;
+    }
+    
     this.gameState.updatePlayer(player);
     
     // Mark delve as completed (only for real map delves with location)
@@ -370,11 +395,25 @@ export class DelveScene extends Phaser.Scene {
     uiElements.push(resultText);
 
     if (success) {
+      // Award XP for trap disarm
+      const player = this.gameState.getPlayer();
+      const xpReward = getXpReward(this.currentDelve.tier, 'trap');
+      const oldXp = player.experience;
+      const newXp = oldXp + xpReward;
+      const newLevel = getNewLevel(oldXp, newXp);
+      
+      // Update player XP and level
+      if (newLevel !== null) {
+        this.gameState.updatePlayer({ experience: newXp, level: newLevel });
+      } else {
+        this.gameState.updatePlayer({ experience: newXp });
+      }
+      
       const successMsg = this.add.text(width / 2, height / 2 - 30, 
-        'Success! You carefully disable the trap mechanism.', {
+        `Success! You carefully disable the trap mechanism.\n+${xpReward} XP${newLevel ? `\n\nLEVEL UP! You are now Level ${newLevel}!` : ''}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
-        color: '#44ff44',
+        color: newLevel ? '#FFD700' : '#44ff44',
         align: 'center',
         wordWrap: { width: 550 },
       }).setOrigin(0.5).setDepth(1001);

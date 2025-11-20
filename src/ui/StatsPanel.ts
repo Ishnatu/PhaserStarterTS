@@ -3,12 +3,14 @@ import { PixelArtBar } from '../utils/PixelArtBar';
 import { CurrencyDisplay } from '../utils/CurrencyDisplay';
 import { FONTS } from '../config/fonts';
 import type { PlayerData } from '../types/GameTypes';
+import { getLevelProgress } from '../systems/xpSystem';
 
 export class StatsPanel {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container;
   private healthBar: PixelArtBar;
   private staminaBar: PixelArtBar;
+  private xpBar: PixelArtBar;
   private aaIcon: Phaser.GameObjects.Image | null = null;
   private aaText: Phaser.GameObjects.Text | null = null;
   private caIcon: Phaser.GameObjects.Image | null = null;
@@ -60,8 +62,22 @@ export class StatsPanel {
       36
     );
     this.container.add(this.staminaBar.getContainer());
+    currentY += 36 + 12;  // Bar height + small gap
     
-    // Calculate position for AA icon: SP bar bottom + 22px gap + half of AA icon height
+    // Create XP bar
+    this.xpBar = new PixelArtBar(
+      scene,
+      0,
+      currentY,
+      'XP',
+      0x33aacc,  // Light blue fill
+      0x4a5a6a,  // Gray empty
+      barWidth,
+      36
+    );
+    this.container.add(this.xpBar.getContainer());
+    
+    // Calculate position for AA icon: XP bar bottom + 22px gap + half of AA icon height
     // First create the icon to get its displayHeight
     this.aaIcon = scene.add.image(0, 0, 'coin-aa');
     this.aaIcon.setScale(iconScale);
@@ -152,6 +168,10 @@ export class StatsPanel {
     this.healthBar.update(player.health, player.maxHealth);
     this.staminaBar.update(player.stamina, player.maxStamina);
     
+    // Update XP bar
+    const levelProgress = getLevelProgress(player.level, player.experience);
+    this.xpBar.update(levelProgress.current, levelProgress.required);
+    
     // Update currency values
     if (this.aaText) {
       this.aaText.setText(`${player.arcaneAsh}`);
@@ -178,6 +198,7 @@ export class StatsPanel {
   public destroy(): void {
     this.healthBar.destroy();
     this.staminaBar.destroy();
+    this.xpBar.destroy();
     this.container.destroy();
   }
   

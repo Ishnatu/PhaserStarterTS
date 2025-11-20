@@ -15,6 +15,7 @@ import { WeaponAttackDatabase } from '../config/WeaponAttackDatabase';
 import { ConditionManager } from '../systems/ConditionManager';
 import { EquipmentManager } from '../systems/EquipmentManager';
 import { AudioManager } from '../managers/AudioManager';
+import { getXpReward, hasLeveledUp, getNewLevel } from '../systems/xpSystem';
 
 export class CombatScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -856,30 +857,61 @@ export class CombatScene extends Phaser.Scene {
       this.gameState.addArcaneAsh(aaReward);
       this.gameState.addCrystallineAnimus(caReward);
       
+      // Calculate XP reward based on enemy type and tier
+      const isBoss = this.currentRoom.type === 'boss';
+      const xpAction = isBoss ? 'boss' : 'mob';
+      const xpReward = getXpReward(this.currentDelve.tier, xpAction);
+      
+      // Check for level-up
+      const oldXp = player.experience;
+      const newXp = oldXp + xpReward;
+      const newLevel = getNewLevel(oldXp, newXp);
+      
+      // Update player XP and level
+      if (newLevel !== null) {
+        this.gameState.updatePlayer({ experience: newXp, level: newLevel });
+      } else {
+        this.gameState.updatePlayer({ experience: newXp });
+      }
+      
       const allLoot: string[] = [];
       state.enemies.forEach(enemy => {
         const loot = EnemyFactory.rollLoot(enemy);
         allLoot.push(...loot);
       });
       
-      this.showVictoryScreen(aaReward, caReward, allLoot, durabilityMessages);
+      this.showVictoryScreen(aaReward, caReward, xpReward, newLevel, allLoot, durabilityMessages);
     } else {
       this.showDefeatScreen();
     }
   }
 
-  private showVictoryScreen(aa: number, ca: number, loot: string[], durabilityMessages: string[]): void {
+  private showVictoryScreen(aa: number, ca: number, xp: number, newLevel: number | null, loot: string[], durabilityMessages: string[]): void {
     const { width, height } = this.cameras.main;
     
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
     
-    this.add.text(width / 2, height / 2 - 100, 'VICTORY!', {
+    // Show LEVEL UP! if player leveled up
+    const victoryText = newLevel !== null ? 'LEVEL UP!' : 'VICTORY!';
+    const victoryColor = newLevel !== null ? '#FFD700' : '#00ff00';
+    
+    this.add.text(width / 2, height / 2 - 100, victoryText, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xlarge,
-      color: '#00ff00',
+      color: victoryColor,
     }).setOrigin(0.5);
+    
+    // Show new level if applicable
+    if (newLevel !== null) {
+      this.add.text(width / 2, height / 2 - 60, `You are now Level ${newLevel}!`, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: '#FFD700',
+        resolution: 2,
+      }).setOrigin(0.5);
+    }
 
-    const baseRewardText = `Rewards:\n+${aa} AA\n+${ca.toFixed(1)} CA`;
+    const baseRewardText = `Rewards:\n+${aa} AA\n+${ca.toFixed(1)} CA\n+${xp} XP`;
     
     interface LootItemInfo {
       name: string;
