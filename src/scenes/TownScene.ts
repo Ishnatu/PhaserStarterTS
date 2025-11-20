@@ -33,6 +33,7 @@ export class TownScene extends Phaser.Scene {
     this.load.image('coin-ca', '/assets/ui/currency/crystalline-animus-coin.png');
     this.load.image('equipment-panel', '/assets/ui/equipment-panel.png');
     this.load.image('blacksmith-button', '/assets/ui/shop-buttons/blacksmith-button.png');
+    this.load.image('merchant-icon', '/assets/npcs/merchant-icon.png');
     this.load.image('garthek-button', '/assets/ui/shop-buttons/garthek-button.png');
     this.load.image('evasion-icon', '/assets/ui/evasion-icon.png');
     this.load.image('shield-icon', '/assets/ui/shield-icon.png');
@@ -222,7 +223,7 @@ export class TownScene extends Phaser.Scene {
 
     const npcs = [
       { name: 'Blacksmith', color: 0xff6633, description: 'Forges and upgrades equipment', sprite: 'blacksmith-button' },
-      { name: 'Merchant', color: 0x66cc66, description: 'Buys and sells goods' },
+      { name: 'Merchant', color: 0x66cc66, description: 'Buys and sells goods', sprite: 'merchant-icon' },
       { name: 'Innkeeper', color: 0x6699ff, description: 'Provides rest and healing' },
       { name: 'Vault Keeper', color: 0x88ddff, description: 'Manages your storage footlocker' },
       { name: 'Garthek', color: 0x9944cc, description: 'The Stitcher - Binds items to your soul', sprite: 'garthek-button' },
