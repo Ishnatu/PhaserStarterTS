@@ -361,4 +361,9 @@ export class GameStateManager {
     const delveKey = `${Math.floor(x)},${Math.floor(y)}`;
     return this.gameState.player.completedDelves.includes(delveKey);
   }
+
+  clearExploredTiles(): void {
+    this.exploredTilesSet.clear();
+    this.gameState.player.exploredTiles = [];
+  }
 }
