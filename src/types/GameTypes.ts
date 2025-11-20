@@ -161,6 +161,36 @@ export interface Delve {
   location?: { x: number; y: number };
 }
 
+export type AttackTriggerType = 'always' | 'chance' | 'health_threshold';
+export type AttackEffectType = 'none' | 'apply_condition' | 'heal_from_history';
+export type AttackCategory = 'basic' | 'special';
+
+export interface EnemyAttackTrigger {
+  type: AttackTriggerType;
+  value: number;
+}
+
+export interface EnemyAttackEffect {
+  type: AttackEffectType;
+  params: Record<string, any>;
+}
+
+export interface EnemyAttackDefinition {
+  name: string;
+  category: AttackCategory;
+  priorityWeight: number;
+  trigger: EnemyAttackTrigger;
+  maxUses?: number;
+  damage: DiceRoll;
+  effect: EnemyAttackEffect;
+  description: string;
+}
+
+export interface EnemyAttackState {
+  attackName: string;
+  usesRemaining?: number;
+}
+
 export interface Enemy {
   id: string;
   name: string;
@@ -175,6 +205,8 @@ export interface Enemy {
   backstabUsed?: boolean;
   chronostepUsesRemaining?: number;
   damageReceivedHistory?: { round: number; damage: number }[];
+  attacks?: EnemyAttackDefinition[];
+  attackStates?: Map<string, EnemyAttackState>;
 }
 
 export interface AttackResult {
