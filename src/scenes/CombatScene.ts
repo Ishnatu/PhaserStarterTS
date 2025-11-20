@@ -245,9 +245,9 @@ export class CombatScene extends Phaser.Scene {
     const spacing = 180;
     
     if (this.isWildEncounter) {
-      // Wilderness: position on right side of dirt path
-      platformCenterX = 730;
-      platformY = height - 300;
+      // Wilderness: position on upper right side of dirt path
+      platformCenterX = 820;
+      platformY = height - 420;
     } else {
       // Delve: position on top center-right platform
       platformCenterX = 740;
