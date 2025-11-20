@@ -146,6 +146,8 @@ export class ConditionManager {
       vampiric: 'Vampiric',
       decapitate: 'Decapitate',
       slowed: 'Slowed',
+      weakened: 'Weakened',
+      empowered: 'Empowered',
     };
     return displayNames[conditionType] || conditionType;
   }
@@ -161,6 +163,8 @@ export class ConditionManager {
       vampiric: 0xff00ff,
       decapitate: 0xff0000,
       slowed: 0x9966cc,
+      weakened: 0xcc6633,
+      empowered: 0xffcc00,
     };
     return colors[conditionType] || 0xffffff;
   }

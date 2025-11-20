@@ -1002,7 +1002,9 @@ export class CombatSystem {
       bonusRoll = roll.total;
     }
 
-    const total = d20 + attackBonus + dependableBonus + bonusRoll;
+    const weakenedPenalty = ConditionManager.hasCondition(this.combatState.player, 'weakened') ? -2 : 0;
+
+    const total = d20 + attackBonus + dependableBonus + bonusRoll + weakenedPenalty;
     const critical = d20 >= critThreshold;
 
     return { d20, total, critical };
@@ -1035,6 +1037,16 @@ export class CombatSystem {
       const buffText = buffDamageBonus > 0 ? `+${buffDamageBonus}` : '';
       damageRollInfo = `(${rollsStr}+${damageResult.modifier}${buffText ? '+' + buffText : ''} = ${damageBeforeReduction})`;
     }
+
+    let damageMultiplier = 1.0;
+    if (ConditionManager.hasCondition(this.combatState.player, 'weakened')) {
+      damageMultiplier *= 0.9;
+    }
+    if (ConditionManager.hasCondition(this.combatState.player, 'empowered')) {
+      damageMultiplier *= 1.25;
+    }
+
+    damageBeforeReduction = Math.floor(damageBeforeReduction * damageMultiplier);
 
     const baseDR = target.damageReduction;
     const bonusDR = ConditionManager.getDamageReductionBonus(target);
@@ -1172,7 +1184,8 @@ export class CombatSystem {
         continue;
       }
 
-      const attackResult = DiceRoller.rollAttack(3);
+      const weakenedPenalty = ConditionManager.hasCondition(enemy, 'weakened') ? -2 : 0;
+      const attackResult = DiceRoller.rollAttack(3 + weakenedPenalty);
       const playerEvasion = this.combatState.player.stats.calculatedEvasion + 
                             ConditionManager.getEvasionBonus(this.combatState.player);
       const hit = attackResult.total >= playerEvasion;
@@ -1197,6 +1210,16 @@ export class CombatSystem {
         const rollsStr = damageResult.rolls.join('+');
         damageRollInfo = `(${rollsStr}+${damageResult.modifier} = ${damageResult.total})`;
       }
+
+      let damageMultiplier = 1.0;
+      if (ConditionManager.hasCondition(enemy, 'weakened')) {
+        damageMultiplier *= 0.9;
+      }
+      if (ConditionManager.hasCondition(enemy, 'empowered')) {
+        damageMultiplier *= 1.25;
+      }
+      
+      damageBeforeReduction = Math.floor(damageBeforeReduction * damageMultiplier);
 
       const baseDR = this.combatState.player.stats.damageReduction;
       const bonusDR = ConditionManager.getDamageReductionBonus(this.combatState.player);

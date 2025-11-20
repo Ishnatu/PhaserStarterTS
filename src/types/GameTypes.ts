@@ -8,7 +8,7 @@ export type ShieldType = 'steel_shield' | 'leather_shield';
 export type ArmorType = 'light' | 'heavy' | 'shield';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
-export type StatusConditionType = 'bleeding' | 'stunned' | 'poisoned' | 'dependable' | 'raise_evasion' | 'raise_defence' | 'vampiric' | 'decapitate' | 'slowed';
+export type StatusConditionType = 'bleeding' | 'stunned' | 'poisoned' | 'dependable' | 'raise_evasion' | 'raise_defence' | 'vampiric' | 'decapitate' | 'slowed' | 'weakened' | 'empowered';
 
 export interface StatusCondition {
   type: StatusConditionType;
