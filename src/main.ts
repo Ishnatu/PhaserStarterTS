@@ -10,6 +10,7 @@ import { SceneManager } from './systems/SceneManager';
 import { GameStateManager } from './systems/GameStateManager';
 import { ItemDatabase } from './config/ItemDatabase';
 import { HeartbeatManager } from './utils/HeartbeatManager';
+import { EnemyFactory } from './systems/EnemyFactory';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -32,10 +33,43 @@ const config: Phaser.Types.Core.GameConfig = {
 
 ItemDatabase.initialize();
 
-const game = new Phaser.Game(config);
+// Initialize game after enemy database loads
+async function initializeGame() {
+  try {
+    await EnemyFactory.loadEnemyDatabase();
+    console.log('Enemy database loaded successfully');
+    
+    const game = new Phaser.Game(config);
+    SceneManager.initialize(game);
+    GameStateManager.getInstance();
+  } catch (error) {
+    console.error('CRITICAL: Failed to load enemy database:', error);
+    
+    // Show error to user
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #2a2a3e;
+      color: #ff4444;
+      padding: 40px;
+      border: 2px solid #ff4444;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 16px;
+      text-align: center;
+      z-index: 9999;
+    `;
+    errorDiv.innerHTML = `
+      <div style="margin-bottom: 20px;">FAILED TO LOAD ENEMY DATA</div>
+      <div style="font-size: 12px; color: #ffffff;">Please refresh the page</div>
+    `;
+    document.body.appendChild(errorDiv);
+  }
+}
 
-SceneManager.initialize(game);
-GameStateManager.getInstance();
+initializeGame();
 
 // Function to show blocking modal for duplicate instances
 function showDuplicateInstanceModal(): void {

@@ -230,10 +230,7 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private getEnemySpriteKey(enemyName: string): string | null {
-    if (enemyName === 'Void Spawn') return 'void-spawn';
-    if (enemyName === 'Greater Void Spawn') return 'greater-void-spawn';
-    if (enemyName === 'Shadow Beast') return 'shadow-beast';
-    return null;
+    return EnemyFactory.getSpriteKey(enemyName);
   }
 
   private renderEnemies(enemies: Enemy[]): void {

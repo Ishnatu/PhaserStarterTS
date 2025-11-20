@@ -1,70 +1,140 @@
 import { Enemy, DiceRoll, WeaponType } from '../types/GameTypes';
+import { CsvParser } from '../utils/CsvParser';
+
+interface EnemyData {
+  name: string;
+  tier: number;
+  isBoss: boolean;
+  health: number;
+  evasion: number;
+  damageReduction: number;
+  weaponDamageDice: number;
+  weaponDamageDieSize: number;
+  weaponDamageModifier: number;
+  spritePath: string;
+  hasSprite: boolean;
+  lootTable: { itemId: string; dropChance: number }[];
+}
 
 export class EnemyFactory {
+  private static enemyDatabase: Map<string, EnemyData> = new Map();
+  private static isLoaded = false;
+
+  static async loadEnemyDatabase(): Promise<void> {
+    if (this.isLoaded) return;
+
+    const rows = await CsvParser.parseCsv('/ENEMY_DATABASE.csv');
+    
+    if (rows.length === 0) {
+      throw new Error('Failed to load enemy database: CSV file is empty or missing');
+    }
+    
+    for (const row of rows) {
+      const enemyData: EnemyData = {
+        name: row['Enemy Name'],
+        tier: parseInt(row['Tier']),
+        isBoss: row['Boss'] === 'YES',
+        health: parseInt(row['Health']),
+        evasion: parseInt(row['Evasion']),
+        damageReduction: parseFloat(row['Damage Reduction'].replace('%', '')) / 100,
+        weaponDamageDice: parseInt(row['Weapon Damage Dice']),
+        weaponDamageDieSize: parseInt(row['Weapon Damage Die Size']),
+        weaponDamageModifier: parseInt(row['Weapon Damage Modifier']),
+        spritePath: row['Sprite Path'],
+        hasSprite: row['Has Sprite Asset'] === 'YES',
+        lootTable: this.parseLootTable(row['Loot Table']),
+      };
+
+      // Create a key using tier and boss status
+      const key = `${enemyData.tier}_${enemyData.isBoss ? 'boss' : 'mob'}`;
+      this.enemyDatabase.set(key, enemyData);
+    }
+
+    this.isLoaded = true;
+    console.log('Enemy database loaded:', this.enemyDatabase.size, 'enemy types');
+  }
+
+  private static parseLootTable(lootString: string): { itemId: string; dropChance: number }[] {
+    const lootTable: { itemId: string; dropChance: number }[] = [];
+    
+    // Parse format: "potion_health (30%); potion_stamina (25%)"
+    const items = lootString.split(';').map(s => s.trim());
+    
+    for (const item of items) {
+      const match = item.match(/(.+?)\s*\((\d+(?:\.\d+)?)%\)/);
+      if (match) {
+        lootTable.push({
+          itemId: match[1].trim(),
+          dropChance: parseFloat(match[2]) / 100,
+        });
+      }
+    }
+    
+    return lootTable;
+  }
+
   private static randomWeaponType(): WeaponType {
     const weaponTypes: WeaponType[] = ['dagger', 'shortsword', 'longsword', 'battleaxe', 'mace', 'warhammer', 'greatsword', 'greataxe', 'spear', 'rapier'];
     return weaponTypes[Math.floor(Math.random() * weaponTypes.length)];
   }
 
   static createEnemy(tier: number, isBoss: boolean = false): Enemy {
-    // Tier 1 specific stats
-    if (tier === 1) {
-      const health = isBoss ? 72 : 32;
-      const evasion = isBoss ? 10 : 5;
-      
-      const weaponDamage: DiceRoll = isBoss ? {
-        numDice: 2,
-        dieSize: 6,
-        modifier: 3,
-      } : {
-        numDice: 1,
-        dieSize: 4,
-        modifier: 2,
-      };
-
-      const lootTable = this.generateLootTable(tier, isBoss);
-
-      return {
-        id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-        name: isBoss ? this.getBossName(tier) : this.getEnemyName(tier),
-        health,
-        maxHealth: health,
-        evasion,
-        damageReduction: 0,
-        weaponDamage,
-        weaponType: this.randomWeaponType(),
-        lootTable,
-        statusConditions: [],
-        backstabUsed: false,
-      };
+    // Ensure database is loaded (defensive programming)
+    if (!this.isLoaded) {
+      console.error('Enemy database not loaded! Using fallback enemy.');
+      return this.createFallbackEnemy(tier, isBoss);
     }
 
-    // Higher tier enemies (unchanged)
+    const key = `${tier}_${isBoss ? 'boss' : 'mob'}`;
+    const enemyData = this.enemyDatabase.get(key);
+
+    if (!enemyData) {
+      console.error(`No enemy data found for tier ${tier}, boss: ${isBoss}`);
+      return this.createFallbackEnemy(tier, isBoss);
+    }
+
+    const weaponDamage: DiceRoll = {
+      numDice: enemyData.weaponDamageDice,
+      dieSize: enemyData.weaponDamageDieSize,
+      modifier: enemyData.weaponDamageModifier,
+    };
+
+    return {
+      id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      name: enemyData.name,
+      health: enemyData.health,
+      maxHealth: enemyData.health,
+      evasion: enemyData.evasion,
+      damageReduction: enemyData.damageReduction,
+      weaponDamage,
+      weaponType: this.randomWeaponType(),
+      lootTable: enemyData.lootTable,
+      statusConditions: [],
+      backstabUsed: false,
+    };
+  }
+
+  private static createFallbackEnemy(tier: number, isBoss: boolean): Enemy {
     const multiplier = isBoss ? 2.0 : 1.0;
     const baseHealth = 30 + (tier * 15);
     const health = Math.floor(baseHealth * multiplier);
 
-    const baseEvasion = 10 + Math.floor(tier * 0.5);
-    const damageReduction = tier >= 3 ? 0.1 : 0;
-
     const weaponDamage: DiceRoll = {
       numDice: 1,
-      dieSize: 6 + Math.min(tier * 2, 6),
-      modifier: 2 + tier,
+      dieSize: 6,
+      modifier: 2,
     };
-
-    const lootTable = this.generateLootTable(tier, isBoss);
 
     return {
       id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-      name: isBoss ? this.getBossName(tier) : this.getEnemyName(tier),
+      name: isBoss ? 'Unknown Boss' : 'Unknown Enemy',
       health,
       maxHealth: health,
-      evasion: baseEvasion,
-      damageReduction,
+      evasion: 10,
+      damageReduction: 0,
       weaponDamage,
       weaponType: this.randomWeaponType(),
-      lootTable,
+      lootTable: [],
       statusConditions: [],
       backstabUsed: false,
     };
@@ -73,57 +143,6 @@ export class EnemyFactory {
   static createWildEnemy(): Enemy {
     const tier = Math.floor(Math.random() * 2) + 1;
     return this.createEnemy(tier, false);
-  }
-
-  private static getEnemyName(tier: number): string {
-    const names = [
-      'Void Spawn',
-      'Shadow Beast',
-      'Corrupted Warrior',
-      'Eldritch Horror',
-      'Voidtouched Abomination',
-    ];
-    return names[Math.min(tier - 1, names.length - 1)];
-  }
-
-  private static getBossName(tier: number): string {
-    const names = [
-      'Greater Void Spawn',
-      'Shadow Lord',
-      'Corrupted Champion',
-      'Eldritch Nightmare',
-      'Primordial Voidbeast',
-    ];
-    return names[Math.min(tier - 1, names.length - 1)];
-  }
-
-  private static generateLootTable(tier: number, isBoss: boolean): { itemId: string; dropChance: number }[] {
-    const lootTable: { itemId: string; dropChance: number }[] = [];
-
-    lootTable.push({ itemId: 'potion_health', dropChance: 0.3 });
-    lootTable.push({ itemId: 'potion_stamina', dropChance: 0.25 });
-
-    if (tier >= 2) {
-      lootTable.push({ itemId: 'chest_leather', dropChance: 0.15 });
-      lootTable.push({ itemId: 'helmet_leather', dropChance: 0.15 });
-    }
-
-    if (tier >= 3) {
-      lootTable.push({ itemId: 'longsword_basic', dropChance: 0.2 });
-      lootTable.push({ itemId: 'battleaxe_basic', dropChance: 0.15 });
-    }
-
-    if (tier >= 4) {
-      lootTable.push({ itemId: 'chest_heavy', dropChance: 0.1 });
-      lootTable.push({ itemId: 'greatsword_basic', dropChance: 0.1 });
-    }
-
-    if (isBoss) {
-      lootTable.forEach(item => item.dropChance *= 1.5);
-      lootTable.push({ itemId: 'warhammer_basic', dropChance: 0.25 });
-    }
-
-    return lootTable;
   }
 
   static rollLoot(enemy: Enemy): string[] {
@@ -136,5 +155,17 @@ export class EnemyFactory {
     }
 
     return droppedItems;
+  }
+
+  static getSpriteKey(enemyName: string): string | null {
+    // Find enemy data by name
+    for (const enemyData of this.enemyDatabase.values()) {
+      if (enemyData.name === enemyName && enemyData.hasSprite) {
+        // Convert sprite path to key: /assets/enemies/void-spawn.png -> void-spawn
+        const match = enemyData.spritePath.match(/\/([^/]+)\.png$/);
+        return match ? match[1] : null;
+      }
+    }
+    return null;
   }
 }
