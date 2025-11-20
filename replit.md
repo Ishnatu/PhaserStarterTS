@@ -36,7 +36,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Database**: PostgreSQL (Neon) via Drizzle ORM
 - **Authentication**: Replit Auth (OpenID Connect) with session-based auth. Multi-instance detection prevents save conflicts.
 - **State Management**: Server-side PostgreSQL saves with 30-second auto-save, LocalStorage fallback.
-- **Enemy System**: Hardcoded enemy database in EnemyFactory.ts. 10 enemy types across 5 tiers (2 per tier: mob and boss).
+- **Enemy System**: Hardcoded enemy database in EnemyFactory.ts. 15 enemy types: Tier 1 has 5 mobs (Void Spawn, Skitterthid, Hollow Husk, Wailing Wisp, Crawley Crow) and 2 bosses (Greater Void Spawn, Aetherbear); Tiers 2-5 have 2 each (mob and boss). Currency rewards are per-enemy: T1 mobs drop 15-45 AA, T1 bosses drop 25-80 AA.
 - **Core Gameplay Loop**: Main Menu -> Town (Roboka) -> Explore Map -> Delve (3-5 Rooms) -> Combat -> Back to Town.
 - **D20 Combat System**: Turn-based tactical combat with d20 rolls, critical hits, armor reduction, and a 2-action economy. Features Pokemon-style attack selection UI. Weapon types have unique attacks with varying stamina/action costs and damage multipliers. Includes status conditions (stunned, poisoned, bleeding, dependable), multi-hit combos, AoE cleaves, backstabs, vampiric healing, and instant-kill finishers. Combat ends immediately upon enemy defeat.
 - **Stamina Management**: Stamina drains per tile moved and per attack. Short rests restore health/stamina with encounter risk.

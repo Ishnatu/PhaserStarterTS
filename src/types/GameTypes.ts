@@ -164,13 +164,15 @@ export interface Delve {
 export interface Enemy {
   id: string;
   name: string;
+  tier: number;
+  isBoss: boolean;
   health: number;
   maxHealth: number;
   evasion: number;
   damageReduction: number;
   weaponDamage: DiceRoll;
   weaponType?: WeaponType;
-  lootTable: { itemId: string; dropChance: number }[];
+  lootTable: { itemId: string; dropChance: number; enhancementLevel?: number }[];
   statusConditions: StatusCondition[];
   backstabUsed?: boolean;
   chronostepUsesRemaining?: number;

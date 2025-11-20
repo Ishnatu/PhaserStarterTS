@@ -848,15 +848,21 @@ export class CombatScene extends Phaser.Scene {
       // Save durability changes
       this.gameState.updatePlayer(player);
       
-      const aaReward = 30 * this.currentDelve.tier;
+      // Calculate AA rewards - sum per enemy using their tier field
+      let totalAaReward = 0;
+      
+      state.enemies.forEach(enemy => {
+        totalAaReward += EnemyFactory.rollCurrencyReward(enemy.tier, enemy.isBoss);
+      });
+      
       const caReward = 0.3 * this.currentDelve.tier;
       
-      this.gameState.addArcaneAsh(aaReward);
+      this.gameState.addArcaneAsh(totalAaReward);
       this.gameState.addCrystallineAnimus(caReward);
       
       // Calculate XP reward based on enemy type and tier
-      const isBoss = this.currentRoom.type === 'boss';
-      const xpAction = isBoss ? 'boss' : 'mob';
+      const isBossEncounter = state.enemies.some(enemy => enemy.isBoss);
+      const xpAction = isBossEncounter ? 'boss' : 'mob';
       const xpReward = getXpReward(this.currentDelve.tier, xpAction);
       
       // Check for level-up
@@ -871,19 +877,19 @@ export class CombatScene extends Phaser.Scene {
         this.gameState.updatePlayer({ experience: newXp });
       }
       
-      const allLoot: string[] = [];
+      const allLoot: Array<{ itemId: string; enhancementLevel?: number }> = [];
       state.enemies.forEach(enemy => {
         const loot = EnemyFactory.rollLoot(enemy);
         allLoot.push(...loot);
       });
       
-      this.showVictoryScreen(aaReward, caReward, xpReward, newLevel, allLoot, durabilityMessages);
+      this.showVictoryScreen(totalAaReward, caReward, xpReward, newLevel, allLoot, durabilityMessages);
     } else {
       this.showDefeatScreen();
     }
   }
 
-  private showVictoryScreen(aa: number, ca: number, xp: number, newLevel: number | null, loot: string[], durabilityMessages: string[]): void {
+  private showVictoryScreen(aa: number, ca: number, xp: number, newLevel: number | null, loot: Array<{ itemId: string; enhancementLevel?: number }>, durabilityMessages: string[]): void {
     const { width, height } = this.cameras.main;
     
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
@@ -921,20 +927,24 @@ export class CombatScene extends Phaser.Scene {
     
     const player = this.gameState.getPlayer();
     
-    for (const itemId of loot) {
-      const item = ItemDatabase.getItem(itemId);
+    for (const lootItem of loot) {
+      const item = ItemDatabase.getItem(lootItem.itemId);
       if (item) {
-        if (this.gameState.addItemToInventory(itemId, 1)) {
-          const addedItem = player.inventory.find(invItem => invItem.itemId === itemId);
+        const targetEnhancement = lootItem.enhancementLevel || 0;
+        if (this.gameState.addItemToInventory(lootItem.itemId, 1, targetEnhancement)) {
+          // Find the most recently added item by matching both itemId and enhancementLevel
+          const addedItem = player.inventory.slice().reverse().find(invItem => 
+            invItem.itemId === lootItem.itemId && invItem.enhancementLevel === targetEnhancement
+          );
           itemsAdded.push({
             name: item.name,
-            enhancementLevel: addedItem?.enhancementLevel,
-            isShiny: addedItem?.isShiny
+            enhancementLevel: addedItem?.enhancementLevel || targetEnhancement,
+            isShiny: addedItem?.isShiny || false
           });
         } else {
           itemsFailed.push({
             name: item.name,
-            enhancementLevel: 0,
+            enhancementLevel: targetEnhancement,
             isShiny: false
           });
         }

@@ -6,11 +6,84 @@ export class EnemyFactory {
     return weaponTypes[Math.floor(Math.random() * weaponTypes.length)];
   }
 
+  private static getT1BossLootCategories() {
+    return {
+      potions: {
+        dropChance: 0.15,
+        items: [
+          { itemId: 'potion_health', enhancementLevel: 0 },
+          { itemId: 'potion_stamina', enhancementLevel: 0 },
+        ]
+      },
+      baseGear: {
+        dropChance: 0.05,
+        items: [
+          { itemId: 'dagger_basic', enhancementLevel: 0 },
+          { itemId: 'shortsword_basic', enhancementLevel: 0 },
+          { itemId: 'helmet_leather', enhancementLevel: 0 },
+          { itemId: 'chest_leather', enhancementLevel: 0 },
+          { itemId: 'legs_leather', enhancementLevel: 0 },
+          { itemId: 'boots_leather', enhancementLevel: 0 },
+          { itemId: 'shoulders_leather', enhancementLevel: 0 },
+        ]
+      },
+      enhancedGearPlus1: {
+        dropChance: 0.03,
+        items: [
+          { itemId: 'dagger_basic', enhancementLevel: 1 },
+          { itemId: 'shortsword_basic', enhancementLevel: 1 },
+          { itemId: 'helmet_leather', enhancementLevel: 1 },
+          { itemId: 'chest_leather', enhancementLevel: 1 },
+          { itemId: 'legs_leather', enhancementLevel: 1 },
+          { itemId: 'boots_leather', enhancementLevel: 1 },
+          { itemId: 'shoulders_leather', enhancementLevel: 1 },
+        ]
+      },
+      enhancedGearPlus2: {
+        dropChance: 0.01,
+        items: [
+          { itemId: 'dagger_basic', enhancementLevel: 2 },
+          { itemId: 'shortsword_basic', enhancementLevel: 2 },
+          { itemId: 'helmet_leather', enhancementLevel: 2 },
+          { itemId: 'chest_leather', enhancementLevel: 2 },
+          { itemId: 'legs_leather', enhancementLevel: 2 },
+          { itemId: 'boots_leather', enhancementLevel: 2 },
+          { itemId: 'shoulders_leather', enhancementLevel: 2 },
+        ]
+      },
+      enhancedGearPlus3: {
+        dropChance: 0.005,
+        items: [
+          { itemId: 'dagger_basic', enhancementLevel: 3 },
+          { itemId: 'shortsword_basic', enhancementLevel: 3 },
+          { itemId: 'helmet_leather', enhancementLevel: 3 },
+          { itemId: 'chest_leather', enhancementLevel: 3 },
+          { itemId: 'legs_leather', enhancementLevel: 3 },
+          { itemId: 'boots_leather', enhancementLevel: 3 },
+          { itemId: 'shoulders_leather', enhancementLevel: 3 },
+        ]
+      }
+    };
+  }
+
   static createEnemy(tier: number, isBoss: boolean = false): Enemy {
     if (tier === 1 && !isBoss) {
-      return this.createVoidSpawn();
+      const tier1Mobs = [
+        this.createVoidSpawn,
+        this.createSkitterthid,
+        this.createHollowHusk,
+        this.createWailingWisp,
+        this.createCrawleyCrow
+      ];
+      const randomMob = tier1Mobs[Math.floor(Math.random() * tier1Mobs.length)];
+      return randomMob.call(this);
     } else if (tier === 1 && isBoss) {
-      return this.createGreaterVoidSpawn();
+      const tier1Bosses = [
+        this.createGreaterVoidSpawn,
+        this.createAetherbear
+      ];
+      const randomBoss = tier1Bosses[Math.floor(Math.random() * tier1Bosses.length)];
+      return randomBoss.call(this);
     } else if (tier === 2 && !isBoss) {
       return this.createShadowBeast();
     } else if (tier === 2 && isBoss) {
@@ -36,6 +109,8 @@ export class EnemyFactory {
     return {
       id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       name: 'Void Spawn',
+      tier: 1,
+      isBoss: false,
       health: 45,
       maxHealth: 45,
       evasion: 12,
@@ -43,8 +118,92 @@ export class EnemyFactory {
       weaponDamage: { numDice: 1, dieSize: 4, modifier: 2 },
       weaponType: this.randomWeaponType(),
       lootTable: [
-        { itemId: 'potion_health', dropChance: 0.30 },
-        { itemId: 'potion_stamina', dropChance: 0.25 }
+        { itemId: 'potion_health', dropChance: 0.05 },
+        { itemId: 'potion_stamina', dropChance: 0.05 }
+      ],
+      statusConditions: [],
+      backstabUsed: false,
+    };
+  }
+
+  private static createSkitterthid(): Enemy {
+    return {
+      id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      name: 'Skitterthid',
+      tier: 1,
+      isBoss: false,
+      health: 24,
+      maxHealth: 24,
+      evasion: 8,
+      damageReduction: 0,
+      weaponDamage: { numDice: 1, dieSize: 6, modifier: 1 },
+      weaponType: this.randomWeaponType(),
+      lootTable: [
+        { itemId: 'potion_health', dropChance: 0.05 },
+        { itemId: 'potion_stamina', dropChance: 0.05 }
+      ],
+      statusConditions: [],
+      backstabUsed: false,
+    };
+  }
+
+  private static createHollowHusk(): Enemy {
+    return {
+      id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      name: 'Hollow Husk',
+      tier: 1,
+      isBoss: false,
+      health: 36,
+      maxHealth: 36,
+      evasion: 5,
+      damageReduction: 0,
+      weaponDamage: { numDice: 1, dieSize: 6, modifier: 1 },
+      weaponType: this.randomWeaponType(),
+      lootTable: [
+        { itemId: 'potion_health', dropChance: 0.05 },
+        { itemId: 'potion_stamina', dropChance: 0.05 }
+      ],
+      statusConditions: [],
+      backstabUsed: false,
+    };
+  }
+
+  private static createWailingWisp(): Enemy {
+    return {
+      id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      name: 'Wailing Wisp',
+      tier: 1,
+      isBoss: false,
+      health: 28,
+      maxHealth: 28,
+      evasion: 8,
+      damageReduction: 0,
+      weaponDamage: { numDice: 1, dieSize: 6, modifier: 2 },
+      weaponType: this.randomWeaponType(),
+      lootTable: [
+        { itemId: 'potion_health', dropChance: 0.05 },
+        { itemId: 'potion_stamina', dropChance: 0.05 }
+      ],
+      statusConditions: [],
+      backstabUsed: false,
+    };
+  }
+
+  private static createCrawleyCrow(): Enemy {
+    return {
+      id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      name: 'Crawley Crow',
+      tier: 1,
+      isBoss: false,
+      health: 31,
+      maxHealth: 31,
+      evasion: 8,
+      damageReduction: 0,
+      weaponDamage: { numDice: 1, dieSize: 6, modifier: 1 },
+      weaponType: this.randomWeaponType(),
+      lootTable: [
+        { itemId: 'potion_health', dropChance: 0.05 },
+        { itemId: 'potion_stamina', dropChance: 0.05 }
       ],
       statusConditions: [],
       backstabUsed: false,
@@ -55,16 +214,15 @@ export class EnemyFactory {
     return {
       id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       name: 'Greater Void Spawn',
+      tier: 1,
+      isBoss: true,
       health: 90,
       maxHealth: 90,
       evasion: 14,
       damageReduction: 0.10,
       weaponDamage: { numDice: 2, dieSize: 6, modifier: 3 },
       weaponType: this.randomWeaponType(),
-      lootTable: [
-        { itemId: 'potion_health', dropChance: 0.50 },
-        { itemId: 'potion_stamina', dropChance: 0.40 }
-      ],
+      lootTable: [], // Uses category-based loot
       statusConditions: [],
       backstabUsed: false,
       chronostepUsesRemaining: 2,
@@ -72,10 +230,30 @@ export class EnemyFactory {
     };
   }
 
+  private static createAetherbear(): Enemy {
+    return {
+      id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      name: 'Aetherbear',
+      tier: 1,
+      isBoss: true,
+      health: 68,
+      maxHealth: 68,
+      evasion: 8,
+      damageReduction: 0,
+      weaponDamage: { numDice: 2, dieSize: 8, modifier: 3 },
+      weaponType: this.randomWeaponType(),
+      lootTable: [], // Uses category-based loot
+      statusConditions: [],
+      backstabUsed: false,
+    };
+  }
+
   private static createShadowBeast(): Enemy {
     return {
       id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       name: 'Shadow Beast',
+      tier: 2,
+      isBoss: false,
       health: 65,
       maxHealth: 65,
       evasion: 15,
@@ -95,6 +273,8 @@ export class EnemyFactory {
     return {
       id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       name: 'Void Stalker',
+      tier: 2,
+      isBoss: true,
       health: 130,
       maxHealth: 130,
       evasion: 16,
@@ -114,6 +294,8 @@ export class EnemyFactory {
     return {
       id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       name: 'Corrupted Sentinel',
+      tier: 3,
+      isBoss: false,
       health: 95,
       maxHealth: 95,
       evasion: 17,
@@ -133,6 +315,8 @@ export class EnemyFactory {
     return {
       id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       name: 'Void Harbinger',
+      tier: 3,
+      isBoss: true,
       health: 180,
       maxHealth: 180,
       evasion: 18,
@@ -152,6 +336,8 @@ export class EnemyFactory {
     return {
       id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       name: 'Abyssal Hunter',
+      tier: 4,
+      isBoss: false,
       health: 120,
       maxHealth: 120,
       evasion: 19,
@@ -171,6 +357,8 @@ export class EnemyFactory {
     return {
       id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       name: 'Eternal Void',
+      tier: 4,
+      isBoss: true,
       health: 240,
       maxHealth: 240,
       evasion: 20,
@@ -190,6 +378,8 @@ export class EnemyFactory {
     return {
       id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       name: 'Chaos Wraith',
+      tier: 5,
+      isBoss: false,
       health: 150,
       maxHealth: 150,
       evasion: 21,
@@ -209,6 +399,8 @@ export class EnemyFactory {
     return {
       id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       name: 'Void Emperor',
+      tier: 5,
+      isBoss: true,
       health: 300,
       maxHealth: 300,
       evasion: 22,
@@ -229,16 +421,52 @@ export class EnemyFactory {
     return this.createEnemy(tier, false);
   }
 
-  static rollLoot(enemy: Enemy): string[] {
-    const droppedItems: string[] = [];
+  static rollLoot(enemy: Enemy): Array<{ itemId: string; enhancementLevel?: number }> {
+    const droppedItems: Array<{ itemId: string; enhancementLevel?: number }> = [];
     
+    // T1 bosses use category-based loot (metadata-based detection, no hardcoded names)
+    if (enemy.tier === 1 && enemy.isBoss) {
+      const categories = this.getT1BossLootCategories();
+      
+      // Roll for each category
+      for (const category of Object.values(categories)) {
+        if (Math.random() < category.dropChance) {
+          // Randomly select one item from the category and clone it to prevent mutation
+          const randomItem = category.items[Math.floor(Math.random() * category.items.length)];
+          droppedItems.push({ ...randomItem });
+        }
+      }
+      
+      return droppedItems;
+    }
+    
+    // Standard loot table rolling for all other enemies
     for (const lootEntry of enemy.lootTable) {
       if (Math.random() < lootEntry.dropChance) {
-        droppedItems.push(lootEntry.itemId);
+        droppedItems.push({
+          itemId: lootEntry.itemId,
+          enhancementLevel: lootEntry.enhancementLevel || 0  // Default to 0 if not specified
+        });
       }
     }
 
     return droppedItems;
+  }
+
+  static rollCurrencyReward(tier: number, isBoss: boolean): number {
+    // T1 enemies use specific ranges
+    if (tier === 1) {
+      if (isBoss) {
+        // T1 bosses: 25-80 AA
+        return Math.floor(Math.random() * (80 - 25 + 1)) + 25;
+      } else {
+        // T1 mobs: 15-45 AA
+        return Math.floor(Math.random() * (45 - 15 + 1)) + 15;
+      }
+    }
+    
+    // T2-T5 enemies use formula: 30 × tier per enemy
+    return 30 * tier;
   }
 
   static getSpriteKey(enemyName: string): string | null {
