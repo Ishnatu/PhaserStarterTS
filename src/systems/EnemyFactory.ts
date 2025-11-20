@@ -473,7 +473,8 @@ export class EnemyFactory {
     const spriteMap: Record<string, string> = {
       'Void Spawn': 'void-spawn',
       'Greater Void Spawn': 'greater-void-spawn',
-      'Shadow Beast': 'shadow-beast'
+      'Shadow Beast': 'shadow-beast',
+      'Skitterthid': 'skitterthid'
     };
 
     return spriteMap[enemyName] || null;

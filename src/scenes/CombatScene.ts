@@ -50,6 +50,7 @@ export class CombatScene extends Phaser.Scene {
     this.load.image('void-spawn', '/assets/enemies/void-spawn.png');
     this.load.image('greater-void-spawn', '/assets/enemies/greater-void-spawn.png');
     this.load.image('shadow-beast', '/assets/enemies/shadow-beast.png');
+    this.load.image('skitterthid', '/assets/enemies/skitterthid.png');
     this.load.image('combat-background', '/assets/combat-background.png');
     this.load.image('wilderness-combat-background', '/assets/wilderness-combat-background.png');
     this.load.audio('combat-music', '/assets/audio/combat-music.mp3');
