@@ -177,6 +177,7 @@ export interface Enemy {
   backstabUsed?: boolean;
   chronostepUsesRemaining?: number;
   damageReceivedHistory?: { round: number; damage: number }[];
+  itemStolen?: boolean;
 }
 
 export interface AttackResult {

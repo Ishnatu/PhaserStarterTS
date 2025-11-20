@@ -25,7 +25,8 @@ export class CombatSystem {
         statusConditions: e.statusConditions || [],
         backstabUsed: false,
         chronostepUsesRemaining: e.name === 'Greater Void Spawn' ? 2 : undefined,
-        damageReceivedHistory: e.name === 'Greater Void Spawn' ? [] : undefined
+        damageReceivedHistory: e.name === 'Greater Void Spawn' ? [] : undefined,
+        itemStolen: e.name === 'Crawley Crow' ? false : undefined
       })),
       currentTurn: 'player',
       currentEnemyIndex: 0,
@@ -1184,6 +1185,45 @@ export class CombatSystem {
         continue;
       }
 
+      if (enemy.name === 'Skitterthid' && Math.random() < 0.35) {
+        const poisonBarbLogs = this.usePoisonBarb(enemy);
+        logs.push(...poisonBarbLogs);
+        continue;
+      }
+
+      if (enemy.name === 'Hollow Husk' && Math.random() < 0.30) {
+        const agonizingBiteLogs = this.useAgonizingBite(enemy);
+        logs.push(...agonizingBiteLogs);
+        continue;
+      }
+
+      if (enemy.name === 'Wailing Wisp' && Math.random() < 0.40) {
+        const shrillTouchLogs = this.useShrillTouch(enemy);
+        logs.push(...shrillTouchLogs);
+        continue;
+      }
+
+      if (enemy.name === 'Crawley Crow' && !enemy.itemStolen && Math.random() < 0.50) {
+        const shinyShinyLogs = this.useShinyShiny(enemy);
+        logs.push(...shinyShinyLogs);
+        continue;
+      }
+
+      if (enemy.name === 'Aetherbear') {
+        const roarRoll = Math.random();
+        const slamRoll = Math.random();
+        
+        if (roarRoll < 0.25) {
+          const roarLogs = this.useMightyRoar(enemy);
+          logs.push(...roarLogs);
+          continue;
+        } else if (slamRoll < 0.30) {
+          const slamLogs = this.useCrushingSlam(enemy);
+          logs.push(...slamLogs);
+          continue;
+        }
+      }
+
       const weakenedPenalty = ConditionManager.hasCondition(enemy, 'weakened') ? -2 : 0;
       const attackResult = DiceRoller.rollAttack(3 + weakenedPenalty);
       const playerEvasion = this.combatState.player.stats.calculatedEvasion + 
@@ -1292,6 +1332,318 @@ export class CombatSystem {
     this.combatState.combatLog.push(message);
     logs.push(message);
     
+    return logs;
+  }
+
+  private usePoisonBarb(enemy: Enemy): string[] {
+    if (!this.combatState) return [];
+    
+    const logs: string[] = [];
+    const specialAttackBonus = 2;
+    const weakenedPenalty = ConditionManager.hasCondition(enemy, 'weakened') ? -2 : 0;
+    const attackResult = DiceRoller.rollAttack(3 + weakenedPenalty + specialAttackBonus);
+    const playerEvasion = this.combatState.player.stats.calculatedEvasion + 
+                          ConditionManager.getEvasionBonus(this.combatState.player);
+    const hit = attackResult.total >= playerEvasion;
+
+    if (!hit) {
+      const missMessage = `${enemy.name} uses Poison Barb but misses! (Rolled ${attackResult.d20}+${3 + weakenedPenalty + specialAttackBonus}=${attackResult.total} vs Evasion ${playerEvasion})`;
+      this.combatState.combatLog.push(missMessage);
+      logs.push(missMessage);
+      return logs;
+    }
+
+    const damageRoll: DiceRoll = { numDice: 1, dieSize: 8, modifier: 2 };
+    const damageResult = DiceRoller.rollDiceTotal(damageRoll);
+    let damageBeforeReduction = damageResult.total;
+
+    let damageMultiplier = 1.0;
+    if (ConditionManager.hasCondition(enemy, 'weakened')) {
+      damageMultiplier *= 0.9;
+    }
+    if (ConditionManager.hasCondition(enemy, 'empowered')) {
+      damageMultiplier *= 1.25;
+    }
+    
+    damageBeforeReduction = Math.floor(damageBeforeReduction * damageMultiplier);
+
+    const baseDR = this.combatState.player.stats.damageReduction;
+    const bonusDR = ConditionManager.getDamageReductionBonus(this.combatState.player);
+    const totalDR = Math.min(baseDR + bonusDR, 0.95);
+    
+    const damage = Math.max(1, Math.floor(damageBeforeReduction * (1 - totalDR)));
+
+    this.combatState.player.health = Math.max(0, this.combatState.player.health - damage);
+
+    const poisonStacks = DiceRoller.rollD4();
+    ConditionManager.applyCondition(this.combatState.player, 'poisoned', 3, poisonStacks);
+
+    let message = `${enemy.name} uses Poison Barb! (${damageResult.rolls.join('+')}+${damageResult.modifier} = ${damageBeforeReduction})`;
+    if (totalDR > 0) {
+      message += ` -> ${damage} damage after ${Math.floor(totalDR * 100)}% reduction and ${poisonStacks} stacks of poison applied!`;
+    } else {
+      message += ` -> ${damage} damage and ${poisonStacks} stacks of poison applied!`;
+    }
+    this.combatState.combatLog.push(message);
+    logs.push(message);
+
+    return logs;
+  }
+
+  private useAgonizingBite(enemy: Enemy): string[] {
+    if (!this.combatState) return [];
+    
+    const logs: string[] = [];
+    const specialAttackBonus = -1;
+    const weakenedPenalty = ConditionManager.hasCondition(enemy, 'weakened') ? -2 : 0;
+    const attackResult = DiceRoller.rollAttack(3 + weakenedPenalty + specialAttackBonus);
+    const playerEvasion = this.combatState.player.stats.calculatedEvasion + 
+                          ConditionManager.getEvasionBonus(this.combatState.player);
+    const hit = attackResult.total >= playerEvasion;
+
+    if (!hit) {
+      const missMessage = `${enemy.name} uses Agonizing Bite but misses! (Rolled ${attackResult.d20}+${3 + weakenedPenalty + specialAttackBonus}=${attackResult.total} vs Evasion ${playerEvasion})`;
+      this.combatState.combatLog.push(missMessage);
+      logs.push(missMessage);
+      return logs;
+    }
+
+    const damageRoll: DiceRoll = { numDice: 1, dieSize: 10, modifier: 0 };
+    const damageResult = DiceRoller.rollDiceTotal(damageRoll);
+    let damageBeforeReduction = damageResult.total;
+
+    let damageMultiplier = 1.0;
+    if (ConditionManager.hasCondition(enemy, 'weakened')) {
+      damageMultiplier *= 0.9;
+    }
+    if (ConditionManager.hasCondition(enemy, 'empowered')) {
+      damageMultiplier *= 1.25;
+    }
+    
+    damageBeforeReduction = Math.floor(damageBeforeReduction * damageMultiplier);
+
+    const baseDR = this.combatState.player.stats.damageReduction;
+    const bonusDR = ConditionManager.getDamageReductionBonus(this.combatState.player);
+    const totalDR = Math.min(baseDR + bonusDR, 0.95);
+    
+    const damage = Math.max(1, Math.floor(damageBeforeReduction * (1 - totalDR)));
+
+    this.combatState.player.health = Math.max(0, this.combatState.player.health - damage);
+
+    const weakenedDuration = DiceRoller.rollDice(1, 3)[0];
+    ConditionManager.applyCondition(this.combatState.player, 'weakened', weakenedDuration, 1);
+
+    let message = `${enemy.name} uses Agonizing Bite! (${damageResult.rolls.join('+')}+${damageResult.modifier} = ${damageBeforeReduction})`;
+    if (totalDR > 0) {
+      message += ` -> ${damage} damage after ${Math.floor(totalDR * 100)}% reduction and weakened for ${weakenedDuration} rounds!`;
+    } else {
+      message += ` -> ${damage} damage and weakened for ${weakenedDuration} rounds!`;
+    }
+    this.combatState.combatLog.push(message);
+    logs.push(message);
+
+    return logs;
+  }
+
+  private useShrillTouch(enemy: Enemy): string[] {
+    if (!this.combatState) return [];
+    
+    const logs: string[] = [];
+    const specialAttackBonus = 2;
+    const weakenedPenalty = ConditionManager.hasCondition(enemy, 'weakened') ? -2 : 0;
+    const attackResult = DiceRoller.rollAttack(3 + weakenedPenalty + specialAttackBonus);
+    const playerEvasion = this.combatState.player.stats.calculatedEvasion + 
+                          ConditionManager.getEvasionBonus(this.combatState.player);
+    const hit = attackResult.total >= playerEvasion;
+
+    if (!hit) {
+      const missMessage = `${enemy.name} uses Shrill Touch but misses! (Rolled ${attackResult.d20}+${3 + weakenedPenalty + specialAttackBonus}=${attackResult.total} vs Evasion ${playerEvasion})`;
+      this.combatState.combatLog.push(missMessage);
+      logs.push(missMessage);
+      return logs;
+    }
+
+    const damageRoll: DiceRoll = { numDice: 2, dieSize: 4, modifier: 2 };
+    const damageResult = DiceRoller.rollDiceTotal(damageRoll);
+    let damageBeforeReduction = damageResult.total;
+
+    let damageMultiplier = 1.0;
+    if (ConditionManager.hasCondition(enemy, 'weakened')) {
+      damageMultiplier *= 0.9;
+    }
+    if (ConditionManager.hasCondition(enemy, 'empowered')) {
+      damageMultiplier *= 1.25;
+    }
+    
+    damageBeforeReduction = Math.floor(damageBeforeReduction * damageMultiplier);
+
+    const baseDR = this.combatState.player.stats.damageReduction;
+    const bonusDR = ConditionManager.getDamageReductionBonus(this.combatState.player);
+    const totalDR = Math.min(baseDR + bonusDR, 0.95);
+    
+    const damage = Math.max(1, Math.floor(damageBeforeReduction * (1 - totalDR)));
+
+    this.combatState.player.health = Math.max(0, this.combatState.player.health - damage);
+
+    const poisonStacks = DiceRoller.rollDice(1, 2)[0];
+    ConditionManager.applyCondition(this.combatState.player, 'poisoned', 3, poisonStacks);
+
+    let message = `${enemy.name} uses Shrill Touch! (${damageResult.rolls.join('+')}+${damageResult.modifier} = ${damageBeforeReduction})`;
+    if (totalDR > 0) {
+      message += ` -> ${damage} damage after ${Math.floor(totalDR * 100)}% reduction and ${poisonStacks} stacks of poison applied!`;
+    } else {
+      message += ` -> ${damage} damage and ${poisonStacks} stacks of poison applied!`;
+    }
+    this.combatState.combatLog.push(message);
+    logs.push(message);
+
+    return logs;
+  }
+
+  private useShinyShiny(enemy: Enemy): string[] {
+    if (!this.combatState) return [];
+    
+    const logs: string[] = [];
+    const specialAttackBonus = 1;
+    const weakenedPenalty = ConditionManager.hasCondition(enemy, 'weakened') ? -2 : 0;
+    const attackResult = DiceRoller.rollAttack(3 + weakenedPenalty + specialAttackBonus);
+    const playerEvasion = this.combatState.player.stats.calculatedEvasion + 
+                          ConditionManager.getEvasionBonus(this.combatState.player);
+    const hit = attackResult.total >= playerEvasion;
+
+    if (!hit) {
+      const missMessage = `${enemy.name} tries Shiny Shiny but misses! (Rolled ${attackResult.d20}+${3 + weakenedPenalty + specialAttackBonus}=${attackResult.total} vs Evasion ${playerEvasion})`;
+      this.combatState.combatLog.push(missMessage);
+      logs.push(missMessage);
+      return logs;
+    }
+
+    const inventoryItems = this.combatState.player.inventory.filter(item => item.quantity > 0);
+    
+    if (inventoryItems.length === 0) {
+      const noItemMessage = `${enemy.name} uses Shiny Shiny but you have no items to steal!`;
+      this.combatState.combatLog.push(noItemMessage);
+      logs.push(noItemMessage);
+      return logs;
+    }
+
+    const randomIndex = Math.floor(Math.random() * inventoryItems.length);
+    const stolenItem = inventoryItems[randomIndex];
+    const itemData = ItemDatabase.getItem(stolenItem.itemId);
+    const itemName = itemData ? itemData.name : stolenItem.itemId;
+
+    if (stolenItem.quantity > 1) {
+      stolenItem.quantity -= 1;
+    } else {
+      const inventoryIndex = this.combatState.player.inventory.indexOf(stolenItem);
+      if (inventoryIndex > -1) {
+        this.combatState.player.inventory.splice(inventoryIndex, 1);
+      }
+    }
+
+    enemy.itemStolen = true;
+
+    const stealMessage = `${enemy.name} uses Shiny Shiny! Stole ${itemName} from your inventory!`;
+    this.combatState.combatLog.push(stealMessage);
+    logs.push(stealMessage);
+
+    const fleeTarget = 12 + this.combatState.player.level;
+    const fleeRoll = DiceRoller.rollD20();
+
+    if (fleeRoll > fleeTarget) {
+      const fleeMessage = `${enemy.name} flees with the stolen item! (Rolled ${fleeRoll} vs ${fleeTarget}) Combat ends!`;
+      this.combatState.combatLog.push(fleeMessage);
+      logs.push(fleeMessage);
+      
+      enemy.health = 0;
+      this.checkCombatEnd();
+    } else {
+      const failMessage = `${enemy.name} tries to flee but is stuck in combat! (Rolled ${fleeRoll} vs ${fleeTarget})`;
+      this.combatState.combatLog.push(failMessage);
+      logs.push(failMessage);
+    }
+
+    return logs;
+  }
+
+  private useMightyRoar(enemy: Enemy): string[] {
+    if (!this.combatState) return [];
+    
+    const logs: string[] = [];
+    const duration = DiceRoller.rollD4() + 2;
+    
+    ConditionManager.applyCondition(enemy, 'empowered', duration, 1);
+    
+    const message = `${enemy.name} uses Mighty Roar! Gains empowered status for ${duration} rounds!`;
+    this.combatState.combatLog.push(message);
+    logs.push(message);
+    
+    return logs;
+  }
+
+  private useCrushingSlam(enemy: Enemy): string[] {
+    if (!this.combatState) return [];
+    
+    const logs: string[] = [];
+    const specialAttackBonus = 3;
+    const weakenedPenalty = ConditionManager.hasCondition(enemy, 'weakened') ? -2 : 0;
+    const attackResult = DiceRoller.rollAttack(3 + weakenedPenalty + specialAttackBonus);
+    const playerEvasion = this.combatState.player.stats.calculatedEvasion + 
+                          ConditionManager.getEvasionBonus(this.combatState.player);
+    const hit = attackResult.total >= playerEvasion;
+
+    if (!hit) {
+      const missMessage = `${enemy.name} uses Crushing Slam but misses! (Rolled ${attackResult.d20}+${3 + weakenedPenalty + specialAttackBonus}=${attackResult.total} vs Evasion ${playerEvasion})`;
+      this.combatState.combatLog.push(missMessage);
+      logs.push(missMessage);
+      
+      if (Math.random() < 0.25) {
+        ConditionManager.applyCondition(enemy, 'stunned', 1, 1);
+        const selfStunMessage = `${enemy.name} loses balance and is stunned for 1 round!`;
+        this.combatState.combatLog.push(selfStunMessage);
+        logs.push(selfStunMessage);
+      }
+      
+      return logs;
+    }
+
+    const damageRoll: DiceRoll = { numDice: 3, dieSize: 8, modifier: 4 };
+    const damageResult = DiceRoller.rollDiceTotal(damageRoll);
+    let damageBeforeReduction = damageResult.total;
+
+    let damageMultiplier = 1.0;
+    if (ConditionManager.hasCondition(enemy, 'weakened')) {
+      damageMultiplier *= 0.9;
+    }
+    if (ConditionManager.hasCondition(enemy, 'empowered')) {
+      damageMultiplier *= 1.25;
+    }
+    
+    damageBeforeReduction = Math.floor(damageBeforeReduction * damageMultiplier);
+
+    const baseDR = this.combatState.player.stats.damageReduction;
+    const bonusDR = ConditionManager.getDamageReductionBonus(this.combatState.player);
+    const totalDR = Math.min(baseDR + bonusDR, 0.95);
+    
+    const damage = Math.max(1, Math.floor(damageBeforeReduction * (1 - totalDR)));
+
+    this.combatState.player.health = Math.max(0, this.combatState.player.health - damage);
+
+    let message = `${enemy.name} uses Crushing Slam! (${damageResult.rolls.join('+')}+${damageResult.modifier} = ${damageBeforeReduction})`;
+    if (totalDR > 0) {
+      message += ` -> ${damage} damage after ${Math.floor(totalDR * 100)}% reduction!`;
+    } else {
+      message += ` -> ${damage} damage!`;
+    }
+    
+    if (Math.random() < 0.15) {
+      ConditionManager.applyCondition(this.combatState.player, 'stunned', 1, 1);
+      message += ' You are stunned for 1 round!';
+    }
+    
+    this.combatState.combatLog.push(message);
+    logs.push(message);
+
     return logs;
   }
 
