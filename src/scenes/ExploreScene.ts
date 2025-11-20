@@ -151,7 +151,7 @@ export class ExploreScene extends Phaser.Scene {
 
     this.add.text(20, height - 40, 'Arrow keys to move • Approach markers to interact • M to open menu', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
+      fontSize: FONTS.size.xsmall,
       color: '#cccccc',
       resolution: 2,
     }).setScrollFactor(0).setDepth(100);
