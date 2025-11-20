@@ -38,7 +38,17 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **State Management**: Server-side PostgreSQL saves with 30-second auto-save, LocalStorage fallback.
 - **Enemy System**: Metadata-driven enemy database in EnemyFactory.ts. 15 enemy types with `tier` and `isBoss` fields for future-proof design. Tier 1 has 5 mobs (Void Spawn, Skitterthid, Hollow Husk, Wailing Wisp, Crawley Crow) and 2 bosses (Greater Void Spawn, Aetherbear); Tiers 2-5 have 2 each (mob and boss). Currency rewards use per-enemy metadata: T1 mobs (15-45 AA), T1 bosses (25-80 AA), T2-T5 (30 × tier per enemy). T1 boss loot uses category-based system with exact probabilities: potions 15%, base gear 5%, +1 enhanced gear 3%, +2 enhanced gear 1%, +3 enhanced gear 0.5%. Each category rolls once; if successful, randomly selects one item from that category.
 - **Core Gameplay Loop**: Main Menu -> Town (Roboka) -> Explore Map -> Delve (3-5 Rooms) -> Combat -> Back to Town.
-- **D20 Combat System**: Turn-based tactical combat with d20 rolls, critical hits, armor reduction, and a 2-action economy. Features Pokemon-style attack selection UI. Weapon types have unique attacks with varying stamina/action costs and damage multipliers. Includes status conditions (stunned, poisoned, bleeding, dependable), multi-hit combos, AoE cleaves, backstabs, vampiric healing, and instant-kill finishers. Combat ends immediately upon enemy defeat.
+- **D20 Combat System**: Turn-based tactical combat with d20 rolls, critical hits, armor reduction, and a 2-action economy. Features Pokemon-style attack selection UI. Weapon types have unique attacks with varying stamina/action costs and damage multipliers. Includes status conditions (stunned, poisoned, bleeding, dependable, weakened, empowered, slowed), multi-hit combos, AoE cleaves, backstabs, vampiric healing, and instant-kill finishers. Combat ends immediately upon enemy defeat.
+  - **Weakened**: Target deals 10% less damage and has -2 to hit.
+  - **Empowered**: Target deals 25% more damage.
+- **Enemy Special Attacks**: T1 enemies have unique special abilities with specific probabilities:
+  - **Void Spawn**: Splooge (35%) - slows player
+  - **Skitterthid**: Poison Barb (35%) - +2 hit, 1d8+2 damage, 1d4 poison stacks
+  - **Hollow Husk**: Agonizing Bite (30%) - -1 hit, 1d10 damage, weakened for 1d3 rounds
+  - **Wailing Wisp**: Shrill Touch (40%) - +2 hit, 2d4+2 damage, 1d2 poison stacks
+  - **Crawley Crow**: Shiny Shiny (50%) - +1 hit, steals random inventory item, attempts flee (d20 vs 12+player level), combat ends if flee succeeds
+  - **Greater Void Spawn**: Chronostep (70% when below 40% HP) - time manipulation ability
+  - **Aetherbear**: Mighty Roar (25%) - gains empowered for 1d4+2 rounds; Crushing Slam (30%) - +3 hit, 3d8+4 damage, 15% stun on hit, 25% self-stun on miss
 - **Stamina Management**: Stamina drains per tile moved and per attack. Short rests restore health/stamina with encounter risk.
 - **Delve Generation**: Procedurally generated 3-5 room dungeons with tier-based difficulty and hidden room types ('???'). Includes interactive trap rooms with D20 disarm checks and dramatic choices.
 - **Economy**: Arcane Ash (AA) for common transactions, Crystalline Animus (CA) for rare items.
