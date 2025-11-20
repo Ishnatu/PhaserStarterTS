@@ -230,7 +230,7 @@ export class EnemyFactory {
     };
   }
 
-  private static createAetherbear(): Enemy {
+  static createAetherbear(): Enemy {
     return {
       id: `enemy_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       name: 'Aetherbear',

@@ -1494,6 +1494,17 @@ export class ExploreScene extends Phaser.Scene {
     console.log('[ENCOUNTER DEBUG] Random roll:', roll);
     
     if (roll < 0.38) {
+      // 15% chance for a rare Aetherbear boss encounter
+      if (Math.random() < 0.15) {
+        const aetherbear = EnemyFactory.createAetherbear();
+        return {
+          type: 'combat',
+          description: 'A massive Aetherbear emerges from the wilderness!',
+          enemies: [aetherbear],
+        };
+      }
+      
+      // Standard wilderness combat encounters
       const numEnemies = Math.floor(Math.random() * 2) + 1;
       const enemies = [];
       

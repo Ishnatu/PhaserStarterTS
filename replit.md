@@ -44,7 +44,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Economy**: Arcane Ash (AA) for common transactions, Crystalline Animus (CA) for rare items.
 - **Inventory & Equipment**: 8-slot equipment, 15-slot active inventory, 80-slot footlocker. Supports dual-wielding. Items have durability that decays and can be repaired. Soulbinding allows binding up to 3 equipment slots.
 - **Loot System**: Enemies drop tier-based items with enhancement metadata. All loot items include `enhancementLevel` (defaults to 0 for standard drops). Items are cloned before returning to prevent reference mutation. Victory screen searches by both itemId and enhancementLevel for accurate display. Tombstone encounters (5% chance) allow looting items from other players.
-- **Random Encounters**: Varied types (Combat, Treasure, Shrine, Corrupted Void Portal (2-stage mini-delve), Trapped Chest, Tombstone, Wandering Merchant).
+- **Random Encounters**: Varied types (Combat, Treasure, Shrine, Corrupted Void Portal (2-stage mini-delve), Trapped Chest, Tombstone, Wandering Merchant). Combat encounters have a 15% chance to spawn an Aetherbear boss instead of standard enemies.
 - **Buff System**: Time-based temporary effects managed by BuffManager.
 - **Wilderness Exploration**: 3000x3000 world with camera-follow, procedural terrain (grass, dirt, trees, bushes, grass tufts), Y-sorted rendering, and fog of war. Limited rests per wilderness trip.
 - **UI System**: Viewport-locked, interactive, blocking overlays with hierarchical ESC key navigation.
