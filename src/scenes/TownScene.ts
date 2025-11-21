@@ -2023,39 +2023,47 @@ export class TownScene extends Phaser.Scene {
     const REST_COST = 0; // Free for testing
 
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
-    const panel = this.add.rectangle(width / 2, height / 2, 600, 400, 0x2a2a3e).setOrigin(0.5);
+    const panel = this.add.rectangle(width / 2, height / 2, 750, 550, 0x2a2a3e).setOrigin(0.5);
     uiElements.push(overlay, panel);
 
-    const title = this.add.text(width / 2, height / 2 - 160, 'The Weary Traveler Inn', {
+    // Header layout with unified design pattern
+    const headerBaseY = height / 2 - 240;
+    const verticalGap = 65;
+
+    // Row 1: Title
+    const title = this.add.text(width / 2, headerBaseY, 'The Weary Traveler Inn', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#6699ff',
-      fontStyle: 'bold',
     }).setOrigin(0.5);
     uiElements.push(title);
 
-    const innkeeperText = this.add.text(width / 2, height / 2 - 100, '"Welcome, traveler. Rest your weary bones."', {
+    // Row 2: Subtitle quote
+    const innkeeperText = this.add.text(width / 2, headerBaseY + verticalGap, '"Welcome, traveler. Rest your weary bones."', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
+      fontSize: FONTS.size.xsmall,
       color: '#cccccc',
       fontStyle: 'italic',
     }).setOrigin(0.5);
     uiElements.push(innkeeperText);
 
-    const playerStatusText = this.add.text(width / 2, height / 2 - 50, 
+    // Content area starts after header
+    const contentY = headerBaseY + (verticalGap * 2) + 40;
+
+    const playerStatusText = this.add.text(width / 2, contentY, 
       `Current Health: ${player.health} / ${player.maxHealth}\n` +
       `Current Stamina: ${player.stamina} / ${player.maxStamina}`, {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
+      fontSize: FONTS.size.xsmall,
       color: '#ffffff',
       align: 'center',
     }).setOrigin(0.5);
     uiElements.push(playerStatusText);
 
-    const costText = this.add.text(width / 2, height / 2 + 20, 
+    const costText = this.add.text(width / 2, contentY + 50, 
       `Rest Cost: FREE (Testing Mode)`, {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
+      fontSize: FONTS.size.xsmall,
       color: '#88ff88',
     }).setOrigin(0.5);
     uiElements.push(costText);
@@ -2072,13 +2080,13 @@ export class TownScene extends Phaser.Scene {
     const isFullyRested = player.health >= player.maxHealth && player.stamina >= player.maxStamina;
 
     if (isFullyRested) {
-      const restBtn = this.createButton(width / 2, height / 2 + 100, 'Already Fully Rested', () => {});
+      const restBtn = this.createButton(width / 2, height / 2 + 140, 'Rest and Restore (FREE)', () => {});
       const btnBg = restBtn.getAt(0) as Phaser.GameObjects.Rectangle;
       btnBg.setFillStyle(0x666666);
       btnBg.disableInteractive();
       uiElements.push(restBtn);
     } else {
-      const restBtn = this.createButton(width / 2, height / 2 + 100, 'Rest and Restore (FREE)', () => {
+      const restBtn = this.createButton(width / 2, height / 2 + 140, 'Rest and Restore (FREE)', () => {
         player.health = player.maxHealth;
         player.stamina = player.maxStamina;
         this.gameState.updatePlayer(player);
@@ -2089,7 +2097,7 @@ export class TownScene extends Phaser.Scene {
       uiElements.push(restBtn);
     }
 
-    const closeBtn = this.createButton(width / 2, height / 2 + 160, 'Leave', () => {
+    const closeBtn = this.createButton(width / 2, height / 2 + 200, 'Leave', () => {
       destroyAll();
     });
     uiElements.push(closeBtn);
