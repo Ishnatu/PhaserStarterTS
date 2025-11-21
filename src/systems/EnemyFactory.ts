@@ -474,9 +474,15 @@ export class EnemyFactory {
       'Void Spawn': 'void-spawn',
       'Greater Void Spawn': 'greater-void-spawn',
       'Shadow Beast': 'shadow-beast',
-      'Skitterthid': 'skitterthid'
+      'Skitterthid': 'skitterthid',
+      'Aetherbear': 'aetherbear'
     };
 
     return spriteMap[enemyName] || null;
+  }
+
+  static isBossEnemy(enemyName: string): boolean {
+    const bosses = ['Greater Void Spawn', 'Aetherbear'];
+    return bosses.includes(enemyName);
   }
 }

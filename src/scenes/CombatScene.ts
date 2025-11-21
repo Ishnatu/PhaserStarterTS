@@ -61,6 +61,7 @@ export class CombatScene extends Phaser.Scene {
     this.load.image('greater-void-spawn', '/assets/enemies/greater-void-spawn.png');
     this.load.image('shadow-beast', '/assets/enemies/shadow-beast.png');
     this.load.image('skitterthid', '/assets/enemies/skitterthid.png');
+    this.load.image('aetherbear', '/assets/enemies/aetherbear.png');
     this.load.image('combat-background', '/assets/combat-background.png');
     this.load.image('wilderness-combat-background', '/assets/wilderness-combat-background.png');
     this.load.audio('combat-music', '/assets/audio/combat-music.mp3');
@@ -306,7 +307,9 @@ export class CombatScene extends Phaser.Scene {
       
       if (spriteKey) {
         enemyVisual = this.add.sprite(x, y, spriteKey);
-        enemyVisual.setScale(0.2);
+        // Boss enemies are 20% larger to emphasize their importance
+        const scale = EnemyFactory.isBossEnemy(enemy.name) ? 0.24 : 0.2;
+        enemyVisual.setScale(scale);
       } else {
         enemyVisual = this.add.rectangle(x, y, 80, 80, 0xff4444);
       }
