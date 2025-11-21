@@ -2100,15 +2100,15 @@ export class ExploreScene extends Phaser.Scene {
     const player = this.gameState.getPlayer();
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
-    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0);
-    const panel = this.add.rectangle(width / 2, height / 2, 700, 550, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0);
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setDepth(999);
+    const panel = this.add.rectangle(width / 2, height / 2, 700, 550, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     uiElements.push(overlay, panel);
 
     const title = this.add.text(width / 2, height / 2 - 250, 'Equipment', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#f0a020',
-    }).setOrigin(0.5).setScrollFactor(0);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     uiElements.push(title);
 
     const destroyAll = () => {
@@ -2142,7 +2142,7 @@ export class ExploreScene extends Phaser.Scene {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: '#aaaaaa',
-      }).setScrollFactor(0);
+      }).setScrollFactor(0).setDepth(1001);
       uiElements.push(slotLabel);
 
       const equipped = player.equipment[slot.key];
@@ -2153,7 +2153,7 @@ export class ExploreScene extends Phaser.Scene {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: item ? '#ffffff' : '#666666',
-      }).setScrollFactor(0);
+      }).setScrollFactor(0).setDepth(1001);
       uiElements.push(itemLabel);
     });
 
@@ -2161,7 +2161,7 @@ export class ExploreScene extends Phaser.Scene {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffaa00',
-    }).setScrollFactor(0);
+    }).setScrollFactor(0).setDepth(1001);
     uiElements.push(statsTitle);
 
     const statsText = this.add.text(width / 2 - 320, height / 2 + 130, [
@@ -2171,7 +2171,7 @@ export class ExploreScene extends Phaser.Scene {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#88ccff',
-    }).setScrollFactor(0);
+    }).setScrollFactor(0).setDepth(1001);
     uiElements.push(statsText);
 
     const closeBtn = this.createButton(width / 2, height / 2 + 240, 'Close', () => {
