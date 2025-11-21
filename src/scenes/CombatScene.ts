@@ -16,6 +16,7 @@ import { ConditionManager } from '../systems/ConditionManager';
 import { EquipmentManager } from '../systems/EquipmentManager';
 import { AudioManager } from '../managers/AudioManager';
 import { getXpReward, hasLeveledUp, getNewLevel } from '../systems/xpSystem';
+import { PixelArtBar } from '../utils/PixelArtBar';
 
 export class CombatScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -23,6 +24,8 @@ export class CombatScene extends Phaser.Scene {
   private currentDelve!: Delve;
   private currentRoom!: DelveRoom;
   private logText!: Phaser.GameObjects.Text;
+  private playerHealthBar!: PixelArtBar;
+  private playerStaminaBar!: PixelArtBar;
   private playerHealthText!: Phaser.GameObjects.Text;
   private playerStaminaText!: Phaser.GameObjects.Text;
   private enemyContainers: Phaser.GameObjects.Container[] = [];
@@ -31,6 +34,8 @@ export class CombatScene extends Phaser.Scene {
   private wildEnemies?: Enemy[];
   private isOverlayActive: boolean = false;
   private actionButtons: Phaser.GameObjects.Container[] = [];
+  private attackButtons: Phaser.GameObjects.Container[] = [];
+  private attackAreaBg?: Phaser.GameObjects.Rectangle;
   private returnToLocation?: { x: number; y: number };
   private selectedAttack?: WeaponAttack;
   private attackUIElements: Phaser.GameObjects.GameObject[] = [];
@@ -128,6 +133,7 @@ export class CombatScene extends Phaser.Scene {
     this.renderEnemies(enemies);
     this.renderCombatLog();
     this.renderActionButtons();
+    this.renderWeaponAttacks();
 
     // ESC key for menu
     this.escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
@@ -194,40 +200,59 @@ export class CombatScene extends Phaser.Scene {
     const player = this.gameState.getPlayer();
     this.previousPlayerHealth = player.health;
     
-    // Nameplate below sprite - horizontal layout
-    const plateY = playerY + 80;
-    const playerInfoBg = this.add.rectangle(60, plateY, 440, 60, 0x2a2a3e, 0.9).setOrigin(0);
+    // Player info panel with HP/SP bars (Pink area - top left)
+    const panelX = 20;
+    const panelY = 20;
+    const panelWidth = 320;
+    const panelHeight = 140;
     
-    this.add.text(80, plateY + 10, 'YOU', {
+    const playerInfoBg = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x2a2a3e, 0.9).setOrigin(0);
+    
+    // Player name and level
+    this.add.text(panelX + 10, panelY + 10, 'YOU', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
+      fontSize: FONTS.size.xsmall,
       color: '#ffffff',
       fontStyle: 'bold',
       resolution: 2,
     });
 
-    this.add.text(80, plateY + 35, `Lv ${player.level}`, {
+    this.add.text(panelX + panelWidth - 10, panelY + 10, `Lv ${player.level}`, {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
+      fontSize: FONTS.size.xsmall,
       color: '#ffcc00',
       resolution: 2,
-    });
+    }).setOrigin(1, 0);
 
-    this.playerHealthText = this.add.text(200, plateY + 10, 
-      `HP: ${player.health}/${player.maxHealth}`, {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
-      color: '#00ff00',
-      resolution: 2,
-    });
+    // HP Bar
+    this.playerHealthBar = new PixelArtBar(
+      this,
+      panelX + 10,
+      panelY + 35,
+      'HP',
+      0xcc3333,  // Red fill
+      0x4a5a8a,  // Blue-gray empty
+      panelWidth - 20,
+      30
+    );
+    this.playerHealthBar.update(player.health, player.maxHealth);
 
-    this.playerStaminaText = this.add.text(200, plateY + 35, 
-      `SP: ${player.stamina}/${player.maxStamina}`, {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
-      color: '#ffcc00',
-      resolution: 2,
-    });
+    // SP Bar
+    this.playerStaminaBar = new PixelArtBar(
+      this,
+      panelX + 10,
+      panelY + 75,
+      'SP',
+      0xccaa33,  // Yellow-gold fill
+      0x4a5a6a,  // Gray empty
+      panelWidth - 20,
+      30
+    );
+    this.playerStaminaBar.update(player.stamina, player.maxStamina);
+
+    // Hidden text elements for backward compatibility (used in updateCombatDisplay)
+    this.playerHealthText = this.add.text(0, 0, '', { fontSize: '1px' }).setVisible(false);
+    this.playerStaminaText = this.add.text(0, 0, '', { fontSize: '1px' }).setVisible(false);
   }
 
   private getEnemySpriteKey(enemyName: string): string | null {
@@ -334,17 +359,20 @@ export class CombatScene extends Phaser.Scene {
 
   private renderCombatLog(): void {
     const { width, height } = this.cameras.main;
-    const logX = 20;
-    const logY = height - 350;
+    // Green area - Combat log (top center/right, wide)
+    const logX = 360;
+    const logY = 20;
+    const logWidth = width - 380 - 250;  // Leave space for player panel and sidebar
+    const logHeight = 140;
 
-    this.add.rectangle(logX, logY, 480, 120, 0x1a1a2e, 0.8).setOrigin(0);
+    this.add.rectangle(logX, logY, logWidth, logHeight, 0x1a1a2e, 0.8).setOrigin(0);
     
     this.logText = this.add.text(logX + 10, logY + 10, 'Combat begins!', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xsmall,
       color: '#ffffff',
       align: 'left',
-      wordWrap: { width: 460 },
+      wordWrap: { width: logWidth - 20 },
       resolution: 2,
     });
   }
@@ -352,9 +380,9 @@ export class CombatScene extends Phaser.Scene {
   private renderActionButtons(): void {
     const { width, height } = this.cameras.main;
     const menuX = width - 250;
-    const menuY = height - 230;
+    const menuY = height - 180;
 
-    const menuBg = this.add.rectangle(menuX, menuY, 230, 210, 0x2a2a3e, 0.95).setOrigin(0);
+    const menuBg = this.add.rectangle(menuX, menuY, 230, 160, 0x2a2a3e, 0.95).setOrigin(0);
 
     const state = this.combatSystem.getCombatState();
     const actionsRemaining = state?.actionsRemaining || 0;
@@ -367,22 +395,17 @@ export class CombatScene extends Phaser.Scene {
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    const attackBtn = this.createActionButton(menuX + 20, menuY + 40, 'Attack', () => {
-      this.showAttackSelection();
-    });
-    this.actionButtons.push(attackBtn);
-
-    const inventoryBtn = this.createActionButton(menuX + 20, menuY + 90, 'Inventory', () => {
+    const inventoryBtn = this.createActionButton(menuX + 20, menuY + 45, 'Inventory', () => {
       this.openInventory();
     });
     this.actionButtons.push(inventoryBtn);
 
-    const runBtn = this.createActionButton(menuX + 20, menuY + 140, 'Run', () => {
+    const runBtn = this.createActionButton(menuX + 20, menuY + 90, 'Run', () => {
       this.attemptRun();
     });
     this.actionButtons.push(runBtn);
 
-    const endTurnBtn = this.createActionButton(menuX + 20, menuY + 170, 'End Turn', () => {
+    const endTurnBtn = this.createActionButton(menuX + 20, menuY + 120, 'End Turn', () => {
       this.endPlayerTurn();
     });
     this.actionButtons.push(endTurnBtn);
@@ -399,7 +422,7 @@ export class CombatScene extends Phaser.Scene {
       .on('pointerover', () => {
         const state = this.combatSystem.getCombatState();
         const hasActions = state && state.actionsRemaining > 0;
-        if (text === 'Attack' || text === 'Inventory') {
+        if (text === 'Inventory') {
           if (hasActions) bg.setFillStyle(0x555577);
         } else {
           bg.setFillStyle(0x555577);
@@ -410,7 +433,7 @@ export class CombatScene extends Phaser.Scene {
         if (!this.isOverlayActive && this.combatSystem.isPlayerTurn()) {
           const state = this.combatSystem.getCombatState();
           const hasActions = state && state.actionsRemaining > 0;
-          if ((text === 'Attack' || text === 'Inventory') && !hasActions) {
+          if (text === 'Inventory' && !hasActions) {
             this.showMessage('Not enough actions!');
             return;
           }
@@ -425,6 +448,146 @@ export class CombatScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     return this.add.container(x + 95, y + 17.5, [bg, label]);
+  }
+
+  private renderWeaponAttacks(): void {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    const availableAttacks = EquipmentManager.getAvailableAttacks(player);
+    
+    // Orange box area - Bottom attack buttons
+    const attackAreaX = 20;
+    const attackAreaY = height - 190;
+    const attackAreaWidth = width - 290;  // Leave space for sidebar
+    const attackAreaHeight = 170;
+    
+    // Create or reuse background rectangle (prevent layer stacking)
+    if (!this.attackAreaBg) {
+      this.attackAreaBg = this.add.rectangle(attackAreaX, attackAreaY, attackAreaWidth, attackAreaHeight, 0x2a2a3e, 0.95).setOrigin(0);
+    }
+    
+    // Guard against zero attacks (division by zero)
+    if (availableAttacks.length === 0) {
+      const noAttacksText = this.add.text(attackAreaX + attackAreaWidth / 2, attackAreaY + attackAreaHeight / 2, 
+        'No weapons equipped', {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: '#888888',
+      }).setOrigin(0.5);
+      this.attackButtons.push(this.add.container(0, 0, [noAttacksText]));
+      return;
+    }
+    
+    // Attack buttons grid - 2 rows, fit as many attacks as needed
+    const cols = Math.max(1, Math.ceil(availableAttacks.length / 2));
+    const attackBoxWidth = Math.min(220, (attackAreaWidth - 40) / cols);
+    const attackBoxHeight = 70;
+    const spacing = 10;
+    const startX = attackAreaX + 10;
+    const startY = attackAreaY + 10;
+    
+    availableAttacks.forEach((attack, index) => {
+      const col = Math.floor(index / 2);
+      const row = index % 2;
+      const x = startX + col * (attackBoxWidth + spacing);
+      const y = startY + row * (attackBoxHeight + spacing);
+      
+      this.createAttackButtonBox(x, y, attackBoxWidth, attackBoxHeight, attack, player.stamina);
+    });
+  }
+
+  private createAttackButtonBox(x: number, y: number, width: number, height: number, attack: WeaponAttack, playerStamina: number): void {
+    const state = this.combatSystem.getCombatState();
+    const hasEnoughActions = state && state.actionsRemaining >= attack.actionCost;
+    const canAffordStamina = playerStamina >= attack.staminaCost;
+    const canUse = canAffordStamina && hasEnoughActions;
+    
+    const baseColor = canUse ? 0x444466 : 0x333344;
+    const hoverColor = canUse ? 0x555577 : 0x444455;
+    
+    const bg = this.add.rectangle(x, y, width, height, baseColor).setOrigin(0);
+    
+    if (canUse) {
+      bg.setInteractive({ useHandCursor: true })
+        .on('pointerover', () => bg.setFillStyle(hoverColor))
+        .on('pointerout', () => bg.setFillStyle(baseColor))
+        .on('pointerdown', () => {
+          if (!this.isOverlayActive && this.combatSystem.isPlayerTurn()) {
+            this.selectAttackDirect(attack);
+          }
+        });
+    } else {
+      bg.setAlpha(0.5);
+    }
+    
+    let nameColor = '#00ff00';
+    if (!canAffordStamina) {
+      nameColor = '#ff0000';
+    } else if (!hasEnoughActions) {
+      nameColor = '#888888';
+    }
+    
+    // Attack name only (no hand labels)
+    const nameText = this.add.text(x + width / 2, y + 10, attack.name, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.xsmall,
+      color: nameColor,
+      fontStyle: 'bold',
+    }).setOrigin(0.5, 0);
+    
+    const staminaText = this.add.text(x + 8, y + 35, `STAM ${attack.staminaCost}`, {
+      fontFamily: FONTS.primary,
+      fontSize: '11px',
+      color: canAffordStamina ? '#ffcc00' : '#ff0000',
+    });
+    
+    const actionText = this.add.text(x + width - 8, y + 35, `ATK ${attack.actionCost}`, {
+      fontFamily: FONTS.primary,
+      fontSize: '11px',
+      color: hasEnoughActions ? '#ffffff' : '#888888',
+    }).setOrigin(1, 0);
+    
+    if (attack.specialEffect && attack.specialEffect.length < 45) {
+      const effectText = this.add.text(x + width / 2, y + 52, attack.specialEffect, {
+        fontFamily: FONTS.primary,
+        fontSize: '10px',
+        color: canUse ? '#aaaaff' : '#666666',
+        wordWrap: { width: width - 16 },
+        align: 'center',
+      }).setOrigin(0.5, 0);
+      this.attackButtons.push(this.add.container(0, 0, [bg, nameText, staminaText, actionText, effectText]));
+    } else {
+      this.attackButtons.push(this.add.container(0, 0, [bg, nameText, staminaText, actionText]));
+    }
+  }
+
+  private selectAttackDirect(attack: WeaponAttack): void {
+    const state = this.combatSystem.getCombatState();
+    if (!state || state.actionsRemaining < attack.actionCost) {
+      this.showMessage('Not enough actions!');
+      return;
+    }
+    
+    this.selectedAttack = attack;
+    
+    const isAoE = attack.name.includes('Arcing') || attack.name.includes('Spinning Flurry');
+    
+    if (isAoE) {
+      this.executeAoEAttack();
+    } else {
+      this.showMessage('Select Target');
+      this.isTargetSelectionMode = true;
+      this.enableEnemyTargeting();
+    }
+  }
+
+  private refreshAttackButtons(): void {
+    // Destroy old attack buttons
+    this.attackButtons.forEach(btn => btn.destroy());
+    this.attackButtons = [];
+    
+    // Recreate attack buttons with current state
+    this.renderWeaponAttacks();
   }
 
   private openInventory(): void {
@@ -762,12 +925,16 @@ export class CombatScene extends Phaser.Scene {
       console.log(`[UI UPDATE] Enemy ${i} (${enemy.name}): ${enemy.health}/${enemy.maxHealth} HP`);
     });
 
-    this.playerHealthText.setText(`HP: ${state.player.health}/${state.player.maxHealth}`);
-    this.playerStaminaText.setText(`SP: ${state.player.stamina}/${state.player.maxStamina}`);
+    // Update HP/SP bars
+    this.playerHealthBar.update(state.player.health, state.player.maxHealth);
+    this.playerStaminaBar.update(state.player.stamina, state.player.maxStamina);
 
     if (this.actionCounterText) {
       this.actionCounterText.setText(`Actions: ${state.actionsRemaining}/${state.maxActionsPerTurn}`);
     }
+
+    // Refresh attack buttons to show current availability
+    this.refreshAttackButtons();
 
     if (state.player.health < this.previousPlayerHealth) {
       this.playHitFlashAnimation();
