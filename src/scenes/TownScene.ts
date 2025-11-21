@@ -34,6 +34,7 @@ export class TownScene extends Phaser.Scene {
     this.load.image('equipment-panel', '/assets/ui/equipment-panel.png');
     this.load.image('blacksmith-button', '/assets/ui/shop-buttons/blacksmith-button.png');
     this.load.image('merchant-icon', '/assets/npcs/merchant-icon.png');
+    this.load.image('gem-expert-icon', '/assets/npcs/gem-expert-icon.png');
     this.load.image('garthek-button', '/assets/ui/shop-buttons/garthek-button.png');
     this.load.image('evasion-icon', '/assets/ui/evasion-icon.png');
     this.load.image('shield-icon', '/assets/ui/shield-icon.png');
@@ -232,7 +233,7 @@ export class TownScene extends Phaser.Scene {
       { name: 'Garthek', color: 0x9944cc, description: 'The Stitcher - Binds items to your soul', sprite: 'garthek-button' },
       { name: 'Keeper of Virtue', color: 0xffd700, description: 'Reclaim returned items and view karma' },
       { name: 'Quest Giver', color: 0xffcc33, description: 'Offers missions and lore' },
-      { name: 'Gem Expert', color: 0xcc66ff, description: 'Soulbinds Voidtouched Gems' },
+      { name: 'Gem Expert', color: 0xcc66ff, description: 'Soulbinds Voidtouched Gems', sprite: 'gem-expert-icon' },
       { name: 'Marketplace', color: 0xff9966, description: 'Player trading hub' },
     ];
 
