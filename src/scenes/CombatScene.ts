@@ -36,6 +36,11 @@ export class CombatScene extends Phaser.Scene {
   private actionButtons: Phaser.GameObjects.Container[] = [];
   private attackButtons: Phaser.GameObjects.Container[] = [];
   private attackAreaBg?: Phaser.GameObjects.Rectangle;
+  private attackPageIndex: number = 0;
+  private paginationButtons: Phaser.GameObjects.GameObject[] = [];
+  private readonly ATTACK_GRID_COLUMNS = 2;
+  private readonly ATTACK_GRID_ROWS = 2;
+  private readonly MAX_ATTACKS_PER_PAGE = 4;
   private returnToLocation?: { x: number; y: number };
   private selectedAttack?: WeaponAttack;
   private attackUIElements: Phaser.GameObjects.GameObject[] = [];
@@ -466,7 +471,7 @@ export class CombatScene extends Phaser.Scene {
       this.attackAreaBg = this.add.rectangle(attackAreaX, attackAreaY, attackAreaWidth, attackAreaHeight, 0x2a2a3e, 0.95).setOrigin(0);
     }
     
-    // Guard against zero attacks (division by zero)
+    // Guard against zero attacks
     if (availableAttacks.length === 0) {
       const noAttacksText = this.add.text(attackAreaX + attackAreaWidth / 2, attackAreaY + attackAreaHeight / 2, 
         'No weapons equipped', {
@@ -478,22 +483,91 @@ export class CombatScene extends Phaser.Scene {
       return;
     }
     
-    // Attack buttons grid - 2 rows, fit as many attacks as needed
-    const cols = Math.max(1, Math.ceil(availableAttacks.length / 2));
-    const attackBoxWidth = Math.min(220, (attackAreaWidth - 40) / cols);
+    // Fixed 2x2 grid layout with pagination
+    const totalPages = Math.max(1, Math.ceil(availableAttacks.length / this.MAX_ATTACKS_PER_PAGE));
+    
+    // Clamp page index to valid range when attack count changes
+    this.attackPageIndex = Math.max(0, Math.min(this.attackPageIndex, totalPages - 1));
+    
+    const currentPageAttacks = availableAttacks.slice(
+      this.attackPageIndex * this.MAX_ATTACKS_PER_PAGE,
+      (this.attackPageIndex + 1) * this.MAX_ATTACKS_PER_PAGE
+    );
+    
+    // Calculate button dimensions for fixed 2-column layout
+    const attackBoxWidth = (attackAreaWidth - 30) / this.ATTACK_GRID_COLUMNS;  // Wider buttons
     const attackBoxHeight = 70;
     const spacing = 10;
     const startX = attackAreaX + 10;
     const startY = attackAreaY + 10;
     
-    availableAttacks.forEach((attack, index) => {
-      const col = Math.floor(index / 2);
-      const row = index % 2;
+    currentPageAttacks.forEach((attack, index) => {
+      const col = index % this.ATTACK_GRID_COLUMNS;
+      const row = Math.floor(index / this.ATTACK_GRID_COLUMNS);
       const x = startX + col * (attackBoxWidth + spacing);
       const y = startY + row * (attackBoxHeight + spacing);
       
       this.createAttackButtonBox(x, y, attackBoxWidth, attackBoxHeight, attack, player.stamina);
     });
+    
+    // Add pagination controls if needed
+    if (totalPages > 1) {
+      this.createPaginationControls(attackAreaX, attackAreaY, attackAreaWidth, attackAreaHeight, totalPages);
+    }
+  }
+
+  private createPaginationControls(areaX: number, areaY: number, areaWidth: number, areaHeight: number, totalPages: number): void {
+    const btnY = areaY + areaHeight - 25;
+    const btnWidth = 60;
+    const btnHeight = 20;
+    
+    // Previous button
+    const prevBg = this.add.rectangle(areaX + 10, btnY, btnWidth, btnHeight, 
+      this.attackPageIndex > 0 ? 0x444466 : 0x333344).setOrigin(0);
+    const prevText = this.add.text(areaX + 10 + btnWidth / 2, btnY + btnHeight / 2, '< Prev', {
+      fontFamily: FONTS.primary,
+      fontSize: '10px',
+      color: this.attackPageIndex > 0 ? '#ffffff' : '#666666',
+    }).setOrigin(0.5);
+    
+    if (this.attackPageIndex > 0) {
+      prevBg.setInteractive({ useHandCursor: true })
+        .on('pointerover', () => prevBg.setFillStyle(0x555577))
+        .on('pointerout', () => prevBg.setFillStyle(0x444466))
+        .on('pointerdown', () => {
+          this.attackPageIndex--;
+          this.refreshAttackButtons();
+        });
+    }
+    
+    // Next button
+    const nextBg = this.add.rectangle(areaX + areaWidth - btnWidth - 10, btnY, btnWidth, btnHeight,
+      this.attackPageIndex < totalPages - 1 ? 0x444466 : 0x333344).setOrigin(0);
+    const nextText = this.add.text(areaX + areaWidth - btnWidth - 10 + btnWidth / 2, btnY + btnHeight / 2, 'Next >', {
+      fontFamily: FONTS.primary,
+      fontSize: '10px',
+      color: this.attackPageIndex < totalPages - 1 ? '#ffffff' : '#666666',
+    }).setOrigin(0.5);
+    
+    if (this.attackPageIndex < totalPages - 1) {
+      nextBg.setInteractive({ useHandCursor: true })
+        .on('pointerover', () => nextBg.setFillStyle(0x555577))
+        .on('pointerout', () => nextBg.setFillStyle(0x444466))
+        .on('pointerdown', () => {
+          this.attackPageIndex++;
+          this.refreshAttackButtons();
+        });
+    }
+    
+    // Page indicator
+    const pageText = this.add.text(areaX + areaWidth / 2, btnY + btnHeight / 2, 
+      `${this.attackPageIndex + 1} / ${totalPages}`, {
+      fontFamily: FONTS.primary,
+      fontSize: '10px',
+      color: '#aaaaaa',
+    }).setOrigin(0.5);
+    
+    this.paginationButtons.push(prevBg, prevText, nextBg, nextText, pageText);
   }
 
   private createAttackButtonBox(x: number, y: number, width: number, height: number, attack: WeaponAttack, playerStamina: number): void {
@@ -507,23 +581,30 @@ export class CombatScene extends Phaser.Scene {
     
     const bg = this.add.rectangle(x, y, width, height, baseColor).setOrigin(0);
     
-    // Create tooltip elements (hidden by default)
+    // Create tooltip elements with dynamic sizing (hidden by default)
     let tooltipBg: Phaser.GameObjects.Rectangle | null = null;
     let tooltipText: Phaser.GameObjects.Text | null = null;
     
     if (attack.specialEffect) {
-      tooltipBg = this.add.rectangle(0, 0, 300, 60, 0x1a1a2e, 0.95)
+      // Create text first to measure its bounds
+      tooltipText = this.add.text(0, 0, attack.specialEffect, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.xsmall,
+        color: '#aaaaff',
+        wordWrap: { width: 350 },  // Max width for wrapping
+      }).setOrigin(0, 0).setVisible(false).setDepth(10001);
+      
+      // Measure text bounds and add padding
+      const padding = 16;
+      const textBounds = tooltipText.getBounds();
+      const tooltipWidth = Math.min(400, textBounds.width + padding);
+      const tooltipHeight = textBounds.height + padding;
+      
+      tooltipBg = this.add.rectangle(0, 0, tooltipWidth, tooltipHeight, 0x1a1a2e, 0.95)
         .setOrigin(0, 0)
         .setStrokeStyle(2, 0x4a4a6a)
         .setVisible(false)
         .setDepth(10000);
-      
-      tooltipText = this.add.text(8, 8, attack.specialEffect, {
-        fontFamily: FONTS.primary,
-        fontSize: FONTS.size.xsmall,
-        color: '#aaaaff',
-        wordWrap: { width: 284 },
-      }).setOrigin(0, 0).setVisible(false).setDepth(10001);
     }
     
     if (canUse) {
@@ -533,8 +614,11 @@ export class CombatScene extends Phaser.Scene {
           if (tooltipBg && tooltipText) {
             tooltipBg.setVisible(true);
             tooltipText.setVisible(true);
-            tooltipBg.setPosition(pointer.x + 20, pointer.y);
-            tooltipText.setPosition(pointer.x + 28, pointer.y + 8);
+            // Position tooltip 20px right of cursor, clamped to viewport
+            const { width: screenWidth } = this.cameras.main;
+            const tooltipX = Math.min(pointer.x + 20, screenWidth - tooltipBg.width - 10);
+            tooltipBg.setPosition(tooltipX, pointer.y);
+            tooltipText.setPosition(tooltipX + 8, pointer.y + 8);
           }
         })
         .on('pointerout', () => {
@@ -546,8 +630,11 @@ export class CombatScene extends Phaser.Scene {
         })
         .on('pointermove', (pointer: Phaser.Input.Pointer) => {
           if (tooltipBg && tooltipText && tooltipBg.visible) {
-            tooltipBg.setPosition(pointer.x + 20, pointer.y);
-            tooltipText.setPosition(pointer.x + 28, pointer.y + 8);
+            // Position tooltip 20px right of cursor, clamped to viewport
+            const { width: screenWidth } = this.cameras.main;
+            const tooltipX = Math.min(pointer.x + 20, screenWidth - tooltipBg.width - 10);
+            tooltipBg.setPosition(tooltipX, pointer.y);
+            tooltipText.setPosition(tooltipX + 8, pointer.y + 8);
           }
         })
         .on('pointerdown', () => {
@@ -618,6 +705,10 @@ export class CombatScene extends Phaser.Scene {
     // Destroy old attack buttons
     this.attackButtons.forEach(btn => btn.destroy());
     this.attackButtons = [];
+    
+    // Destroy old pagination buttons
+    this.paginationButtons.forEach(btn => btn.destroy());
+    this.paginationButtons = [];
     
     // Recreate attack buttons with current state
     this.renderWeaponAttacks();
