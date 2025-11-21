@@ -475,7 +475,8 @@ export class EnemyFactory {
       'Greater Void Spawn': 'greater-void-spawn',
       'Shadow Beast': 'shadow-beast',
       'Skitterthid': 'skitterthid',
-      'Aetherbear': 'aetherbear'
+      'Aetherbear': 'aetherbear',
+      'Hollow Husk': 'hollow-husk'
     };
 
     return spriteMap[enemyName] || null;
