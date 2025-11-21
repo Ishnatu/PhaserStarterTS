@@ -2122,31 +2122,37 @@ export class TownScene extends Phaser.Scene {
     const selectedSlots = new Set<string>(soulboundSlots);
 
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
-    const panel = this.add.rectangle(width / 2, height / 2, 700, 550, 0x2a2a3e).setOrigin(0.5);
+    const panel = this.add.rectangle(width / 2, height / 2, 750, 550, 0x2a2a3e).setOrigin(0.5);
     uiElements.push(overlay, panel);
 
-    const title = this.add.text(width / 2, height / 2 - 240, 'Garthek the Stitcher', {
+    // Header layout with unified design pattern
+    const headerBaseY = height / 2 - 240;
+    const verticalGap = 65;
+
+    // Row 1: Title
+    const title = this.add.text(width / 2, headerBaseY, 'Garthek the Stitcher', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#9944cc',
-      fontStyle: 'bold',
     }).setOrigin(0.5);
     uiElements.push(title);
 
-    const subtitle = this.add.text(width / 2, height / 2 - 200, 
+    // Row 2: Quote
+    const subtitle = this.add.text(width / 2, headerBaseY + verticalGap, 
       '"I can bind your equipment to your very soul.\nSoulbound items will return to you upon death."', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
+      fontSize: FONTS.size.xsmall,
       color: '#cccccc',
       fontStyle: 'italic',
       align: 'center',
     }).setOrigin(0.5);
     uiElements.push(subtitle);
 
-    const infoText = this.add.text(width / 2, height / 2 - 140, 
+    // Row 3: Instructions
+    const infoText = this.add.text(width / 2, headerBaseY + (verticalGap * 2), 
       'Select equipment slots to bind (max 3 slots):', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
+      fontSize: FONTS.size.xsmall,
       color: '#ffffff',
     }).setOrigin(0.5);
     uiElements.push(infoText);
@@ -2172,7 +2178,8 @@ export class TownScene extends Phaser.Scene {
       { key: 'accessory' as keyof PlayerEquipment, label: 'Accessory' },
     ];
 
-    let startY = height / 2 - 100;
+    // Content area starts 40px below header
+    let startY = headerBaseY + (verticalGap * 2) + 40;
     const slotCheckboxes: Map<string, Phaser.GameObjects.Container> = new Map();
 
     slots.forEach((slot, index) => {
@@ -2199,7 +2206,7 @@ export class TownScene extends Phaser.Scene {
       const slotText = this.add.text(posX + 15, y, 
         `${slot.label}: ${displayName}`, {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: isEquipped ? '#ffffff' : '#666666',
       }).setOrigin(0, 0.5);
 
