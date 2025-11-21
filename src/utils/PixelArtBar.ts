@@ -80,11 +80,11 @@ export class PixelArtBar {
     this.interactiveZone.on('pointerout', () => this.hideTooltip());
     this.interactiveZone.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (this.tooltipText && this.tooltipBg) {
-        // Position tooltip near mouse
-        const localX = pointer.x - this.container.x - x;
-        const localY = pointer.y - this.container.y - y;
-        this.tooltipText.setPosition(localX + 15, localY - 25);
-        this.tooltipBg.setPosition(localX + 15, localY - 25);
+        // Position tooltip 20px to the right of cursor (local coordinates)
+        const localX = pointer.x - this.container.x;
+        const localY = pointer.y - this.container.y;
+        this.tooltipText.setPosition(localX + 20, localY);
+        this.tooltipBg.setPosition(localX + 20, localY);
       }
     });
     

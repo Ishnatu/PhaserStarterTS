@@ -507,10 +507,49 @@ export class CombatScene extends Phaser.Scene {
     
     const bg = this.add.rectangle(x, y, width, height, baseColor).setOrigin(0);
     
+    // Create tooltip elements (hidden by default)
+    let tooltipBg: Phaser.GameObjects.Rectangle | null = null;
+    let tooltipText: Phaser.GameObjects.Text | null = null;
+    
+    if (attack.specialEffect) {
+      tooltipBg = this.add.rectangle(0, 0, 300, 60, 0x1a1a2e, 0.95)
+        .setOrigin(0, 0)
+        .setStrokeStyle(2, 0x4a4a6a)
+        .setVisible(false)
+        .setDepth(10000);
+      
+      tooltipText = this.add.text(8, 8, attack.specialEffect, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.xsmall,
+        color: '#aaaaff',
+        wordWrap: { width: 284 },
+      }).setOrigin(0, 0).setVisible(false).setDepth(10001);
+    }
+    
     if (canUse) {
       bg.setInteractive({ useHandCursor: true })
-        .on('pointerover', () => bg.setFillStyle(hoverColor))
-        .on('pointerout', () => bg.setFillStyle(baseColor))
+        .on('pointerover', (pointer: Phaser.Input.Pointer) => {
+          bg.setFillStyle(hoverColor);
+          if (tooltipBg && tooltipText) {
+            tooltipBg.setVisible(true);
+            tooltipText.setVisible(true);
+            tooltipBg.setPosition(pointer.x + 20, pointer.y);
+            tooltipText.setPosition(pointer.x + 28, pointer.y + 8);
+          }
+        })
+        .on('pointerout', () => {
+          bg.setFillStyle(baseColor);
+          if (tooltipBg && tooltipText) {
+            tooltipBg.setVisible(false);
+            tooltipText.setVisible(false);
+          }
+        })
+        .on('pointermove', (pointer: Phaser.Input.Pointer) => {
+          if (tooltipBg && tooltipText && tooltipBg.visible) {
+            tooltipBg.setPosition(pointer.x + 20, pointer.y);
+            tooltipText.setPosition(pointer.x + 28, pointer.y + 8);
+          }
+        })
         .on('pointerdown', () => {
           if (!this.isOverlayActive && this.combatSystem.isPlayerTurn()) {
             this.selectAttackDirect(attack);
@@ -547,18 +586,12 @@ export class CombatScene extends Phaser.Scene {
       color: hasEnoughActions ? '#ffffff' : '#888888',
     }).setOrigin(1, 0);
     
-    if (attack.specialEffect && attack.specialEffect.length < 45) {
-      const effectText = this.add.text(x + width / 2, y + 52, attack.specialEffect, {
-        fontFamily: FONTS.primary,
-        fontSize: '10px',
-        color: canUse ? '#aaaaff' : '#666666',
-        wordWrap: { width: width - 16 },
-        align: 'center',
-      }).setOrigin(0.5, 0);
-      this.attackButtons.push(this.add.container(0, 0, [bg, nameText, staminaText, actionText, effectText]));
-    } else {
-      this.attackButtons.push(this.add.container(0, 0, [bg, nameText, staminaText, actionText]));
+    // No special effect text rendered directly on button anymore
+    const elements = [bg, nameText, staminaText, actionText];
+    if (tooltipBg && tooltipText) {
+      elements.push(tooltipBg, tooltipText);
     }
+    this.attackButtons.push(this.add.container(0, 0, elements));
   }
 
   private selectAttackDirect(attack: WeaponAttack): void {
