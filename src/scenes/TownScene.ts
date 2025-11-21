@@ -620,10 +620,15 @@ export class TownScene extends Phaser.Scene {
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
-    const panel = this.add.rectangle(width / 2, height / 2, 850, 550, 0x2a2a3e).setOrigin(0.5);
+    const panel = this.add.rectangle(width / 2, height / 2, 900, 550, 0x2a2a3e).setOrigin(0.5);
     uiElements.push(overlay, panel);
 
-    const title = this.add.text(width / 2, height / 2 - 250, 'Vault Keeper - Storage Footlocker', {
+    // Header layout with unified design pattern
+    const headerBaseY = height / 2 - 240;
+    const verticalGap = 65;
+
+    // Row 1: Title
+    const title = this.add.text(width / 2, headerBaseY, 'Vault Keeper - Storage Footlocker', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#88ddff',
@@ -642,21 +647,25 @@ export class TownScene extends Phaser.Scene {
     const footlockerCount = player.footlocker.reduce((sum, item) => sum + item.quantity, 0);
     const inventoryCount = player.inventory.reduce((sum, item) => sum + item.quantity, 0);
 
-    const footlockerTitle = this.add.text(width / 2 - 300, height / 2 - 210, `Footlocker (${footlockerCount}/${player.footlockerSlots})`, {
+    // Row 3: Column headers (after standard 2-row gap)
+    const headerY = headerBaseY + (verticalGap * 2);
+    
+    const footlockerTitle = this.add.text(width / 2 - 300, headerY, `Footlocker (${footlockerCount}/${player.footlockerSlots})`, {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.medium,
+      fontSize: FONTS.size.xsmall,
       color: '#88ddff',
     });
     uiElements.push(footlockerTitle);
 
-    const inventoryTitle = this.add.text(width / 2 + 100, height / 2 - 210, `Inventory (${inventoryCount}/${player.inventorySlots})`, {
+    const inventoryTitle = this.add.text(width / 2 + 100, headerY, `Inventory (${inventoryCount}/${player.inventorySlots})`, {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.medium,
+      fontSize: FONTS.size.xsmall,
       color: '#f0a020',
     });
     uiElements.push(inventoryTitle);
 
-    const itemsStartY = height / 2 - 180;
+    // Content area starts 40px below headers
+    const itemsStartY = headerY + 40;
     const itemHeight = 28;
     const maxDisplay = 14;
 
@@ -676,14 +685,14 @@ export class TownScene extends Phaser.Scene {
       const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
       const itemLabel = this.add.text(width / 2 - 400, y, `${item.name} x${invItem.quantity}`, {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: itemColor,
       });
       uiElements.push(itemLabel);
 
       const retrieveBtn = this.add.text(width / 2 - 120, y, '[Retrieve]', {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: '#88ff88',
       }).setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
@@ -701,15 +710,15 @@ export class TownScene extends Phaser.Scene {
     if (footlockerItems.length === 0) {
       const emptyText = this.add.text(width / 2 - 300, itemsStartY, 'Footlocker is empty', {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: '#666666',
       });
       uiElements.push(emptyText);
     } else {
       if (clampedFootlockerScroll > 0) {
-        const upBtn = this.add.text(width / 2 - 400, height / 2 - 210, '▲', {
+        const upBtn = this.add.text(width / 2 - 400, headerY, '▲', {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
+          fontSize: FONTS.size.xsmall,
           color: '#88ddff',
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
@@ -721,7 +730,7 @@ export class TownScene extends Phaser.Scene {
       if (footlockerEnd < footlockerItems.length) {
         const downBtn = this.add.text(width / 2 - 400, height / 2 + 200, '▼', {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
+          fontSize: FONTS.size.xsmall,
           color: '#88ddff',
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
@@ -748,14 +757,14 @@ export class TownScene extends Phaser.Scene {
       const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
       const itemLabel = this.add.text(width / 2 + 100, y, `${item.name} x${invItem.quantity}`, {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: itemColor,
       });
       uiElements.push(itemLabel);
 
       const storeBtn = this.add.text(width / 2 + 350, y, '[Store]', {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: '#ffaa44',
       }).setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
@@ -769,15 +778,15 @@ export class TownScene extends Phaser.Scene {
     if (inventoryItems.length === 0) {
       const emptyText = this.add.text(width / 2 + 100, itemsStartY, 'Inventory is empty', {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: '#666666',
       });
       uiElements.push(emptyText);
     } else {
       if (clampedInventoryScroll > 0) {
-        const upBtn = this.add.text(width / 2 + 100, height / 2 - 210, '▲', {
+        const upBtn = this.add.text(width / 2 + 100, headerY, '▲', {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
+          fontSize: FONTS.size.xsmall,
           color: '#f0a020',
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
@@ -789,7 +798,7 @@ export class TownScene extends Phaser.Scene {
       if (inventoryEnd < inventoryItems.length) {
         const downBtn = this.add.text(width / 2 + 100, height / 2 + 200, '▼', {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
+          fontSize: FONTS.size.xsmall,
           color: '#f0a020',
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
