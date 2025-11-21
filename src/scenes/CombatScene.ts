@@ -247,9 +247,9 @@ export class CombatScene extends Phaser.Scene {
       platformCenterX = 820;
       platformY = height - 420;
     } else {
-      // Delve: position on top center-right platform
-      platformCenterX = 740;
-      platformY = 200;
+      // Delve: position on center-right platform
+      platformCenterX = width / 2 + 100;
+      platformY = height / 2 - 50;
     }
     
     // Calculate positions based on enemy count
@@ -341,7 +341,7 @@ export class CombatScene extends Phaser.Scene {
     
     this.logText = this.add.text(logX + 10, logY + 10, 'Combat begins!', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
+      fontSize: FONTS.size.xsmall,
       color: '#ffffff',
       align: 'left',
       wordWrap: { width: 460 },
@@ -744,6 +744,12 @@ export class CombatScene extends Phaser.Scene {
     } else {
       this.combatSystem.playerTurnStart();
       this.updateCombatDisplay();
+      
+      // If player is stunned, playerTurnStart() switches to enemy turn
+      const state = this.combatSystem.getCombatState();
+      if (state && state.currentTurn === 'enemy') {
+        this.time.delayedCall(1000, () => this.enemyTurn());
+      }
     }
   }
 
