@@ -1137,6 +1137,8 @@ export class CombatSystem {
         }
       }
     }
+    
+    this.checkCombatEnd();
   }
 
   enemyTurnEnd(): void {
@@ -1155,6 +1157,8 @@ export class CombatSystem {
         }
       }
     }
+    
+    this.checkCombatEnd();
   }
 
   enemyTurn(): string[] {
