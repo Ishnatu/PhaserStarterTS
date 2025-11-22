@@ -279,9 +279,9 @@ export class CombatScene extends Phaser.Scene {
       platformCenterX = 580;
       platformY = height - 420;
     } else {
-      // Delve: fixed position on center-right platform
-      platformCenterX = 740;
-      platformY = 200;
+      // Delve: fixed position on center-right area (based on user's visual marker)
+      platformCenterX = 780;
+      platformY = 240;
     }
     
     // Position enemies centered around the fixed platform point
