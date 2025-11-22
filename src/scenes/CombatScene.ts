@@ -267,30 +267,30 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private renderEnemies(enemies: Enemy[]): void {
-    const { width, height } = this.cameras.main;
+    const { height } = this.cameras.main;
     
-    // Different positioning for wilderness vs delve combat
+    // Fixed positioning - centered around fixed platform coordinates regardless of enemy type
     let platformCenterX: number;
     let platformY: number;
-    const spacing = 180;
+    const spacing = 120; // Reduced spacing to keep enemies closer together
     
     if (this.isWildEncounter) {
-      // Wilderness: position on upper right side of dirt path
+      // Wilderness: fixed position on upper right side of dirt path
       platformCenterX = 820;
       platformY = height - 420;
     } else {
-      // Delve: position on center-right platform
-      platformCenterX = width / 2 + 100;
-      platformY = height / 2 - 50;
+      // Delve: fixed position on center-right platform
+      platformCenterX = 740;
+      platformY = 200;
     }
     
-    // Calculate positions based on enemy count
+    // Position enemies centered around the fixed platform point
     let enemyPositions: { x: number, y: number }[];
     if (enemies.length === 1) {
-      // Single enemy: center on platform
+      // Single enemy: exactly on center point
       enemyPositions = [{ x: platformCenterX, y: platformY }];
     } else {
-      // Multiple enemies: distribute across platform
+      // Multiple enemies: distribute evenly around center point with minimal spacing
       const totalWidth = (enemies.length - 1) * spacing;
       const startX = platformCenterX - totalWidth / 2;
       enemyPositions = enemies.map((_, index) => ({
