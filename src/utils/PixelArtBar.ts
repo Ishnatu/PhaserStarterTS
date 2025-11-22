@@ -104,7 +104,8 @@ export class PixelArtBar {
       // Create tooltip background
       this.tooltipBg = this.scene.add.rectangle(0, 0, 120, 32, 0x1a1a2e, 0.95)
         .setOrigin(0, 0.5)
-        .setStrokeStyle(2, 0x4a4a6a);
+        .setStrokeStyle(2, 0x4a4a6a)
+        .setScrollFactor(0);  // Respect parent container scroll factor
       
       // Create tooltip text
       this.tooltipText = this.scene.add.text(8, 0, `${label} ${this.currentValue}/${this.maxValue}`, {
@@ -112,7 +113,8 @@ export class PixelArtBar {
         fontSize: FONTS.size.small,
         color: '#ffffff',
         resolution: 2,
-      }).setOrigin(0, 0.5);
+      }).setOrigin(0, 0.5)
+        .setScrollFactor(0);  // Respect parent container scroll factor
       
       this.container.add([this.tooltipBg, this.tooltipText]);
       this.tooltipBg.setDepth(1000);
