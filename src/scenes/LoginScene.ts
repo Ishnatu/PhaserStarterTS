@@ -25,6 +25,12 @@ export class LoginScene extends Phaser.Scene {
     logo.setOrigin(0.5);
     logo.setScale(0.18);
 
+    // Calculate equal spacing between logo and login button
+    const logoBottom = 380; // Approximate bottom of logo
+    const loginBtnY = 730;
+    const totalSpace = loginBtnY - logoBottom;
+    const gap = totalSpace / 3; // Divide space into 3 equal sections
+
     // Email field
     const emailInputHtml = `
       <input type="email" id="email-input" style="
@@ -39,7 +45,7 @@ export class LoginScene extends Phaser.Scene {
         outline: none;
       " placeholder="your@email.com" />
     `;
-    this.emailInput = this.add.dom(width / 2, 480).createFromHTML(emailInputHtml).setOrigin(0.5);
+    this.emailInput = this.add.dom(width / 2, logoBottom + gap).createFromHTML(emailInputHtml).setOrigin(0.5);
 
     // Password field
     const passwordInputHtml = `
@@ -55,10 +61,10 @@ export class LoginScene extends Phaser.Scene {
         outline: none;
       " placeholder="••••••••" />
     `;
-    this.passwordInput = this.add.dom(width / 2, 570).createFromHTML(passwordInputHtml).setOrigin(0.5);
+    this.passwordInput = this.add.dom(width / 2, logoBottom + gap * 2).createFromHTML(passwordInputHtml).setOrigin(0.5);
 
     // Error text
-    this.errorText = this.add.text(width / 2, 650, '', {
+    this.errorText = this.add.text(width / 2, logoBottom + gap * 2 + 80, '', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xsmall,
       color: '#ff4444',
@@ -66,7 +72,7 @@ export class LoginScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Login button
-    const loginBtn = this.add.rectangle(width / 2, 730, 200, 50, 0x44aa44).setInteractive({ useHandCursor: true });
+    const loginBtn = this.add.rectangle(width / 2, loginBtnY, 200, 50, 0x44aa44).setInteractive({ useHandCursor: true });
     const loginText = this.add.text(width / 2, 730, 'Login', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
