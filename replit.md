@@ -38,7 +38,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Build Tool**: Vite 5.0
 - **Backend**: Express.js with TypeScript
 - **Database**: PostgreSQL (Neon) via Drizzle ORM
-- **Authentication**: Replit Auth (OpenID Connect) with session-based auth. Multi-instance detection prevents save conflicts.
+- **Authentication**: Dual authentication system supports both email/password (for playtesting) and Replit Auth (OpenID Connect). Session-based auth using express-session with PostgreSQL session store. Email/password accounts use bcrypt hashing (10 salt rounds). Players must register/login before playing. Multi-instance detection prevents save conflicts. Game starts at LoginScene, validates session via /api/auth/me, displays username in MainMenuScene with logout option.
 - **State Management**: Server-side PostgreSQL saves with 30-second auto-save, LocalStorage fallback.
 - **Enemy System**: Metadata-driven enemy database in EnemyFactory.ts. 15 enemy types with `tier` and `isBoss` fields for future-proof design. Tier 1 has 5 mobs (Void Spawn, Skitterthid, Hollow Husk, Wailing Wisp, Crawley Crow) and 2 bosses (Greater Void Spawn, Aetherbear); Tiers 2-5 have 2 each (mob and boss). Currency rewards use per-enemy metadata: T1 mobs (15-45 AA), T1 bosses (25-80 AA), T2-T5 (30 × tier per enemy). T1 boss loot uses category-based system with exact probabilities: potions 15%, base gear 5%, +1 enhanced gear 3%, +2 enhanced gear 1%, +3 enhanced gear 0.5%. Each category rolls once; if successful, randomly selects one item from that category.
 - **Core Gameplay Loop**: Main Menu -> Town (Roboka) -> Explore Map -> Delve (3-5 Rooms) -> Combat -> Back to Town.
