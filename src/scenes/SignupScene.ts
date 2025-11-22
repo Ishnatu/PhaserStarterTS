@@ -12,21 +12,22 @@ export class SignupScene extends Phaser.Scene {
     super({ key: 'SignupScene' });
   }
 
+  preload() {
+    this.load.image('gemforge-logo', '/assets/ui/gemforge-logo.png');
+  }
+
   create() {
     const { width, height } = this.cameras.main;
 
     // Background
     this.add.rectangle(0, 0, width, height, 0x0f0f13).setOrigin(0);
 
-    // Title
-    this.add.text(width / 2, 120, 'Gemforge Chronicles', {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.xlarge,
-      color: '#ffffff',
-      resolution: 2,
-    }).setOrigin(0.5);
+    // Logo
+    const logo = this.add.sprite(width / 2, 150, 'gemforge-logo');
+    logo.setOrigin(0.5);
+    logo.setScale(0.18);
 
-    this.add.text(width / 2, 190, 'Create Account', {
+    this.add.text(width / 2, 300, 'Create Account', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.medium,
       color: '#aaaaaa',
@@ -34,99 +35,71 @@ export class SignupScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Username field
-    this.add.text(width / 2 - 200, 280, 'Username:', {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
-      color: '#ffffff',
-      resolution: 2,
-    }).setOrigin(0, 0.5);
-
     const usernameInputHtml = `
       <input type="text" id="username-input" style="
-        width: 360px;
-        height: 40px;
+        width: 500px;
+        height: 50px;
         font-family: ${FONTS.primary}, monospace;
         font-size: 18px;
-        padding: 8px;
+        padding: 12px;
         background: #1a1a2e;
         color: #ffffff;
         border: 2px solid #444;
         outline: none;
-      " placeholder="3-20 characters" maxlength="20" />
+      " placeholder="Username (3-20 characters)" maxlength="20" />
     `;
-    this.usernameInput = this.add.dom(width / 2 + 80, 280).createFromHTML(usernameInputHtml);
+    this.usernameInput = this.add.dom(width / 2, 390).createFromHTML(usernameInputHtml);
 
     // Email field
-    this.add.text(width / 2 - 200, 360, 'Email:', {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
-      color: '#ffffff',
-      resolution: 2,
-    }).setOrigin(0, 0.5);
-
     const emailInputHtml = `
       <input type="email" id="email-input" style="
-        width: 360px;
-        height: 40px;
+        width: 500px;
+        height: 50px;
         font-family: ${FONTS.primary}, monospace;
         font-size: 18px;
-        padding: 8px;
+        padding: 12px;
         background: #1a1a2e;
         color: #ffffff;
         border: 2px solid #444;
         outline: none;
       " placeholder="your@email.com" />
     `;
-    this.emailInput = this.add.dom(width / 2 + 80, 360).createFromHTML(emailInputHtml);
+    this.emailInput = this.add.dom(width / 2, 470).createFromHTML(emailInputHtml);
 
     // Password field
-    this.add.text(width / 2 - 200, 440, 'Password:', {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
-      color: '#ffffff',
-      resolution: 2,
-    }).setOrigin(0, 0.5);
-
     const passwordInputHtml = `
       <input type="password" id="password-input" style="
-        width: 360px;
-        height: 40px;
+        width: 500px;
+        height: 50px;
         font-family: ${FONTS.primary}, monospace;
         font-size: 18px;
-        padding: 8px;
+        padding: 12px;
         background: #1a1a2e;
         color: #ffffff;
         border: 2px solid #444;
         outline: none;
-      " placeholder="min. 8 characters" />
+      " placeholder="Password (min. 8 characters)" />
     `;
-    this.passwordInput = this.add.dom(width / 2 + 80, 440).createFromHTML(passwordInputHtml);
+    this.passwordInput = this.add.dom(width / 2, 550).createFromHTML(passwordInputHtml);
 
     // Confirm password field
-    this.add.text(width / 2 - 200, 520, 'Confirm:', {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
-      color: '#ffffff',
-      resolution: 2,
-    }).setOrigin(0, 0.5);
-
     const confirmPasswordInputHtml = `
       <input type="password" id="confirm-password-input" style="
-        width: 360px;
-        height: 40px;
+        width: 500px;
+        height: 50px;
         font-family: ${FONTS.primary}, monospace;
         font-size: 18px;
-        padding: 8px;
+        padding: 12px;
         background: #1a1a2e;
         color: #ffffff;
         border: 2px solid #444;
         outline: none;
-      " placeholder="re-enter password" />
+      " placeholder="Confirm password" />
     `;
-    this.confirmPasswordInput = this.add.dom(width / 2 + 80, 520).createFromHTML(confirmPasswordInputHtml);
+    this.confirmPasswordInput = this.add.dom(width / 2, 630).createFromHTML(confirmPasswordInputHtml);
 
     // Error/success text
-    this.errorText = this.add.text(width / 2, 600, '', {
+    this.errorText = this.add.text(width / 2, 710, '', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xsmall,
       color: '#ff4444',
@@ -136,8 +109,8 @@ export class SignupScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Create Account button
-    const signupBtn = this.add.rectangle(width / 2 - 120, 680, 220, 50, 0x44aa44).setInteractive({ useHandCursor: true });
-    const signupText = this.add.text(width / 2 - 120, 680, 'Create Account', {
+    const signupBtn = this.add.rectangle(width / 2 - 120, 790, 220, 50, 0x44aa44).setInteractive({ useHandCursor: true });
+    const signupText = this.add.text(width / 2 - 120, 790, 'Create Account', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
@@ -149,8 +122,8 @@ export class SignupScene extends Phaser.Scene {
     signupBtn.on('pointerdown', () => this.handleSignup());
 
     // Back to login button
-    const backBtn = this.add.rectangle(width / 2 + 120, 680, 180, 50, 0x666666).setInteractive({ useHandCursor: true });
-    const backText = this.add.text(width / 2 + 120, 680, 'Back to Login', {
+    const backBtn = this.add.rectangle(width / 2 + 120, 790, 180, 50, 0x666666).setInteractive({ useHandCursor: true });
+    const backText = this.add.text(width / 2 + 120, 790, 'Back to Login', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
