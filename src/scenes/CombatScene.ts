@@ -275,8 +275,8 @@ export class CombatScene extends Phaser.Scene {
     const spacing = 120; // Reduced spacing to keep enemies closer together
     
     if (this.isWildEncounter) {
-      // Wilderness: fixed position centered on dirt path
-      platformCenterX = 680;
+      // Wilderness: fixed position centered on dirt path (measured from background asset)
+      platformCenterX = 580;
       platformY = height - 420;
     } else {
       // Delve: fixed position on center-right platform
