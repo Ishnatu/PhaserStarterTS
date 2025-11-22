@@ -39,7 +39,7 @@ export class LoginScene extends Phaser.Scene {
         outline: none;
       " placeholder="your@email.com" />
     `;
-    this.emailInput = this.add.dom(width / 2, 480).createFromHTML(emailInputHtml);
+    this.emailInput = this.add.dom(width / 2, 480).createFromHTML(emailInputHtml).setOrigin(0.5);
 
     // Password field
     const passwordInputHtml = `
@@ -55,7 +55,7 @@ export class LoginScene extends Phaser.Scene {
         outline: none;
       " placeholder="••••••••" />
     `;
-    this.passwordInput = this.add.dom(width / 2, 570).createFromHTML(passwordInputHtml);
+    this.passwordInput = this.add.dom(width / 2, 570).createFromHTML(passwordInputHtml).setOrigin(0.5);
 
     // Error text
     this.errorText = this.add.text(width / 2, 650, '', {

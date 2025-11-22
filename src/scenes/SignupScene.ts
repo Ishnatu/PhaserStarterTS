@@ -48,7 +48,7 @@ export class SignupScene extends Phaser.Scene {
         outline: none;
       " placeholder="Username (3-20 characters)" maxlength="20" />
     `;
-    this.usernameInput = this.add.dom(width / 2, 390).createFromHTML(usernameInputHtml);
+    this.usernameInput = this.add.dom(width / 2, 390).createFromHTML(usernameInputHtml).setOrigin(0.5);
 
     // Email field
     const emailInputHtml = `
@@ -64,7 +64,7 @@ export class SignupScene extends Phaser.Scene {
         outline: none;
       " placeholder="your@email.com" />
     `;
-    this.emailInput = this.add.dom(width / 2, 470).createFromHTML(emailInputHtml);
+    this.emailInput = this.add.dom(width / 2, 470).createFromHTML(emailInputHtml).setOrigin(0.5);
 
     // Password field
     const passwordInputHtml = `
@@ -80,7 +80,7 @@ export class SignupScene extends Phaser.Scene {
         outline: none;
       " placeholder="Password (min. 8 characters)" />
     `;
-    this.passwordInput = this.add.dom(width / 2, 550).createFromHTML(passwordInputHtml);
+    this.passwordInput = this.add.dom(width / 2, 550).createFromHTML(passwordInputHtml).setOrigin(0.5);
 
     // Confirm password field
     const confirmPasswordInputHtml = `
@@ -96,7 +96,7 @@ export class SignupScene extends Phaser.Scene {
         outline: none;
       " placeholder="Confirm password" />
     `;
-    this.confirmPasswordInput = this.add.dom(width / 2, 630).createFromHTML(confirmPasswordInputHtml);
+    this.confirmPasswordInput = this.add.dom(width / 2, 630).createFromHTML(confirmPasswordInputHtml).setOrigin(0.5);
 
     // Error/success text
     this.errorText = this.add.text(width / 2, 710, '', {
