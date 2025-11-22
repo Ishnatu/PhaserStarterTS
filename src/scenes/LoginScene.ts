@@ -21,16 +21,9 @@ export class LoginScene extends Phaser.Scene {
     this.add.rectangle(0, 0, width, height, 0x0f0f13).setOrigin(0);
 
     // Logo
-    const logo = this.add.sprite(width / 2, 180, 'gemforge-logo');
+    const logo = this.add.sprite(width / 2, 240, 'gemforge-logo');
     logo.setOrigin(0.5);
     logo.setScale(0.18);
-
-    this.add.text(width / 2, 340, 'Player Login', {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.medium,
-      color: '#aaaaaa',
-      resolution: 2,
-    }).setOrigin(0.5);
 
     // Email field
     const emailInputHtml = `
@@ -46,7 +39,7 @@ export class LoginScene extends Phaser.Scene {
         outline: none;
       " placeholder="your@email.com" />
     `;
-    this.emailInput = this.add.dom(width / 2, 440).createFromHTML(emailInputHtml);
+    this.emailInput = this.add.dom(width / 2, 480).createFromHTML(emailInputHtml);
 
     // Password field
     const passwordInputHtml = `
@@ -62,10 +55,10 @@ export class LoginScene extends Phaser.Scene {
         outline: none;
       " placeholder="••••••••" />
     `;
-    this.passwordInput = this.add.dom(width / 2, 530).createFromHTML(passwordInputHtml);
+    this.passwordInput = this.add.dom(width / 2, 570).createFromHTML(passwordInputHtml);
 
     // Error text
-    this.errorText = this.add.text(width / 2, 610, '', {
+    this.errorText = this.add.text(width / 2, 650, '', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xsmall,
       color: '#ff4444',
@@ -73,8 +66,8 @@ export class LoginScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Login button
-    const loginBtn = this.add.rectangle(width / 2, 690, 200, 50, 0x44aa44).setInteractive({ useHandCursor: true });
-    const loginText = this.add.text(width / 2, 690, 'Login', {
+    const loginBtn = this.add.rectangle(width / 2, 730, 200, 50, 0x44aa44).setInteractive({ useHandCursor: true });
+    const loginText = this.add.text(width / 2, 730, 'Login', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
@@ -86,14 +79,14 @@ export class LoginScene extends Phaser.Scene {
     loginBtn.on('pointerdown', () => this.handleLogin());
 
     // Register link
-    const registerPrompt = this.add.text(width / 2, 790, "Don't have an account?", {
+    const registerPrompt = this.add.text(width / 2, 830, "Don't have an account?", {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xsmall,
       color: '#aaaaaa',
       resolution: 2,
     }).setOrigin(0.5);
 
-    const registerLink = this.add.text(width / 2, 830, 'Create Account', {
+    const registerLink = this.add.text(width / 2, 870, 'Create Account', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#4488ff',
