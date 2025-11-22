@@ -33,6 +33,39 @@ export class MainMenuScene extends Phaser.Scene {
       fontFamily: FONTS.primary,
     }).setOrigin(0.5);
 
+    // Fetch and display user info
+    try {
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const user = await response.json();
+        this.add.text(width - 20, 20, `Player: ${user.username || user.email}`, {
+          fontSize: FONTS.size.small,
+          color: '#88ff88',
+          fontFamily: FONTS.primary,
+          resolution: 2,
+        }).setOrigin(1, 0);
+
+        // Add logout button
+        const logoutBtn = this.add.text(width - 20, 60, '[Logout]', {
+          fontSize: FONTS.size.xsmall,
+          color: '#ff8888',
+          fontFamily: FONTS.primary,
+          resolution: 2,
+        }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+
+        logoutBtn.on('pointerover', () => logoutBtn.setColor('#ffaaaa'));
+        logoutBtn.on('pointerout', () => logoutBtn.setColor('#ff8888'));
+        logoutBtn.on('pointerdown', async () => {
+          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+          this.scene.start('LoginScene');
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch user info:', error);
+    }
+
     const startButton = this.add.sprite(width / 2, height / 2 + 150, 'start-button');
     startButton.setOrigin(0.5);
     startButton.setScale(0.4);

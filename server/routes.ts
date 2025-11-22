@@ -3,6 +3,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { registerUser, loginUser, changePassword } from "./auth";
 
 // Session tracking for multi-instance detection
 interface SessionInfo {
@@ -31,7 +32,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication middleware
   await setupAuth(app);
 
-  // Get current authenticated user
+  // Email/password authentication routes
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const { username, email, password } = req.body;
+      const user = await registerUser({ username, email, password });
+      
+      // Set session (using Express session)
+      if (req.session) {
+        (req.session as any).userId = user.id;
+      }
+      
+      res.json({ user });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      res.status(400).json({ message: error.message || "Registration failed" });
+    }
+  });
+
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      const user = await loginUser({ email, password });
+      
+      // Set session
+      if (req.session) {
+        (req.session as any).userId = user.id;
+      }
+      
+      res.json({ user });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      res.status(401).json({ message: error.message || "Login failed" });
+    }
+  });
+
+  app.post('/api/auth/logout', async (req, res) => {
+    try {
+      if (req.session) {
+        req.session.destroy((err) => {
+          if (err) {
+            return res.status(500).json({ message: "Logout failed" });
+          }
+          res.json({ success: true });
+        });
+      } else {
+        res.json({ success: true });
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      res.status(500).json({ message: "Logout failed" });
+    }
+  });
+
+  app.get('/api/auth/me', async (req: any, res) => {
+    try {
+      // Support both session and Replit Auth
+      let userId: string | undefined;
+      
+      if (req.session && (req.session as any).userId) {
+        userId = (req.session as any).userId;
+      } else if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        createdAt: user.createdAt,
+      });
+    } catch (error) {
+      console.error("Error fetching current user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  app.post('/api/auth/change-password', async (req: any, res) => {
+    try {
+      let userId: string | undefined;
+      
+      if (req.session && (req.session as any).userId) {
+        userId = (req.session as any).userId;
+      } else if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const { oldPassword, newPassword } = req.body;
+      await changePassword(userId, oldPassword, newPassword);
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Password change error:", error);
+      res.status(400).json({ message: error.message || "Password change failed" });
+    }
+  });
+
+  // Get current authenticated user (legacy Replit Auth endpoint)
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -47,14 +157,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/game/load", async (req: any, res) => {
     try {
       let gameSave;
+      let userId: string | undefined;
       
-      // Try authenticated user first
-      if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
-        const userId = req.user.claims.sub;
+      // Try session-based auth first
+      if (req.session && (req.session as any).userId) {
+        userId = (req.session as any).userId;
+      }
+      // Then try Replit Auth
+      else if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      
+      // Load save by userId if authenticated
+      if (userId) {
         gameSave = await storage.getGameSaveByUserId(userId);
       }
       
-      // Fall back to session ID from header
+      // Fall back to session ID from header (anonymous)
       if (!gameSave) {
         const sessionId = req.headers['x-session-id'];
         if (sessionId) {
@@ -88,11 +207,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let userId: string | undefined;
       let sessionId: string | undefined;
       
-      // Use authenticated userId if available
-      if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
+      // Use session-based auth userId if available
+      if (req.session && (req.session as any).userId) {
+        userId = (req.session as any).userId;
+      }
+      // Then try Replit Auth
+      else if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
         userId = req.user.claims.sub;
       } else {
-        // Otherwise use session ID from header
+        // Otherwise use session ID from header (anonymous)
         sessionId = req.headers['x-session-id'] as string;
         if (!sessionId) {
           return res.status(400).json({ message: "Session ID required" });
@@ -117,9 +240,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Helper to get playerId from request (userId or sessionId)
   const getPlayerId = (req: any): string | null => {
+    // Try session-based auth first
+    if (req.session && (req.session as any).userId) {
+      return (req.session as any).userId;
+    }
+    // Then try Replit Auth
     if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
       return req.user.claims.sub;
     }
+    // Finally fall back to anonymous session ID
     const sessionId = req.headers['x-session-id'];
     return sessionId ? sessionId as string : null;
   };
@@ -129,7 +258,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Use authenticated userId if available, otherwise use the playerId from body
       let playerId: string;
-      if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
+      
+      if (req.session && (req.session as any).userId) {
+        playerId = (req.session as any).userId;
+      } else if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
         playerId = req.user.claims.sub;
       } else {
         // For anonymous users, use the playerId from body (stable across tabs)
