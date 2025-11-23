@@ -23,16 +23,13 @@ import { db } from "./db";
 import { eq, desc, and, lt, sql as drizzleSql } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations (supports both Replit Auth and email/password)
+  // User operations (Replit Auth only)
   getUser(id: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-  updateUserPassword(userId: string, passwordHash: string): Promise<void>;
   
-  // Game save operations - supports both authenticated and anonymous sessions
+  // Game save operations - authenticated users only
   getGameSaveByUserId(userId: string): Promise<GameSave | undefined>;
-  getGameSaveBySessionId(sessionId: string): Promise<GameSave | undefined>;
   saveGame(save: InsertGameSave): Promise<GameSave>;
   
   // Soulbinding operations
@@ -64,11 +61,6 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user;
-  }
-
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
@@ -89,14 +81,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUserPassword(userId: string, passwordHash: string): Promise<void> {
-    await db
-      .update(users)
-      .set({ passwordHash, updatedAt: new Date() })
-      .where(eq(users.id, userId));
-  }
-
-  // Game save operations - supports both authenticated and anonymous sessions
+  // Game save operations - authenticated users only
   async getGameSaveByUserId(userId: string): Promise<GameSave | undefined> {
     const [save] = await db
       .select()
@@ -107,24 +92,12 @@ export class DatabaseStorage implements IStorage {
     return save;
   }
 
-  async getGameSaveBySessionId(sessionId: string): Promise<GameSave | undefined> {
-    const [save] = await db
-      .select()
-      .from(gameSaves)
-      .where(eq(gameSaves.sessionId, sessionId))
-      .orderBy(desc(gameSaves.lastSaved))
-      .limit(1);
-    return save;
-  }
-
   async saveGame(saveData: InsertGameSave): Promise<GameSave> {
-    // Upsert logic: find existing save by userId OR sessionId, then update or insert
+    // Upsert logic: find existing save by userId, then update or insert
     let existing: GameSave | undefined;
     
     if (saveData.userId) {
       existing = await this.getGameSaveByUserId(saveData.userId);
-    } else if (saveData.sessionId) {
-      existing = await this.getGameSaveBySessionId(saveData.sessionId);
     }
     
     if (existing) {
