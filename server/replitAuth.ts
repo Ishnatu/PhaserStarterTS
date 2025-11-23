@@ -51,8 +51,11 @@ function updateUserSession(
 }
 
 async function upsertUser(claims: any) {
+  const username = claims["preferred_username"] || claims["name"] || claims["email"]?.split("@")[0] || `user_${claims["sub"].slice(0, 8)}`;
+  
   await storage.upsertUser({
     id: claims["sub"],
+    username,
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
