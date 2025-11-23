@@ -1,6 +1,4 @@
 import Phaser from 'phaser';
-import { LoginScene } from './scenes/LoginScene';
-import { SignupScene } from './scenes/SignupScene';
 import { MainMenuScene } from './scenes/MainMenuScene';
 import { TownScene } from './scenes/TownScene';
 import { ExploreScene } from './scenes/ExploreScene';
@@ -25,7 +23,7 @@ const config: Phaser.Types.Core.GameConfig = {
   dom: {
     createContainer: true,
   },
-  scene: [LoginScene, SignupScene, MainMenuScene, TownScene, ExploreScene, DelveScene, CombatScene, EscMenuScene, InterfaceMenuScene],
+  scene: [MainMenuScene, TownScene, ExploreScene, DelveScene, CombatScene, EscMenuScene, InterfaceMenuScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

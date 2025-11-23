@@ -33,14 +33,14 @@ export class MainMenuScene extends Phaser.Scene {
       fontFamily: FONTS.primary,
     }).setOrigin(0.5);
 
-    // Fetch and display user info
+    // Fetch and display user info (Replit Auth)
     try {
       const response = await fetch('/api/auth/me', {
         credentials: 'include',
       });
       if (response.ok) {
         const user = await response.json();
-        this.add.text(width - 20, 20, `Player: ${user.username || user.email}`, {
+        this.add.text(width - 20, 20, `Player: ${user.username}`, {
           fontSize: FONTS.size.small,
           color: '#88ff88',
           fontFamily: FONTS.primary,
@@ -59,11 +59,15 @@ export class MainMenuScene extends Phaser.Scene {
         logoutBtn.on('pointerout', () => logoutBtn.setColor('#ff8888'));
         logoutBtn.on('pointerdown', async () => {
           await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-          this.scene.start('LoginScene');
+          window.location.href = '/';
         });
+      } else {
+        // Not authenticated - redirect to login
+        window.location.href = '/login';
       }
     } catch (error) {
       console.error('Failed to fetch user info:', error);
+      window.location.href = '/login';
     }
 
     const startButton = this.add.sprite(width / 2, height / 2 + 150, 'start-button');
