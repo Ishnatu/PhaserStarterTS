@@ -22,12 +22,10 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User authentication table - supports both Replit Auth and email/password
+// User authentication table - Replit Auth only
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique().notNull(),
-  username: varchar("username").unique(),
-  passwordHash: varchar("password_hash"), // Only for email/password auth
+  id: varchar("id").primaryKey(), // Replit Auth user ID (sub claim)
+  username: varchar("username").notNull(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -35,24 +33,21 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Game save data table - stores the complete player state
-// Supports both authenticated users (via userId) and anonymous sessions (via sessionId)
+// Game save data table - stores the complete player state (Replit Auth only)
 export const gameSaves = pgTable("game_saves", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }), // Optional: for authenticated users
-  sessionId: varchar("session_id"), // Optional: for anonymous sessions
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   saveData: jsonb("save_data").notNull(), // Complete PlayerData object
   lastSaved: timestamp("last_saved").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("IDX_game_saves_user_id").on(table.userId),
-  index("IDX_game_saves_session_id").on(table.sessionId),
 ]);
 
-// Tombstones - stores death locations and dropped items
+// Tombstones - stores death locations and dropped items (Replit Auth only)
 export const tombstones = pgTable("tombstones", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  ownerId: varchar("owner_id"), // userId or sessionId of the dead player
+  ownerId: varchar("owner_id").notNull(), // userId of the dead player
   ownerName: varchar("owner_name").notNull(), // Display name for "corpse of X"
   worldX: real("world_x").notNull(), // Death location X
   worldY: real("world_y").notNull(), // Death location Y
@@ -60,7 +55,7 @@ export const tombstones = pgTable("tombstones", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at").notNull(), // When tombstone disappears
   looted: boolean("looted").default(false).notNull(), // Whether someone has taken the loot
-  lootedBy: varchar("looted_by"), // userId/sessionId of the looter
+  lootedBy: varchar("looted_by"), // userId of the looter
   lootedAt: timestamp("looted_at"), // When it was looted
 }, (table) => [
   index("IDX_tombstones_owner").on(table.ownerId),
@@ -68,10 +63,10 @@ export const tombstones = pgTable("tombstones", {
   index("IDX_tombstones_looted").on(table.looted),
 ]);
 
-// Soulbound items - tracks which equipment slots are soulbound per player
+// Soulbound items - tracks which equipment slots are soulbound per player (Replit Auth only)
 export const soulboundItems = pgTable("soulbound_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  playerId: varchar("player_id").notNull(), // userId or sessionId
+  playerId: varchar("player_id").notNull(), // userId
   slotName: varchar("slot_name").notNull(), // e.g., "mainHand", "chest", etc.
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
