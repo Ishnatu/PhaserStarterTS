@@ -63,11 +63,11 @@ export class MainMenuScene extends Phaser.Scene {
         });
       } else {
         // Not authenticated - redirect to login
-        window.location.href = '/login';
+        window.location.href = '/api/login';
       }
     } catch (error) {
       console.error('Failed to fetch user info:', error);
-      window.location.href = '/login';
+      window.location.href = '/api/login';
     }
 
     const startButton = this.add.sprite(width / 2, height / 2 + 150, 'start-button');
