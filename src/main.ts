@@ -12,39 +12,19 @@ import { ItemDatabase } from './config/ItemDatabase';
 import { HeartbeatManager } from './utils/HeartbeatManager';
 import { EnemyFactory } from './systems/EnemyFactory';
 
-const config: Phaser.Types.Core.GameConfig = {
-  type: Phaser.AUTO,
-  parent: 'game',
-  width: 1920,
-  height: 1080,
-  backgroundColor: '#0f0f13',
-  pixelArt: true,
-  antialias: false,
-  dom: {
-    createContainer: true,
-  },
-  scene: [MainMenuScene, TownScene, ExploreScene, DelveScene, CombatScene, EscMenuScene, InterfaceMenuScene],
-  scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-  },
-  render: {
-    pixelArt: true,
-    roundPixels: true,
-  },
-};
-
-ItemDatabase.initialize();
-
-// Initialize game
-console.log('Initializing Gemforge Chronicles...');
-const game = new Phaser.Game(config);
-SceneManager.initialize(game);
-GameStateManager.getInstance();
+// Global user cache
+declare global {
+  interface Window {
+    authenticatedUser?: {
+      id: string;
+      username: string;
+      createdAt: string;
+    };
+  }
+}
 
 // Function to show blocking modal for duplicate instances
 function showDuplicateInstanceModal(): void {
-  // Create full-screen blocking overlay
   const overlay = document.createElement('div');
   overlay.id = 'duplicate-instance-modal';
   overlay.style.position = 'fixed';
@@ -61,7 +41,6 @@ function showDuplicateInstanceModal(): void {
   overlay.style.fontFamily = 'VT323, monospace';
   overlay.style.color = '#ff4444';
   
-  // Warning message
   const message = document.createElement('div');
   message.style.fontSize = '48px';
   message.style.textAlign = 'center';
@@ -75,7 +54,6 @@ function showDuplicateInstanceModal(): void {
   subMessage.style.color = '#ffffff';
   subMessage.textContent = 'Please close this window to prevent save conflicts';
   
-  // Exit button
   const exitButton = document.createElement('button');
   exitButton.textContent = 'Exit Game';
   exitButton.style.fontSize = '32px';
@@ -89,7 +67,6 @@ function showDuplicateInstanceModal(): void {
   
   exitButton.onclick = () => {
     window.close();
-    // If window.close() doesn't work (not opened by script), force reload to about:blank
     window.location.href = 'about:blank';
   };
   
@@ -98,25 +75,148 @@ function showDuplicateInstanceModal(): void {
   overlay.appendChild(exitButton);
   document.body.appendChild(overlay);
   
-  // Disable ESC key globally
   document.addEventListener('keydown', (e) => {
     e.preventDefault();
     e.stopPropagation();
   }, true);
   
-  // Auto-close after 10 seconds if user doesn't click
   setTimeout(() => {
     window.close();
     window.location.href = 'about:blank';
   }, 10000);
 }
 
-// Start heartbeat monitoring after a brief delay to ensure server is ready
-setTimeout(() => {
-  HeartbeatManager.getInstance().start(() => {
-    showDuplicateInstanceModal();
-  });
-}, 2000); // Wait 2 seconds before starting heartbeat
+// Show landing page for unauthenticated users
+function showLandingPage(): void {
+  const root = document.getElementById('game')!;
+  root.innerHTML = '';
+  
+  const container = document.createElement('div');
+  container.style.width = '100vw';
+  container.style.height = '100vh';
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.alignItems = 'center';
+  container.style.justifyContent = 'center';
+  container.style.backgroundColor = '#1a1a2e';
+  container.style.fontFamily = '"Press Start 2P", monospace';
+  container.style.color = '#ffffff';
+  
+  const title = document.createElement('h1');
+  title.textContent = 'GEMFORGE CHRONICLES';
+  title.style.fontSize = '48px';
+  title.style.marginBottom = '20px';
+  title.style.color = '#f0a020';
+  title.style.textAlign = 'center';
+  
+  const subtitle = document.createElement('h2');
+  subtitle.textContent = 'PHASE ONE: THE HUNT';
+  subtitle.style.fontSize = '24px';
+  subtitle.style.marginBottom = '80px';
+  subtitle.style.color = '#f0a020';
+  subtitle.style.textAlign = 'center';
+  
+  const loginButton = document.createElement('button');
+  loginButton.textContent = 'LOG IN TO PLAY';
+  loginButton.style.fontSize = '20px';
+  loginButton.style.padding = '20px 40px';
+  loginButton.style.backgroundColor = '#f0a020';
+  loginButton.style.color = '#1a1a2e';
+  loginButton.style.border = 'none';
+  loginButton.style.cursor = 'pointer';
+  loginButton.style.fontFamily = '"Press Start 2P", monospace';
+  loginButton.style.fontWeight = 'bold';
+  loginButton.style.transition = 'all 0.3s';
+  
+  loginButton.onmouseover = () => {
+    loginButton.style.backgroundColor = '#ffcc66';
+  };
+  
+  loginButton.onmouseout = () => {
+    loginButton.style.backgroundColor = '#f0a020';
+  };
+  
+  loginButton.onclick = () => {
+    window.location.href = '/api/login';
+  };
+  
+  const footer = document.createElement('div');
+  footer.textContent = '© 2025 - A Dark Fantasy Extraction RPG';
+  footer.style.fontSize = '14px';
+  footer.style.marginTop = '100px';
+  footer.style.color = '#888888';
+  
+  container.appendChild(title);
+  container.appendChild(subtitle);
+  container.appendChild(loginButton);
+  container.appendChild(footer);
+  root.appendChild(container);
+}
 
-console.log('Gemforge Chronicles - Phase One: The Hunt');
-console.log('Game initialized successfully!');
+// Initialize the game
+function initializeGame(): void {
+  const config: Phaser.Types.Core.GameConfig = {
+    type: Phaser.AUTO,
+    parent: 'game',
+    width: 1920,
+    height: 1080,
+    backgroundColor: '#0f0f13',
+    pixelArt: true,
+    antialias: false,
+    dom: {
+      createContainer: true,
+    },
+    scene: [MainMenuScene, TownScene, ExploreScene, DelveScene, CombatScene, EscMenuScene, InterfaceMenuScene],
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+    },
+    render: {
+      pixelArt: true,
+      roundPixels: true,
+    },
+  };
+
+  ItemDatabase.initialize();
+
+  console.log('Initializing Gemforge Chronicles...');
+  const game = new Phaser.Game(config);
+  SceneManager.initialize(game);
+  GameStateManager.getInstance();
+
+  // Start heartbeat monitoring after a brief delay
+  setTimeout(() => {
+    HeartbeatManager.getInstance().start(() => {
+      showDuplicateInstanceModal();
+    });
+  }, 2000);
+
+  console.log('Gemforge Chronicles - Phase One: The Hunt');
+  console.log('Game initialized successfully!');
+}
+
+// Bootstrap: Check authentication before loading game
+async function bootstrap(): Promise<void> {
+  try {
+    const response = await fetch('/api/auth/me', {
+      credentials: 'include',
+    });
+    
+    if (response.ok) {
+      // User is authenticated - cache user and load game
+      const user = await response.json();
+      window.authenticatedUser = user;
+      initializeGame();
+    } else {
+      // User not authenticated - show landing page
+      showLandingPage();
+    }
+  } catch (error) {
+    console.error('Bootstrap error:', error);
+    // On error, show landing page
+    showLandingPage();
+  }
+}
+
+// Start the bootstrap process
+bootstrap();
