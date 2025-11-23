@@ -3,7 +3,6 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { registerUser, loginUser, changePassword } from "./auth";
 
 // Session tracking for multi-instance detection
 interface SessionInfo {
@@ -32,41 +31,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication middleware
   await setupAuth(app);
 
-  // Email/password authentication routes
-  app.post('/api/auth/register', async (req, res) => {
-    try {
-      const { username, email, password } = req.body;
-      const user = await registerUser({ username, email, password });
-      
-      // Set session (using Express session)
-      if (req.session) {
-        (req.session as any).userId = user.id;
-      }
-      
-      res.json({ user });
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      res.status(400).json({ message: error.message || "Registration failed" });
-    }
-  });
-
-  app.post('/api/auth/login', async (req, res) => {
-    try {
-      const { email, password } = req.body;
-      const user = await loginUser({ email, password });
-      
-      // Set session
-      if (req.session) {
-        (req.session as any).userId = user.id;
-      }
-      
-      res.json({ user });
-    } catch (error: any) {
-      console.error("Login error:", error);
-      res.status(401).json({ message: error.message || "Login failed" });
-    }
-  });
-
+  // Logout endpoint
   app.post('/api/auth/logout', async (req, res) => {
     try {
       if (req.session) {
@@ -85,29 +50,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/auth/me', async (req: any, res) => {
+  // Get current authenticated user (Replit Auth only)
+  app.get('/api/auth/me', isAuthenticated, async (req: any, res) => {
     try {
-      // Support both session and Replit Auth
-      let userId: string | undefined;
-      
-      if (req.session && (req.session as any).userId) {
-        userId = (req.session as any).userId;
-      } else if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
-        userId = req.user.claims.sub;
-      }
-      
-      if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-      
+      const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
+      
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       
       res.json({
         id: user.id,
-        email: user.email,
         username: user.username,
         createdAt: user.createdAt,
       });
@@ -117,69 +71,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/auth/change-password', async (req: any, res) => {
-    try {
-      let userId: string | undefined;
-      
-      if (req.session && (req.session as any).userId) {
-        userId = (req.session as any).userId;
-      } else if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
-        userId = req.user.claims.sub;
-      }
-      
-      if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-      
-      const { oldPassword, newPassword } = req.body;
-      await changePassword(userId, oldPassword, newPassword);
-      
-      res.json({ success: true });
-    } catch (error: any) {
-      console.error("Password change error:", error);
-      res.status(400).json({ message: error.message || "Password change failed" });
-    }
-  });
-
-  // Get current authenticated user (legacy Replit Auth endpoint)
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Load game save (Replit Auth only)
+  app.get("/api/game/load", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
-
-  // Load game save - supports both authenticated users and anonymous sessions
-  app.get("/api/game/load", async (req: any, res) => {
-    try {
-      let gameSave;
-      let userId: string | undefined;
-      
-      // Try session-based auth first
-      if (req.session && (req.session as any).userId) {
-        userId = (req.session as any).userId;
-      }
-      // Then try Replit Auth
-      else if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
-        userId = req.user.claims.sub;
-      }
-      
-      // Load save by userId if authenticated
-      if (userId) {
-        gameSave = await storage.getGameSaveByUserId(userId);
-      }
-      
-      // Fall back to session ID from header (anonymous)
-      if (!gameSave) {
-        const sessionId = req.headers['x-session-id'];
-        if (sessionId) {
-          gameSave = await storage.getGameSaveBySessionId(sessionId as string);
-        }
-      }
+      const gameSave = await storage.getGameSaveByUserId(userId);
       
       if (!gameSave) {
         return res.status(404).json({ message: "No save found" });
@@ -195,8 +91,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Save game state - supports both authenticated users and anonymous sessions
-  app.post("/api/game/save", async (req: any, res) => {
+  // Save game state (Replit Auth only)
+  app.post("/api/game/save", isAuthenticated, async (req: any, res) => {
     try {
       const { saveData } = req.body;
       
@@ -204,27 +100,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Save data required" });
       }
       
-      let userId: string | undefined;
-      let sessionId: string | undefined;
-      
-      // Use session-based auth userId if available
-      if (req.session && (req.session as any).userId) {
-        userId = (req.session as any).userId;
-      }
-      // Then try Replit Auth
-      else if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
-        userId = req.user.claims.sub;
-      } else {
-        // Otherwise use session ID from header (anonymous)
-        sessionId = req.headers['x-session-id'] as string;
-        if (!sessionId) {
-          return res.status(400).json({ message: "Session ID required" });
-        }
-      }
+      const userId = req.user.claims.sub;
       
       const result = await storage.saveGame({
         userId,
-        sessionId,
         saveData,
       });
       
@@ -238,40 +117,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Helper to get playerId from request (userId or sessionId)
+  // Helper to get playerId from request (Replit Auth only)
   const getPlayerId = (req: any): string | null => {
-    // Try session-based auth first
-    if (req.session && (req.session as any).userId) {
-      return (req.session as any).userId;
-    }
-    // Then try Replit Auth
     if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
       return req.user.claims.sub;
     }
-    // Finally fall back to anonymous session ID
-    const sessionId = req.headers['x-session-id'];
-    return sessionId ? sessionId as string : null;
+    return null;
   };
 
-  // Heartbeat endpoint for multi-instance detection
-  app.post("/api/game/heartbeat", async (req: any, res) => {
+  // Heartbeat endpoint for multi-instance detection (Replit Auth only)
+  app.post("/api/game/heartbeat", isAuthenticated, async (req: any, res) => {
     try {
-      // Use authenticated userId if available, otherwise use the playerId from body
-      let playerId: string;
-      
-      if (req.session && (req.session as any).userId) {
-        playerId = (req.session as any).userId;
-      } else if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
-        playerId = req.user.claims.sub;
-      } else {
-        // For anonymous users, use the playerId from body (stable across tabs)
-        playerId = req.body.playerId;
-      }
-      
+      const playerId = req.user.claims.sub;
       const instanceId = req.body.instanceId; // Unique per tab/window
       
-      if (!playerId || !instanceId) {
-        return res.status(400).json({ message: "Player ID and instance ID required" });
+      if (!instanceId) {
+        return res.status(400).json({ message: "Instance ID required" });
       }
 
       const now = Date.now();
@@ -305,14 +166,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Soulbinding endpoints
-  app.get("/api/soulbound/slots", async (req: any, res) => {
+  // Soulbinding endpoints (Replit Auth only)
+  app.get("/api/soulbound/slots", isAuthenticated, async (req: any, res) => {
     try {
-      const playerId = getPlayerId(req);
-      if (!playerId) {
-        return res.status(401).json({ message: "Player ID required" });
-      }
-
+      const playerId = req.user.claims.sub;
       const slots = await storage.getSoulboundSlots(playerId);
       res.json({ slots: slots.map(s => s.slotName) });
     } catch (error) {
@@ -321,14 +178,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/soulbound/slots", async (req: any, res) => {
+  app.post("/api/soulbound/slots", isAuthenticated, async (req: any, res) => {
     try {
-      const playerId = getPlayerId(req);
-      if (!playerId) {
-        return res.status(401).json({ message: "Player ID required" });
-      }
-
+      const playerId = req.user.claims.sub;
       const { slots } = req.body;
+      
       if (!Array.isArray(slots)) {
         return res.status(400).json({ message: "Slots must be an array" });
       }
@@ -341,14 +195,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Tombstone endpoints
-  app.post("/api/tombstones/create", async (req: any, res) => {
+  // Tombstone endpoints (Replit Auth only)
+  app.post("/api/tombstones/create", isAuthenticated, async (req: any, res) => {
     try {
-      const playerId = getPlayerId(req);
-      if (!playerId) {
-        return res.status(401).json({ message: "Player ID required" });
-      }
-
+      const playerId = req.user.claims.sub;
       const { ownerName, worldX, worldY, items, expiresInHours } = req.body;
       
       const expiresAt = new Date();
@@ -370,13 +220,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tombstones/mine", async (req: any, res) => {
+  app.get("/api/tombstones/mine", isAuthenticated, async (req: any, res) => {
     try {
-      const playerId = getPlayerId(req);
-      if (!playerId) {
-        return res.status(401).json({ message: "Player ID required" });
-      }
-
+      const playerId = req.user.claims.sub;
       const tombstones = await storage.getPlayerTombstones(playerId);
       res.json({ tombstones });
     } catch (error) {
@@ -385,13 +231,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tombstones/random", async (req: any, res) => {
+  app.get("/api/tombstones/random", isAuthenticated, async (req: any, res) => {
     try {
-      const playerId = getPlayerId(req);
-      if (!playerId) {
-        return res.status(401).json({ message: "Player ID required" });
-      }
-
+      const playerId = req.user.claims.sub;
       const tombstone = await storage.getRandomTombstone(playerId);
       res.json({ tombstone: tombstone || null });
     } catch (error) {
@@ -400,13 +242,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tombstones/:id/loot", async (req: any, res) => {
+  app.post("/api/tombstones/:id/loot", isAuthenticated, async (req: any, res) => {
     try {
-      const playerId = getPlayerId(req);
-      if (!playerId) {
-        return res.status(401).json({ message: "Player ID required" });
-      }
-
+      const playerId = req.user.claims.sub;
       const { id } = req.params;
       
       // Verify tombstone exists and is lootable
@@ -436,13 +274,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/tombstones/:id", async (req: any, res) => {
+  app.delete("/api/tombstones/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const playerId = getPlayerId(req);
-      if (!playerId) {
-        return res.status(401).json({ message: "Player ID required" });
-      }
-
+      const playerId = req.user.claims.sub;
       const { id } = req.params;
       
       // Verify the tombstone exists and belongs to this player
@@ -464,14 +298,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Karma/return endpoints
-  app.get("/api/karma/looted-tombstones", async (req: any, res) => {
+  // Karma/return endpoints (Replit Auth only)
+  app.get("/api/karma/looted-tombstones", isAuthenticated, async (req: any, res) => {
     try {
-      const playerId = getPlayerId(req);
-      if (!playerId) {
-        return res.status(401).json({ message: "Player ID required" });
-      }
-
+      const playerId = req.user.claims.sub;
       const tombstones = await storage.getLootedTombstones(playerId);
       res.json({ tombstones });
     } catch (error) {
@@ -480,13 +310,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/karma/return", async (req: any, res) => {
+  app.post("/api/karma/return", isAuthenticated, async (req: any, res) => {
     try {
-      const playerId = getPlayerId(req);
-      if (!playerId) {
-        return res.status(401).json({ message: "Player ID required" });
-      }
-
+      const playerId = req.user.claims.sub;
       const { originalOwnerId, returnerName, items } = req.body;
 
       const returnedLoot = await storage.createReturnedLoot({
@@ -509,13 +335,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/karma/pending", async (req: any, res) => {
+  app.get("/api/karma/pending", isAuthenticated, async (req: any, res) => {
     try {
-      const playerId = getPlayerId(req);
-      if (!playerId) {
-        return res.status(401).json({ message: "Player ID required" });
-      }
-
+      const playerId = req.user.claims.sub;
       const pending = await storage.getPendingReturns(playerId);
       res.json({ pending });
     } catch (error) {
@@ -524,13 +346,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/karma/claim/:id", async (req: any, res) => {
+  app.post("/api/karma/claim/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const playerId = getPlayerId(req);
-      if (!playerId) {
-        return res.status(401).json({ message: "Player ID required" });
-      }
-
+      const playerId = req.user.claims.sub;
       const { id } = req.params;
       
       // Verify the pending return belongs to this player
