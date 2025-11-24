@@ -791,14 +791,15 @@ export class DelveScene extends Phaser.Scene {
     const amount = restorationRoll.total;
 
     if (potion.type === 'health') {
-      player.health = Math.min(player.maxHealth, player.health + amount);
+      const newHealth = Math.min(player.maxHealth, player.health + amount);
       this.showMessage(`Used ${potion.name}! Restored ${amount} HP`);
+      this.gameState.removeItemFromInventory(itemId, 1);
+      this.gameState.updatePlayer({ health: newHealth });
     } else if (potion.type === 'stamina') {
-      player.stamina = Math.min(player.maxStamina, player.stamina + amount);
+      const newStamina = Math.min(player.maxStamina, player.stamina + amount);
       this.showMessage(`Used ${potion.name}! Restored ${amount} Stamina`);
+      this.gameState.removeItemFromInventory(itemId, 1);
+      this.gameState.updatePlayer({ stamina: newStamina });
     }
-
-    this.gameState.removeItemFromInventory(itemId, 1);
-    this.gameState.updatePlayer(player);
   }
 }
