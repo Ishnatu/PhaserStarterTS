@@ -3,6 +3,8 @@ import type { Express } from "express";
 import { isAuthenticated } from "../replitAuth";
 import { CombatSystem } from "../systems/CombatSystem";
 import { DiceRoller } from "../systems/DiceRoller";
+import { EnemyFactory } from "../systems/EnemyFactory";
+import { WeaponValidator } from "../systems/WeaponValidator";
 import { SeededRNG } from "../utils/SeededRNG";
 import { storage } from "../storage";
 import type { CombatState, Enemy, PlayerData, WeaponAttack } from "../../shared/types";
@@ -28,16 +30,31 @@ export function registerCombatRoutes(app: Express) {
   /**
    * POST /api/combat/initiate
    * Starts a new combat encounter with server-rolled initiative
-   * SERVER-AUTHORITATIVE: Player data loaded from storage, not client
+   * 
+   * [SERVER-AUTHORITATIVE SECURITY FIX]
+   * - Accepts only enemy names (strings), not full enemy objects
+   * - Creates enemies server-side using EnemyFactory with authoritative stats
+   * - Prevents client from spoofing enemy HP/damage
+   * 
+   * Request body: { enemyNames: string[], isWildEncounter: boolean }
    */
   app.post("/api/combat/initiate", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { enemies, isWildEncounter } = req.body;
+      const { enemyNames, isWildEncounter } = req.body;
 
-      // Validate input
-      if (!enemies || !Array.isArray(enemies)) {
-        return res.status(400).json({ message: "Invalid combat initiation data" });
+      // [SECURITY] Validate input - accept only enemy names, not full objects
+      if (!enemyNames || !Array.isArray(enemyNames)) {
+        return res.status(400).json({ message: "enemyNames array required" });
+      }
+
+      if (enemyNames.length === 0 || enemyNames.length > 5) {
+        return res.status(400).json({ message: "Must have 1-5 enemies" });
+      }
+
+      // Validate all enemy names are strings
+      if (!enemyNames.every((name: any) => typeof name === 'string')) {
+        return res.status(400).json({ message: "All enemy names must be strings" });
       }
 
       // [SERVER AUTHORITATIVE] Load player data from storage, ignore client payload
@@ -49,18 +66,29 @@ export function registerCombatRoutes(app: Express) {
       const player = gameSave.saveData as PlayerData;
 
       // [SERVER RNG] Create deterministic seed from save data (not Math.random!)
-      // Seed combines userId hash + timestamp for uniqueness but no client influence
       const userHash = userId.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
       const seed = userHash + Date.now();
       
       const rng = new SeededRNG(seed);
-      const diceRoller = new DiceRoller(rng);
-      const combatSystem = new CombatSystem(diceRoller);
+      const enemyFactory = new EnemyFactory(rng);
+
+      // [SERVER AUTHORITATIVE] Create enemies using server-side factory
+      // This prevents client from spoofing enemy stats
+      const enemies: Enemy[] = [];
+      for (const enemyName of enemyNames) {
+        const enemy = enemyFactory.createEnemyByName(enemyName);
+        if (!enemy) {
+          return res.status(400).json({ message: `Unknown enemy: ${enemyName}` });
+        }
+        enemies.push(enemy);
+      }
 
       // Roll initiative and create combat state server-side
+      const diceRoller = new DiceRoller(rng);
+      const combatSystem = new CombatSystem(diceRoller);
       const combatState = combatSystem.initiateCombat(
         player, 
-        enemies as Enemy[],
+        enemies,
         isWildEncounter || false
       );
 
@@ -87,6 +115,13 @@ export function registerCombatRoutes(app: Express) {
   /**
    * POST /api/combat/action
    * Processes a player action (attack/item/run) server-side
+   * 
+   * [SERVER-AUTHORITATIVE SECURITY FIX]
+   * - Accepts only attackName (string), not full attack objects
+   * - Validates attack against player's equipped weapons server-side
+   * - Prevents client from forging "999 damage, 0 stamina cost" attacks
+   * 
+   * Request body: { sessionId: string, action: { type: string, attackName?: string, targetId?: string } }
    */
   app.post("/api/combat/action", isAuthenticated, async (req: any, res) => {
     try {
@@ -121,22 +156,47 @@ export function registerCombatRoutes(app: Express) {
       
       switch (action.type) {
         case 'attack': {
-          // Validate attack action
-          if (!action.attack || !action.targetId) {
-            return res.status(400).json({ message: "Attack requires attack object and targetId" });
+          // [SECURITY] Validate attack - accept only attackName, not full attack object
+          if (!action.attackName || typeof action.attackName !== 'string') {
+            return res.status(400).json({ message: "Attack requires attackName (string)" });
+          }
+
+          if (!action.targetId) {
+            return res.status(400).json({ message: "Attack requires targetId" });
           }
           
+          // [SECURITY FIX] Reload fresh player data from storage, don't trust mutable session state
+          // This prevents exploits where session state was tampered with earlier
+          const gameSave = await storage.getGameSaveByUserId(userId);
+          if (!gameSave || !gameSave.saveData) {
+            return res.status(500).json({ message: "Failed to load player data" });
+          }
+          const freshPlayer = gameSave.saveData as PlayerData;
+
+          // [SERVER AUTHORITATIVE] Validate attack against fresh player equipment from storage
+          // This prevents client from forging attacks with spoofed damage/costs
+          const validatedAttack = WeaponValidator.validateAttack(
+            action.attackName,
+            freshPlayer
+          );
+
+          if (!validatedAttack) {
+            return res.status(400).json({ 
+              message: `Invalid attack: "${action.attackName}" not found in equipped weapons` 
+            });
+          }
+
           // Find target index from targetId
           const targetIndex = session.combatState.enemies.findIndex((e: Enemy) => e.id === action.targetId);
           if (targetIndex === -1) {
             return res.status(400).json({ message: "Target enemy not found" });
           }
           
-          // Execute attack using CombatSystem.playerAttack
+          // Execute attack using authoritative attack data from server
           const { state, result } = combatSystem.playerAttack(
             session.combatState,
             targetIndex,
-            action.attack as WeaponAttack
+            validatedAttack
           );
           updatedState = state;
           actionResult = result;
