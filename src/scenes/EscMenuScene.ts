@@ -144,7 +144,7 @@ export class EscMenuScene extends Phaser.Scene {
     const elements: Phaser.GameObjects.GameObject[] = [];
 
     const bg = this.add.rectangle(x, y, 250, 50, 0x444466)
-      .setDepth(10002)
+      .setDepth(10008)
       .setInteractive({ useHandCursor: true })
       .on('pointerover', () => bg.setFillStyle(0x555577))
       .on('pointerout', () => bg.setFillStyle(0x444466))
@@ -155,7 +155,7 @@ export class EscMenuScene extends Phaser.Scene {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.medium,
       color: '#ffffff',
-    }).setOrigin(0.5).setDepth(10003);
+    }).setOrigin(0.5).setDepth(10009);
     elements.push(label);
 
     return { elements };
