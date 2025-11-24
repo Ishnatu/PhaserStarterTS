@@ -4,6 +4,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { registerCombatRoutes } from "./routes/combat";
+import { registerDelveRoutes } from "./routes/delve";
+import { registerLootRoutes } from "./routes/loot";
 
 // Session tracking for multi-instance detection
 interface SessionInfo {
@@ -34,6 +36,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register combat routes (server-authoritative combat system)
   registerCombatRoutes(app);
+
+  // Register delve generation routes (server-authoritative delve system)
+  registerDelveRoutes(app);
+
+  // Register loot rolling routes (server-authoritative loot system)
+  registerLootRoutes(app);
 
   // Logout endpoint
   app.post('/api/auth/logout', async (req, res) => {
