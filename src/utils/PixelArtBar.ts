@@ -80,11 +80,11 @@ export class PixelArtBar {
     this.interactiveZone.on('pointerout', () => this.hideTooltip());
     this.interactiveZone.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (this.tooltipText && this.tooltipBg) {
-        // Position tooltip 20px to the right of cursor (local coordinates)
-        const localX = pointer.x - this.container.x;
-        const localY = pointer.y - this.container.y;
-        this.tooltipText.setPosition(localX + 20, localY);
-        this.tooltipBg.setPosition(localX + 20, localY);
+        // Tooltips have scrollFactor(0), so they're always in screen space
+        // Simply use pointer screen coordinates (x/y) for positioning
+        // This works regardless of whether the bar is in world or screen space
+        this.tooltipText.setPosition(pointer.x + 20, pointer.y);
+        this.tooltipBg.setPosition(pointer.x + 20, pointer.y);
       }
     });
     
@@ -101,24 +101,24 @@ export class PixelArtBar {
     if (!this.tooltipText) {
       const label = this.container.getData('label');
       
-      // Create tooltip background
+      // Create tooltip background - add directly to scene, not container, so depth works
       this.tooltipBg = this.scene.add.rectangle(0, 0, 120, 32, 0x1a1a2e, 0.95)
         .setOrigin(0, 0.5)
         .setStrokeStyle(2, 0x4a4a6a)
-        .setScrollFactor(0);  // Respect parent container scroll factor
+        .setScrollFactor(0)
+        .setDepth(10000);  // Very high depth to appear above all bars
       
-      // Create tooltip text
+      // Create tooltip text - add directly to scene, not container, so depth works
       this.tooltipText = this.scene.add.text(8, 0, `${label} ${this.currentValue}/${this.maxValue}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: '#ffffff',
         resolution: 2,
       }).setOrigin(0, 0.5)
-        .setScrollFactor(0);  // Respect parent container scroll factor
+        .setScrollFactor(0)
+        .setDepth(10001);  // Very high depth to appear above all bars
       
-      this.container.add([this.tooltipBg, this.tooltipText]);
-      this.tooltipBg.setDepth(1000);
-      this.tooltipText.setDepth(1001);
+      // Do NOT add to container - tooltips need to be independent to render on top
     } else {
       this.tooltipText.setVisible(true);
       this.tooltipBg!.setVisible(true);
@@ -204,6 +204,15 @@ export class PixelArtBar {
   }
   
   public destroy(): void {
+    // Destroy tooltips if they exist (not part of container)
+    if (this.tooltipText) {
+      this.tooltipText.destroy();
+      this.tooltipText = null;
+    }
+    if (this.tooltipBg) {
+      this.tooltipBg.destroy();
+      this.tooltipBg = null;
+    }
     this.container.destroy();
   }
   
