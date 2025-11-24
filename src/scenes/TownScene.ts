@@ -402,7 +402,7 @@ export class TownScene extends Phaser.Scene {
     this.menuState = 'inventory';
 
     const itemsStartY = height / 2 - 180;
-    const itemHeight = 30;
+    const itemHeight = 28;
     const maxDisplay = 12;
 
     let displayedItems = 0;
@@ -427,8 +427,9 @@ export class TownScene extends Phaser.Scene {
       const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
       const itemLabel = this.add.text(width / 2 - 320, y, displayName, {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: itemColor,
+        resolution: 2,
       });
       uiElements.push(itemLabel);
       
@@ -443,10 +444,11 @@ export class TownScene extends Phaser.Scene {
         else if (durabilityPercent <= 25) durabilityColor = '#ffaa00';
         else if (durabilityPercent <= 50) durabilityColor = '#ffff00';
         
-        const durabilityLabel = this.add.text(width / 2 - 100, y, `[${Math.floor(currentDurability)}/${maxDurability}]`, {
+        const durabilityLabel = this.add.text(width / 2 - 80, y, `[${Math.floor(currentDurability)}/${maxDurability}]`, {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
+          fontSize: FONTS.size.xsmall,
           color: durabilityColor,
+          resolution: 2,
         });
         uiElements.push(durabilityLabel);
       }
@@ -455,10 +457,11 @@ export class TownScene extends Phaser.Scene {
 
       if (weapon) {
         if (weapon.twoHanded) {
-          const equipBtn = this.add.text(width / 2 + 100, y, '[Equip]', {
+          const equipBtn = this.add.text(width / 2 + 120, y, '[Equip]', {
             fontFamily: FONTS.primary,
-            fontSize: FONTS.size.small,
+            fontSize: FONTS.size.xsmall,
             color: '#88ff88',
+            resolution: 2,
           }).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => {
               this.equipItemFromInventory(invItem.itemId, 'mainHand');
@@ -467,10 +470,11 @@ export class TownScene extends Phaser.Scene {
             });
           uiElements.push(equipBtn);
         } else {
-          const equipMHBtn = this.add.text(width / 2 + 70, y, '[Equip MH]', {
+          const equipMHBtn = this.add.text(width / 2 + 80, y, '[Equip MH]', {
             fontFamily: FONTS.primary,
-            fontSize: FONTS.size.small,
+            fontSize: FONTS.size.xsmall,
             color: '#88ff88',
+            resolution: 2,
           }).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => {
               this.equipItemFromInventory(invItem.itemId, 'mainHand');
@@ -479,10 +483,11 @@ export class TownScene extends Phaser.Scene {
             });
           uiElements.push(equipMHBtn);
 
-          const equipOHBtn = this.add.text(width / 2 + 150, y, '[Equip OH]', {
+          const equipOHBtn = this.add.text(width / 2 + 170, y, '[Equip OH]', {
             fontFamily: FONTS.primary,
-            fontSize: FONTS.size.small,
+            fontSize: FONTS.size.xsmall,
             color: '#88ff88',
+            resolution: 2,
           }).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => {
               this.equipItemFromInventory(invItem.itemId, 'offHand');
@@ -492,10 +497,11 @@ export class TownScene extends Phaser.Scene {
           uiElements.push(equipOHBtn);
         }
       } else if (armor) {
-        const equipBtn = this.add.text(width / 2 + 100, y, '[Equip]', {
+        const equipBtn = this.add.text(width / 2 + 120, y, '[Equip]', {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
+          fontSize: FONTS.size.xsmall,
           color: '#88ff88',
+          resolution: 2,
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
             this.equipItemFromInventory(invItem.itemId);
@@ -506,10 +512,11 @@ export class TownScene extends Phaser.Scene {
       }
 
       if (isPotion) {
-        const useBtn = this.add.text(width / 2 + 120, y, '[Use]', {
+        const useBtn = this.add.text(width / 2 + 140, y, '[Use]', {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
+          fontSize: FONTS.size.xsmall,
           color: '#8888ff',
+          resolution: 2,
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
             this.usePotion(invItem.itemId);
@@ -519,10 +526,11 @@ export class TownScene extends Phaser.Scene {
         uiElements.push(useBtn);
       }
 
-      const storeBtn = this.add.text(width / 2 + 200, y, '[Store]', {
+      const storeBtn = this.add.text(width / 2 + 230, y, '[Store]', {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: '#ffaa88',
+        resolution: 2,
       }).setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
           this.storeItem(invItem.itemId);
