@@ -30,6 +30,7 @@ export class CombatScene extends Phaser.Scene {
   private playerStaminaText!: Phaser.GameObjects.Text;
   private enemyContainers: Phaser.GameObjects.Container[] = [];
   private enemyHealthTexts: Phaser.GameObjects.Text[] = [];
+  private enemyHealthBars: PixelArtBar[] = [];
   private isWildEncounter: boolean = false;
   private wildEnemies?: Enemy[];
   private isOverlayActive: boolean = false;
@@ -98,6 +99,7 @@ export class CombatScene extends Phaser.Scene {
 
     this.enemyContainers = [];
     this.enemyHealthTexts = [];
+    this.enemyHealthBars = [];
     this.actionButtons = [];
     this.isOverlayActive = false;
 
@@ -272,15 +274,15 @@ export class CombatScene extends Phaser.Scene {
     // Fixed positioning - centered around fixed platform coordinates regardless of enemy type
     let platformCenterX: number;
     let platformY: number;
-    const spacing = 120; // Reduced spacing to keep enemies closer together
+    const spacing = 180; // Increased spacing to prevent enemies from being too close
     
     if (this.isWildEncounter) {
       // Wilderness: fixed position centered on dirt path (measured from background asset)
-      platformCenterX = 580;
+      platformCenterX = 780; // Moved 200px to the right
       platformY = height - 420;
     } else {
       // Delve: fixed position on center-right area (based on user's visual marker)
-      platformCenterX = 780;
+      platformCenterX = 980; // Moved 200px to the right
       platformY = 240;
     }
     
@@ -317,27 +319,35 @@ export class CombatScene extends Phaser.Scene {
       
       // Nameplate positioned above sprite - centered
       const plateY = y - 80;
-      const enemyInfoBg = this.add.rectangle(x - 90, plateY, 180, 60, 0x2a2a3e, 0.9).setOrigin(0);
+      const enemyInfoBg = this.add.rectangle(x - 90, plateY, 180, 65, 0x2a2a3e, 0.9).setOrigin(0);
       
       const nameText = this.add.text(x, plateY + 10, enemy.name, {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: '#ffffff',
         fontStyle: 'bold',
         resolution: 2,
       }).setOrigin(0.5, 0);
 
-      const healthText = this.add.text(x, plateY + 35, 
-        `HP: ${enemy.health}/${enemy.maxHealth}`, {
-        fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
-        color: '#ff8888',
-        resolution: 2,
-      }).setOrigin(0.5, 0);
+      // Create HP bar for enemy with built-in tooltip
+      const hpBar = new PixelArtBar(
+        this,
+        x - 80,
+        plateY + 32,
+        'HP', // Label for tooltip
+        0xcc3333,  // Red fill
+        0x4a5a8a,  // Blue-gray empty
+        160,
+        20
+      );
+      hpBar.update(enemy.health, enemy.maxHealth);
+      this.enemyHealthBars.push(hpBar);
 
+      // Hidden text element for backward compatibility
+      const healthText = this.add.text(0, 0, '', { fontSize: '1px' }).setVisible(false);
       this.enemyHealthTexts.push(healthText);
 
-      const container = this.add.container(0, 0, [enemyVisual, enemyInfoBg, nameText, healthText]);
+      const container = this.add.container(0, 0, [enemyVisual, enemyInfoBg, nameText]);
       container.setData('index', index);
       this.enemyContainers.push(container);
 
@@ -1071,10 +1081,15 @@ export class CombatScene extends Phaser.Scene {
 
     state.enemies.forEach((enemy, index) => {
       const healthText = this.enemyHealthTexts[index];
+      const healthBar = this.enemyHealthBars[index];
       const container = this.enemyContainers[index];
       
       if (healthText) {
         healthText.setText(`HP: ${enemy.health}/${enemy.maxHealth}`);
+      }
+      
+      if (healthBar) {
+        healthBar.update(enemy.health, enemy.maxHealth);
       }
       
       if (container && enemy.health <= 0) {
