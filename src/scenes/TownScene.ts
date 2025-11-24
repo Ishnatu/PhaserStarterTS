@@ -587,12 +587,25 @@ export class TownScene extends Phaser.Scene {
     const restorationRoll = DiceRoller.rollDiceTotal(potion.restoration);
     const amount = restorationRoll.total;
 
+    console.log(`Potion restoration:`, {
+      potion: potion.name,
+      restoration: potion.restoration,
+      rolled: restorationRoll,
+      amount,
+    });
+
     if (potion.type === 'health') {
+      const oldHealth = player.health;
       player.health = Math.min(player.maxHealth, player.health + amount);
-      this.showMessage(`Used ${potion.name}! Restored ${amount} HP`);
+      const actualRestored = player.health - oldHealth;
+      console.log(`Health: ${oldHealth} + ${amount} = ${player.health} (max: ${player.maxHealth}), actually restored: ${actualRestored}`);
+      this.showMessage(`Used ${potion.name}! Restored ${actualRestored} HP (rolled ${amount})`);
     } else if (potion.type === 'stamina') {
+      const oldStamina = player.stamina;
       player.stamina = Math.min(player.maxStamina, player.stamina + amount);
-      this.showMessage(`Used ${potion.name}! Restored ${amount} Stamina`);
+      const actualRestored = player.stamina - oldStamina;
+      console.log(`Stamina: ${oldStamina} + ${amount} = ${player.stamina} (max: ${player.maxStamina}), actually restored: ${actualRestored}`);
+      this.showMessage(`Used ${potion.name}! Restored ${actualRestored} Stamina (rolled ${amount})`);
     }
 
     this.gameState.removeItemFromInventory(itemId, 1);
