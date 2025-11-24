@@ -197,6 +197,14 @@ function initializeGame(): void {
 
 // Bootstrap: Check authentication before loading game
 async function bootstrap(): Promise<void> {
+  // Clear any old client-side saves - all progress is now server-authoritative
+  try {
+    localStorage.removeItem('gemforge_save');
+    console.log('Cleared old client-side save data');
+  } catch (e) {
+    // Ignore localStorage errors
+  }
+
   try {
     const response = await fetch('/api/auth/me', {
       credentials: 'include',
