@@ -9,6 +9,8 @@ import {
   varchar,
   text,
   boolean,
+  unique,
+  check,
 } from "drizzle-orm/pg-core";
 
 // Session storage table for Replit Auth
@@ -110,6 +112,81 @@ export const playerCurrencies = pgTable("player_currencies", {
   index("IDX_player_currencies_player").on(table.playerId),
 ]);
 
+// Withdrawal requests - tracks nonces and signatures to prevent replay attacks
+export const playerWithdrawals = pgTable("player_withdrawals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull(), // userId
+  walletAddress: varchar("wallet_address").notNull(), // Ronin wallet address
+  currencyType: varchar("currency_type").notNull(), // 'arcaneAsh' or 'crystallineAnimus'
+  amount: integer("amount").notNull(),
+  nonce: integer("nonce").notNull(), // Monotonic nonce per player - UNIQUE per player!
+  signature: text("signature"), // EIP-712 signature (null until generated)
+  expiresAt: timestamp("expires_at"), // Signature expiry (15 minutes from generation)
+  status: varchar("status").notNull().default("pending"), // pending, signed, claimed, expired, cancelled
+  claimedTxHash: varchar("claimed_tx_hash"), // Ronin transaction hash when claimed
+  claimedAt: timestamp("claimed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  unique("withdrawal_player_nonce_unique").on(table.playerId, table.nonce),
+  check("withdrawal_amount_positive", sql`${table.amount} > 0`),
+  index("IDX_withdrawals_player").on(table.playerId),
+  index("IDX_withdrawals_status").on(table.status),
+  index("IDX_withdrawals_player_status_created").on(table.playerId, table.status, table.createdAt),
+  index("IDX_withdrawals_wallet").on(table.walletAddress),
+]);
+
+// Security audit log - tracks all security-sensitive events
+export const securityAuditLog = pgTable("security_audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventType: varchar("event_type").notNull(), // withdrawal_request, withdrawal_claimed, forge_attempt, marketplace_trade, admin_action
+  playerId: varchar("player_id"), // Optional - not all events have a player
+  sessionId: varchar("session_id"), // Session identifier for tracking user sessions
+  metadata: jsonb("metadata").notNull(), // Event-specific data (amounts, item IDs, etc.)
+  ipAddress: varchar("ip_address"), // Note: Hash or anonymize for GDPR compliance
+  userAgent: text("user_agent"), // Note: Hash or anonymize for GDPR compliance
+  severity: varchar("severity").notNull().default("info"), // info, warning, critical
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("IDX_audit_log_player_created").on(table.playerId, table.createdAt),
+  index("IDX_audit_log_event_type").on(table.eventType),
+  index("IDX_audit_log_severity").on(table.severity),
+]);
+
+// Forge attempts - tracks forging patterns for anomaly detection
+export const forgeAttempts = pgTable("forge_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull(),
+  itemId: varchar("item_id").notNull(), // Item being forged
+  fromLevel: integer("from_level").notNull(),
+  toLevel: integer("to_level").notNull(),
+  success: boolean("success").notNull(),
+  costArcaneAsh: integer("cost_arcane_ash").notNull(),
+  costCrystallineAnimus: integer("cost_crystalline_animus").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("IDX_forge_player_created").on(table.playerId, table.createdAt),
+  index("IDX_forge_success").on(table.success),
+]);
+
+// Marketplace trades - tracks trading activity for wash trading detection
+export const marketplaceTrades = pgTable("marketplace_trades", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sellerId: varchar("seller_id").notNull(),
+  buyerId: varchar("buyer_id"),
+  itemId: varchar("item_id").notNull(),
+  itemType: varchar("item_type").notNull(), // weapon, armor, potion, etc.
+  listingPrice: integer("listing_price").notNull(),
+  currencyType: varchar("currency_type").notNull(), // arcaneAsh or crystallineAnimus
+  status: varchar("status").notNull().default("listed"), // listed, sold, cancelled
+  soldAt: timestamp("sold_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  check("marketplace_price_positive", sql`${table.listingPrice} > 0`),
+  index("IDX_marketplace_seller_buyer_created").on(table.sellerId, table.buyerId, table.createdAt),
+  index("IDX_marketplace_status").on(table.status),
+]);
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type GameSave = typeof gameSaves.$inferSelect;
@@ -124,3 +201,11 @@ export type KarmaEvent = typeof karmaEvents.$inferSelect;
 export type InsertKarmaEvent = typeof karmaEvents.$inferInsert;
 export type PlayerCurrency = typeof playerCurrencies.$inferSelect;
 export type InsertPlayerCurrency = typeof playerCurrencies.$inferInsert;
+export type PlayerWithdrawal = typeof playerWithdrawals.$inferSelect;
+export type InsertPlayerWithdrawal = typeof playerWithdrawals.$inferInsert;
+export type SecurityAuditLog = typeof securityAuditLog.$inferSelect;
+export type InsertSecurityAuditLog = typeof securityAuditLog.$inferInsert;
+export type ForgeAttempt = typeof forgeAttempts.$inferSelect;
+export type InsertForgeAttempt = typeof forgeAttempts.$inferInsert;
+export type MarketplaceTrade = typeof marketplaceTrades.$inferSelect;
+export type InsertMarketplaceTrade = typeof marketplaceTrades.$inferInsert;
