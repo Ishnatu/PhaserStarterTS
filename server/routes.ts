@@ -93,8 +93,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "No save found" });
       }
       
+      const saveData = gameSave.saveData as any;
+      
+      // Ensure currency record exists - initialize with defaults if missing
+      // After migration, this should rarely be needed (only for brand new players)
+      let currency = await storage.getPlayerCurrency(userId);
+      if (!currency) {
+        // New player - initialize with server-defined defaults
+        // Legacy players should have been migrated by backfill script
+        currency = await storage.ensurePlayerCurrency(userId, 0, 0);
+      }
+      
+      // Inject server-authoritative currency values into save data
+      // Client-side currency values are NEVER trusted
+      saveData.arcaneAsh = currency.arcaneAsh;
+      saveData.crystallineAnimus = currency.crystallineAnimus;
+      
       res.json({
-        saveData: gameSave.saveData,
+        saveData,
         lastSaved: gameSave.lastSaved
       });
     } catch (error) {
@@ -112,7 +128,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Save data required" });
       }
       
+      // SECURITY: Reject save payloads containing currency fields
+      // Currencies are server-authoritative and stored in playerCurrencies table
+      if (saveData.arcaneAsh !== undefined || saveData.crystallineAnimus !== undefined) {
+        return res.status(400).json({ 
+          message: "Currency fields not allowed in save data. Currencies are server-managed."
+        });
+      }
+      
       const userId = req.user.claims.sub;
+      
+      // Ensure currency record exists for new players
+      let currency = await storage.getPlayerCurrency(userId);
+      if (!currency) {
+        // Initialize new player with defaults
+        currency = await storage.ensurePlayerCurrency(userId, 0, 0);
+      }
       
       const result = await storage.saveGame({
         userId,
@@ -199,8 +230,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Slots must be an array" });
       }
 
-      await storage.setSoulboundSlots(playerId, slots);
-      res.json({ success: true });
+      // Validate slots (max 3, valid slot names)
+      const validSlots = ['mainHand', 'offHand', 'head', 'chest', 'legs', 'feet', 'hands', 'accessory'];
+      if (slots.length > 3 || !slots.every(slot => validSlots.includes(slot))) {
+        return res.status(400).json({ message: "Invalid slot configuration" });
+      }
+
+      // Get current soulbound slots to calculate cost
+      const currentSlots = await storage.getSoulboundSlots(playerId);
+      const currentSlotNames = new Set(currentSlots.map(s => s.slotName));
+      
+      // Find newly bound items (items being added that aren't already bound)
+      const newlyBoundItems = slots.filter(slot => !currentSlotNames.has(slot));
+      const cost = newlyBoundItems.length; // 1 CA per newly bound item
+      
+      // Atomically deduct CA if there's a cost (server-authoritative, cannot be bypassed)
+      if (cost > 0) {
+        const updated = await storage.deductCrystallineAnimus(playerId, cost);
+        if (!updated) {
+          // Deduction failed - insufficient balance
+          const currency = await storage.getPlayerCurrency(playerId);
+          const currentCA = currency?.crystallineAnimus || 0;
+          return res.status(400).json({ 
+            message: `Not enough Crystalline Animus! Need ${cost} CA to bind ${newlyBoundItems.length} item(s). You have ${currentCA} CA.`,
+            cost,
+            currentCA
+          });
+        }
+        
+        // Success - update slots and return new balance
+        await storage.setSoulboundSlots(playerId, slots);
+        res.json({ 
+          success: true, 
+          cost,
+          newCA: updated.crystallineAnimus
+        });
+      } else {
+        // No cost - just update slots
+        await storage.setSoulboundSlots(playerId, slots);
+        const currency = await storage.getPlayerCurrency(playerId);
+        res.json({ 
+          success: true, 
+          cost: 0,
+          newCA: currency?.crystallineAnimus || 0
+        });
+      }
     } catch (error) {
       console.error("Error setting soulbound slots:", error);
       res.status(500).json({ message: "Failed to set soulbound slots" });

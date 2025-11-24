@@ -52,6 +52,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Services**: Innkeeper, Vault Keeper, Blacksmith for specific town functions.
 - **Forging & Enhancement System**: +1 to +9 enhancements with success rates, costs, failure penalties, and a "Shiny System" for rare, indestructible items.
 - **Karma System**: Rewards players for returning looted tombstone items.
+- **Currency Security**: Production-ready server-authoritative currency system with dedicated `playerCurrencies` table. Currencies stored separately from game save blob to prevent client tampering. Save endpoint rejects payloads containing currency fields. Load endpoint injects server-authoritative values. Atomic `deductCrystallineAnimus` prevents TOCTOU exploits. Migration script backfills legacy saves with clamped values. INSERT-ONLY `ensurePlayerCurrency` method prevents existing balance overwrites. Soulbinding costs 1 CA per newly bound item, deducted atomically server-side.
 
 ## External Dependencies
 

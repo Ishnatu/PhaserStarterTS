@@ -100,6 +100,16 @@ export const karmaEvents = pgTable("karma_events", {
   index("IDX_karma_events_player").on(table.playerId),
 ]);
 
+// Player currencies - server-authoritative currency tracking (cannot be tampered by client)
+export const playerCurrencies = pgTable("player_currencies", {
+  playerId: varchar("player_id").primaryKey(), // userId
+  arcaneAsh: integer("arcane_ash").default(0).notNull(),
+  crystallineAnimus: integer("crystalline_animus").default(0).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("IDX_player_currencies_player").on(table.playerId),
+]);
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type GameSave = typeof gameSaves.$inferSelect;
@@ -112,3 +122,5 @@ export type ReturnedLoot = typeof returnedLoot.$inferSelect;
 export type InsertReturnedLoot = typeof returnedLoot.$inferInsert;
 export type KarmaEvent = typeof karmaEvents.$inferSelect;
 export type InsertKarmaEvent = typeof karmaEvents.$inferInsert;
+export type PlayerCurrency = typeof playerCurrencies.$inferSelect;
+export type InsertPlayerCurrency = typeof playerCurrencies.$inferInsert;

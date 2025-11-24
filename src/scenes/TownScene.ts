@@ -2189,10 +2189,11 @@ export class TownScene extends Phaser.Scene {
 
     // Row 3: Instructions
     const infoText = this.add.text(width / 2, headerBaseY + (verticalGap * 2), 
-      'Select equipment slots to bind (max 3 slots):', {
+      `Select equipment slots to bind (max 3 slots)\nCost: 1 CA per item  |  Your CA: ${player.crystallineAnimus}`, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xsmall,
-      color: '#ffffff',
+      color: '#ffcc00',
+      align: 'center',
     }).setOrigin(0.5);
     uiElements.push(infoText);
 
@@ -2277,12 +2278,19 @@ export class TownScene extends Phaser.Scene {
 
     // Save button
     const saveBtn = this.createButton(width / 2 - 100, height / 2 + 220, 'Save Bindings', async () => {
-      const success = await ApiClient.setSoulboundSlots(Array.from(selectedSlots));
-      if (success) {
-        this.showMessage('Soul bindings saved successfully');
+      const result = await ApiClient.setSoulboundSlots(Array.from(selectedSlots));
+      if (result.success) {
+        const cost = result.cost || 0;
+        if (cost > 0 && result.newCA !== undefined) {
+          // Sync CA from server (authoritative)
+          this.gameState.updatePlayer({ crystallineAnimus: result.newCA });
+          this.showMessage(`Soul bindings saved! Cost: ${cost} CA`);
+        } else {
+          this.showMessage('Soul bindings saved successfully');
+        }
         destroyAll();
       } else {
-        this.showMessage('Failed to save bindings');
+        this.showMessage(result.message || 'Failed to save bindings');
       }
     });
     uiElements.push(saveBtn);

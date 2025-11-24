@@ -100,13 +100,14 @@ export class ApiClient {
     }
   }
 
-  static async setSoulboundSlots(slots: string[]): Promise<boolean> {
+  static async setSoulboundSlots(slots: string[]): Promise<{ success: boolean; cost?: number; newCA?: number; message?: string }> {
     try {
-      await this.post('/api/soulbound/slots', { slots });
-      return true;
-    } catch (error) {
+      const response = await this.post('/api/soulbound/slots', { slots });
+      return { success: true, cost: response.cost, newCA: response.newCA };
+    } catch (error: any) {
       console.error('Failed to set soulbound slots:', error);
-      return false;
+      const message = error.response?.data?.message || 'Failed to save bindings';
+      return { success: false, message };
     }
   }
 

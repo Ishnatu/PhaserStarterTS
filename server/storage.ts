@@ -6,6 +6,7 @@ import {
   soulboundItems,
   returnedLoot,
   karmaEvents,
+  playerCurrencies,
   type User,
   type UpsertUser,
   type GameSave,
@@ -18,6 +19,8 @@ import {
   type InsertReturnedLoot,
   type KarmaEvent,
   type InsertKarmaEvent,
+  type PlayerCurrency,
+  type InsertPlayerCurrency,
 } from "../shared/schema";
 import { db } from "./db";
 import { eq, desc, and, lt, sql as drizzleSql } from "drizzle-orm";
@@ -52,6 +55,11 @@ export interface IStorage {
   claimReturnedLoot(lootId: string): Promise<ReturnedLoot>;
   addKarmaEvent(event: InsertKarmaEvent): Promise<KarmaEvent>;
   getKarmaLeaderboard(limit: number): Promise<{ playerName: string; totalItems: number }[]>;
+  
+  // Currency operations (server-authoritative)
+  getPlayerCurrency(playerId: string): Promise<PlayerCurrency | undefined>;
+  ensurePlayerCurrency(playerId: string, arcaneAsh: number, crystallineAnimus: number): Promise<PlayerCurrency>;
+  deductCrystallineAnimus(playerId: string, amount: number): Promise<PlayerCurrency | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -286,6 +294,64 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
     
     return result;
+  }
+
+  // Currency operations - server-authoritative
+  async getPlayerCurrency(playerId: string): Promise<PlayerCurrency | undefined> {
+    const [currency] = await db
+      .select()
+      .from(playerCurrencies)
+      .where(eq(playerCurrencies.playerId, playerId));
+    return currency;
+  }
+
+  async ensurePlayerCurrency(playerId: string, arcaneAsh: number, crystallineAnimus: number): Promise<PlayerCurrency> {
+    // INSERT-ONLY: create currency record if it doesn't exist, NEVER overwrite existing
+    // This prevents client tampering from overwriting server-authoritative balances
+    try {
+      const [currency] = await db
+        .insert(playerCurrencies)
+        .values({
+          playerId,
+          arcaneAsh,
+          crystallineAnimus,
+        })
+        .onConflictDoNothing() // Critical: do NOT update on conflict
+        .returning();
+      
+      // If conflict (record exists), return existing record
+      if (!currency) {
+        const existing = await this.getPlayerCurrency(playerId);
+        if (!existing) {
+          throw new Error(`Failed to ensure currency for player ${playerId}`);
+        }
+        return existing;
+      }
+      
+      return currency;
+    } catch (error) {
+      console.error(`Error ensuring currency for player ${playerId}:`, error);
+      throw error;
+    }
+  }
+
+  async deductCrystallineAnimus(playerId: string, amount: number): Promise<PlayerCurrency | null> {
+    // Atomic update - deduct only if sufficient balance
+    const [updated] = await db
+      .update(playerCurrencies)
+      .set({
+        crystallineAnimus: drizzleSql`${playerCurrencies.crystallineAnimus} - ${amount}`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(playerCurrencies.playerId, playerId),
+          drizzleSql`${playerCurrencies.crystallineAnimus} >= ${amount}`
+        )
+      )
+      .returning();
+    
+    return updated || null;
   }
 }
 
