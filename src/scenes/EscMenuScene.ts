@@ -82,17 +82,27 @@ export class EscMenuScene extends Phaser.Scene {
       .setDepth(10005);
     this.uiElements.push(confirmOverlay);
 
-    // Confirmation panel
-    const confirmPanel = this.add.rectangle(width / 2, height / 2, 450, 250, 0x1a1a2e)
+    // Confirmation panel - slightly larger for better spacing
+    const panelWidth = 500;
+    const panelHeight = 220;
+    const confirmPanel = this.add.rectangle(width / 2, height / 2, panelWidth, panelHeight, 0x1a1a2e)
       .setOrigin(0.5)
       .setDepth(10006);
     this.uiElements.push(confirmPanel);
 
+    // Panel border for polish
+    const border = this.add.rectangle(width / 2, height / 2, panelWidth, panelHeight)
+      .setOrigin(0.5)
+      .setStrokeStyle(2, 0xff8844)
+      .setDepth(10006);
+    this.uiElements.push(border);
+
     // Confirmation text
-    const confirmText = this.add.text(width / 2, height / 2 - 60, 'Exit to Main Menu?', {
+    const confirmText = this.add.text(width / 2, height / 2 - 65, 'Exit to Main Menu?', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#ff8844',
+      resolution: 2,
     }).setOrigin(0.5).setDepth(10007);
     this.uiElements.push(confirmText);
 
@@ -100,14 +110,18 @@ export class EscMenuScene extends Phaser.Scene {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#88ff88',
+      resolution: 2,
     }).setOrigin(0.5).setDepth(10007);
     this.uiElements.push(warningText);
 
-    // Yes button
-    const yesButton = this.createButton(
-      width / 2 - 100,
-      height / 2 + 60,
+    // Yes button - smaller and better positioned
+    const buttonWidth = 120;
+    const buttonSpacing = 80;
+    const yesButton = this.createConfirmButton(
+      width / 2 - buttonSpacing,
+      height / 2 + 50,
       'Yes',
+      buttonWidth,
       () => {
         this.scene.stop();
         if (this.parentKey) {
@@ -119,13 +133,14 @@ export class EscMenuScene extends Phaser.Scene {
     this.uiElements.push(...yesButton.elements);
 
     // No button
-    const noButton = this.createButton(
-      width / 2 + 100,
-      height / 2 + 60,
+    const noButton = this.createConfirmButton(
+      width / 2 + buttonSpacing,
+      height / 2 + 50,
       'No',
+      buttonWidth,
       () => {
         // Remove confirmation UI elements
-        const elementsToRemove = [confirmOverlay, confirmPanel, confirmText, warningText, ...yesButton.elements, ...noButton.elements];
+        const elementsToRemove = [confirmOverlay, confirmPanel, border, confirmText, warningText, ...yesButton.elements, ...noButton.elements];
         elementsToRemove.forEach(el => el.destroy());
         
         // Remove them from uiElements array
@@ -138,6 +153,28 @@ export class EscMenuScene extends Phaser.Scene {
       }
     );
     this.uiElements.push(...noButton.elements);
+  }
+
+  private createConfirmButton(x: number, y: number, text: string, width: number, onClick: () => void): { elements: Phaser.GameObjects.GameObject[] } {
+    const elements: Phaser.GameObjects.GameObject[] = [];
+
+    const bg = this.add.rectangle(x, y, width, 45, 0x444466)
+      .setDepth(10008)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => bg.setFillStyle(0x666688))
+      .on('pointerout', () => bg.setFillStyle(0x444466))
+      .on('pointerdown', onClick);
+    elements.push(bg);
+
+    const label = this.add.text(x, y, text, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffffff',
+      resolution: 2,
+    }).setOrigin(0.5).setDepth(10009);
+    elements.push(label);
+
+    return { elements };
   }
 
   private createButton(x: number, y: number, text: string, onClick: () => void): { elements: Phaser.GameObjects.GameObject[] } {
