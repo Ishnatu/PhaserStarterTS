@@ -3,6 +3,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { registerCombatRoutes } from "./routes/combat";
 
 // Session tracking for multi-instance detection
 interface SessionInfo {
@@ -30,6 +31,9 @@ setInterval(() => {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication middleware
   await setupAuth(app);
+
+  // Register combat routes (server-authoritative combat system)
+  registerCombatRoutes(app);
 
   // Logout endpoint
   app.post('/api/auth/logout', async (req, res) => {

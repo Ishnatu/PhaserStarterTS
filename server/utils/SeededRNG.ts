@@ -71,6 +71,42 @@ export class SeededRNG {
   getCallCount(): number {
     return this.callCount;
   }
+
+  /**
+   * Skip RNG forward without side effects (no audit logging)
+   * Used to restore RNG state between requests deterministically
+   * [SERVER RNG] State restoration (pure)
+   */
+  skip(count: number): void {
+    if (count < 0) {
+      throw new Error(`Cannot skip negative count: ${count}`);
+    }
+    
+    // Advance the seed mathematically without calling next() or logging
+    for (let i = 0; i < count; i++) {
+      let x = this.seed;
+      x ^= x << 13;
+      x ^= x >> 17;
+      x ^= x << 5;
+      this.seed = x;
+      this.callCount++;
+    }
+  }
+  
+  /**
+   * Fast-forward RNG to a specific call count (pure, no audit logging)
+   * Used to restore RNG state between requests
+   * [SERVER RNG] State restoration
+   */
+  fastForward(targetCallCount: number): void {
+    if (targetCallCount < this.callCount) {
+      throw new Error(`Cannot rewind RNG: target ${targetCallCount} < current ${this.callCount}`);
+    }
+    
+    // Skip to target without side effects
+    const callsNeeded = targetCallCount - this.callCount;
+    this.skip(callsNeeded);
+  }
 }
 
 /**
