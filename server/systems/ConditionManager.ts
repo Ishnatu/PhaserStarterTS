@@ -148,6 +148,7 @@ export class ConditionManager {
       slowed: 'Slowed',
       weakened: 'Weakened',
       empowered: 'Empowered',
+      choke: 'Choke',
     };
     return displayNames[conditionType] || conditionType;
   }
