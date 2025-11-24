@@ -25,6 +25,7 @@
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.6",
     "drizzle-orm": "^0.44.7",
+    "ethers": "^6.15.0",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "memoizee": "^0.4.17",
