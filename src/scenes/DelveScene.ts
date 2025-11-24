@@ -718,7 +718,7 @@ export class DelveScene extends Phaser.Scene {
 
     const title = this.add.text(width / 2, height / 2 - 220, `Inventory (${player.inventory.reduce((sum, item) => sum + item.quantity, 0)}/${player.inventorySlots})`, {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.large,
+      fontSize: FONTS.size.medium,
       color: '#f0a020',
     }).setOrigin(0.5).setScrollFactor(0);
     uiElements.push(title);
@@ -734,8 +734,8 @@ export class DelveScene extends Phaser.Scene {
     this.menuState = 'inventory';
 
     const itemsStartY = height / 2 - 180;
-    const itemHeight = 30;
-    const maxDisplay = 12;
+    const itemHeight = 28;
+    const maxDisplay = 14;
 
     let displayedItems = 0;
     player.inventory.forEach((invItem, index) => {
@@ -749,7 +749,7 @@ export class DelveScene extends Phaser.Scene {
       const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
       const itemLabel = this.add.text(width / 2 - 320, y, `${item.name} x${invItem.quantity}`, {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: itemColor,
       }).setScrollFactor(0);
       uiElements.push(itemLabel);
@@ -759,7 +759,7 @@ export class DelveScene extends Phaser.Scene {
       if (isPotion) {
         const useBtn = this.add.text(width / 2 + 120, y, '[Use]', {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
+          fontSize: FONTS.size.xsmall,
           color: '#8888ff',
         }).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => {
