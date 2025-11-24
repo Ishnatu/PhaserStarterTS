@@ -16,6 +16,7 @@ import { ApiClient } from '../utils/ApiClient';
 import { GameConfig } from '../config/GameConfig';
 import { AudioManager } from '../managers/AudioManager';
 import { StatsPanel } from '../ui/StatsPanel';
+import { TerrainGenerator } from '../utils/TerrainGenerator';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -57,6 +58,12 @@ export class TownScene extends Phaser.Scene {
     
     // Clear explored tiles so each wilderness expedition starts with fresh fog of war
     this.gameState.clearExploredTiles();
+    
+    // Clear discovered delves so they regenerate on next wilderness visit
+    // This fixes bug where dying and returning to wilderness shows "undefined" delves
+    const state = this.gameState.getState();
+    state.discoveredDelves = [];
+    TerrainGenerator.clearDelvePositions();
 
     const { width, height } = this.cameras.main;
 
