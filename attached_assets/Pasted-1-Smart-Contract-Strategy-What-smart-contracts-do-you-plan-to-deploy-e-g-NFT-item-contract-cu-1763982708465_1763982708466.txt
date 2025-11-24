@@ -1,0 +1,32 @@
+1. Smart Contract Strategy
+What smart contracts do you plan to deploy? (e.g., NFT item contract, currency token contracts, marketplace contract, forging/upgrade contract, loot box/RNG contract?)
+What stays on-chain vs off-chain? Currently all game logic (combat, loot, progression, RNG) is server-side. What data/actions will move on-chain?
+NFT Design: Will items/equipment become NFTs? If so, how does minting work - on demand, batch minting, or pre-minted pools?
+2. Wallet & Custody Model
+Custodial or non-custodial wallets? Will players hold their own private keys, or will you manage wallets server-side (custodial)?
+Gas fees: Who pays for on-chain transactions - players or you (meta-transactions)?
+Wallet linking: How do players connect wallets to game accounts? One wallet per account, or multiple?
+3. Marketplace & Trading
+Marketplace design: Will you build a custom marketplace contract, or use an existing one (e.g., OpenSea)?
+Trading mechanics: Peer-to-peer trades, auction house, fixed-price listings?
+Royalties & fees: Do you take a cut on secondary sales?
+4. Tokenomics & Currency
+Your two currencies (Arcane Ash & Crystalline Animus): Will these become ERC-20 tokens on-chain, or stay off-chain?
+Earning & spending loops: How do players earn tokens? How do they spend them? Any bridge between on-chain and off-chain economies?
+Token supply: Fixed cap, inflationary, deflationary? Any staking or burning mechanics?
+5. Randomness & Oracles
+RNG for loot/combat: Currently server-side deterministic. Will you move to on-chain RNG (Chainlink VRF, etc.)?
+Oracles: Do you need external data feeds (price oracles, cross-chain bridges)?
+6. Upgrade/Forging System
+Forging on-chain or off-chain? Your +1 to +9 enhancement system with failure rates - will this happen via smart contract or stay server-controlled?
+Item destruction: If forging fails and items break, does that burn an NFT?
+7. Admin Controls & Governance
+Admin keys: Who controls contract upgrades, pausing, minting?
+Multisig: Will you use multi-signature wallets for admin operations?
+Upgradeability: Will contracts be upgradeable (proxy pattern) or immutable?
+8. Cross-Chain & Interoperability
+Ronin-specific: Any plans to bridge to other chains (Ethereum mainnet, etc.)?
+Katana DEX integration: Will players trade your tokens on Ronin's native DEX?
+9. Current Off-Chain Security
+Your current setup: Server-authoritative saves, Replit Auth, PostgreSQL, deterministic RNG. What parts of this infrastructure remain after Web3 integration?
+API security: How will you authenticate on-chain actions with off-chain game state?
