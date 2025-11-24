@@ -148,6 +148,7 @@ export class ConditionManager {
       slowed: 'Slowed',
       weakened: 'Weakened',
       empowered: 'Empowered',
+      choke: 'Choke',
     };
     return displayNames[conditionType] || conditionType;
   }
@@ -165,6 +166,7 @@ export class ConditionManager {
       slowed: 0x9966cc,
       weakened: 0xcc6633,
       empowered: 0xffcc00,
+      choke: 0x6600cc,
     };
     return colors[conditionType] || 0xffffff;
   }

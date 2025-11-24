@@ -3,12 +3,12 @@ export type ArmorSlot = 'helmet' | 'chest' | 'legs' | 'boots' | 'shoulders' | 'c
 export type EquipmentSlot = WeaponSlot | ArmorSlot;
 
 export type WeaponType = 'dagger' | 'shortsword' | 'longsword' | 'battleaxe' | 'mace' | 'warhammer' | 
-                         'greatsword' | 'greataxe' | 'staff' | 'spear' | 'rapier' | 'quarterstaff';
+                         'greatsword' | 'greataxe' | 'staff' | 'spear' | 'rapier' | 'quarterstaff' | 'unarmed';
 export type ShieldType = 'steel_shield' | 'leather_shield';
 export type ArmorType = 'light' | 'heavy' | 'shield';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
-export type StatusConditionType = 'bleeding' | 'stunned' | 'poisoned' | 'dependable' | 'raise_evasion' | 'raise_defence' | 'vampiric' | 'decapitate' | 'slowed' | 'weakened' | 'empowered';
+export type StatusConditionType = 'bleeding' | 'stunned' | 'poisoned' | 'dependable' | 'raise_evasion' | 'raise_defence' | 'vampiric' | 'decapitate' | 'slowed' | 'weakened' | 'empowered' | 'choke';
 
 export interface StatusCondition {
   type: StatusConditionType;
@@ -32,6 +32,7 @@ export interface WeaponAttack {
   sourceHand?: WeaponSlot;
   weaponData?: WeaponData;
   enhancementLevel?: number;
+  baseDamage?: DiceRoll;
 }
 
 export interface DiceRoll {
