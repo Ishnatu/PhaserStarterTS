@@ -1699,8 +1699,9 @@ export class TownScene extends Phaser.Scene {
 
         const detailTitle = this.add.text(width / 2, detailY - 40, `Enhance to +${targetLevel}`, {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.medium,
+          fontSize: FONTS.size.xsmall,
           color: '#f0a020',
+          resolution: 2,
         }).setOrigin(0.5);
         uiElements.push(detailTitle);
 
@@ -1719,9 +1720,10 @@ export class TownScene extends Phaser.Scene {
         const detailsText = this.add.text(width / 2, detailY - 10, 
           `Success: ${tierData.success}  |  Fail: ${tierData.fail}  |  Destroy: ${tierData.destroy}\nCost: ${cost.aa} AA + ${cost.ca} CA`, {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
+          fontSize: FONTS.size.xsmall,
           color: '#ffffff',
           align: 'center',
+          resolution: 2,
         }).setOrigin(0.5);
         uiElements.push(detailsText);
 
