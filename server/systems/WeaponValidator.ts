@@ -39,6 +39,14 @@ export class WeaponValidator {
       }
     }
     
+    // Check for unarmed attacks if no weapons equipped
+    if (!equipment.mainHand && !equipment.offHand) {
+      const unarmedAttack = this.getUnarmedAttack(attackName);
+      if (unarmedAttack) {
+        return unarmedAttack;
+      }
+    }
+    
     // Attack not found in any equipped weapon
     return null;
   }
@@ -94,6 +102,12 @@ export class WeaponValidator {
       const offHandAttacks = this.getWeaponAttacks(equipment.offHand, 'offHand');
       attacks.push(...offHandAttacks);
     }
+    
+    // Get unarmed attacks if no weapons equipped
+    if (!equipment.mainHand && !equipment.offHand) {
+      const unarmedAttacks = this.getUnarmedAttacks();
+      attacks.push(...unarmedAttacks);
+    }
 
     return attacks;
   }
@@ -118,6 +132,43 @@ export class WeaponValidator {
       sourceHand,
       weaponData,
       enhancementLevel: equippedItem.enhancementLevel || 0
+    }));
+  }
+
+  /**
+   * Get unarmed attack by name
+   * Uses baseDamage field instead of weaponData for damage calculation
+   */
+  private static getUnarmedAttack(attackName: string): WeaponAttack | null {
+    const unarmedAttacks = WeaponAttackDatabase.getAttacksForWeapon('unarmed');
+    const attack = unarmedAttacks.find((a: WeaponAttack) => a.name === attackName);
+    
+    if (!attack) {
+      return null;
+    }
+
+    // Return attack without weaponData - baseDamage field contains damage dice
+    return {
+      ...attack,
+      sourceHand: 'mainHand',
+      weaponData: undefined,
+      enhancementLevel: 0
+    };
+  }
+
+  /**
+   * Get all unarmed attacks
+   * Uses baseDamage field instead of weaponData for damage calculation
+   */
+  private static getUnarmedAttacks(): WeaponAttack[] {
+    const attacks = WeaponAttackDatabase.getAttacksForWeapon('unarmed');
+    
+    // Return attacks without weaponData - baseDamage field contains damage dice
+    return attacks.map((attack: WeaponAttack) => ({
+      ...attack,
+      sourceHand: 'mainHand',
+      weaponData: undefined,
+      enhancementLevel: 0
     }));
   }
 
