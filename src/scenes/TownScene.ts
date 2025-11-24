@@ -2068,6 +2068,7 @@ export class TownScene extends Phaser.Scene {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#6699ff',
+      resolution: 2,
     }).setOrigin(0.5);
     uiElements.push(title);
 
@@ -2077,19 +2078,25 @@ export class TownScene extends Phaser.Scene {
       fontSize: FONTS.size.xsmall,
       color: '#cccccc',
       fontStyle: 'italic',
+      resolution: 2,
     }).setOrigin(0.5);
     uiElements.push(innkeeperText);
 
     // Content area starts after header
     const contentY = headerBaseY + (verticalGap * 2) + 40;
 
+    // Pad numbers to ensure consistent width for alignment
+    const healthStr = `${player.health} / ${player.maxHealth}`.padEnd(9);
+    const staminaStr = `${player.stamina} / ${player.maxStamina}`.padEnd(9);
+    
     const playerStatusText = this.add.text(width / 2, contentY, 
-      `Current Health: ${player.health} / ${player.maxHealth}\n` +
-      `Current Stamina: ${player.stamina} / ${player.maxStamina}`, {
+      `Current Health : ${healthStr}\n` +
+      `Current Stamina: ${staminaStr}`, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xsmall,
       color: '#ffffff',
       align: 'center',
+      resolution: 2,
     }).setOrigin(0.5);
     uiElements.push(playerStatusText);
 
@@ -2098,6 +2105,7 @@ export class TownScene extends Phaser.Scene {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xsmall,
       color: '#88ff88',
+      resolution: 2,
     }).setOrigin(0.5);
     uiElements.push(costText);
 
