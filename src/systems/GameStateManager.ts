@@ -174,30 +174,6 @@ export class GameStateManager {
     return false;
   }
 
-  saveToLocalStorage(): void {
-    this.gameState.player.exploredTiles = Array.from(this.exploredTilesSet);
-    localStorage.setItem('gemforge_save', JSON.stringify(this.gameState));
-  }
-
-  loadFromLocalStorage(): boolean {
-    const saved = localStorage.getItem('gemforge_save');
-    if (saved) {
-      try {
-        this.gameState = JSON.parse(saved);
-        this.exploredTilesSet = new Set(this.gameState.player.exploredTiles || []);
-        if (!this.gameState.player.completedDelves) {
-          this.gameState.player.completedDelves = [];
-        }
-        this.migrateDurabilitySystem();
-        return true;
-      } catch (e) {
-        console.error('Failed to load save data:', e);
-        return false;
-      }
-    }
-    return false;
-  }
-
   loadFromObject(data: any): void {
     this.gameState = data;
     this.gameState.player.stats = EquipmentManager.calculatePlayerStats(this.gameState.player);
@@ -236,7 +212,6 @@ export class GameStateManager {
   resetGame(): void {
     this.gameState = this.createInitialState();
     this.exploredTilesSet = new Set();
-    localStorage.removeItem('gemforge_save');
     this.disableAutoSave();
   }
 

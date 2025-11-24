@@ -675,10 +675,8 @@ export class DelveScene extends Phaser.Scene {
     const abandonBtn = this.createButton(width / 2, height / 2 - 10, 'Abandon Delve', () => {
       destroyAll();
       
-      // Save current player state to localStorage before abandoning
-      // Note: getPlayer() returns a reference, so HP/stamina changes are already on the object
-      // We just need to ensure it's saved before transitioning
-      this.gameState.saveToLocalStorage();
+      // Save current player state to server before abandoning
+      this.gameState.saveToServer();
       
       if (this.currentDelve.location) {
         this.gameState.markDelveCompleted(this.currentDelve.location.x, this.currentDelve.location.y);

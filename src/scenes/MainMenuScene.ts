@@ -81,10 +81,10 @@ export class MainMenuScene extends Phaser.Scene {
       const gameState = GameStateManager.getInstance();
       
       if (saveData) {
+        // Load existing save from server
         gameState.loadFromObject(saveData);
-      } else {
-        gameState.loadFromLocalStorage();
       }
+      // If no save data, GameStateManager already has initial state
       
       gameState.enableAutoSave(30);
       SceneManager.getInstance().transitionTo('town');
