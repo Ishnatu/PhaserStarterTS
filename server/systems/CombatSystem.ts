@@ -62,6 +62,22 @@ function calculateEnhancedDamage(baseWeapon: WeaponData, enhancementLevel: numbe
 }
 
 /**
+ * Helper function to extract base damage from attack
+ * Handles both weapon attacks (with weaponData) and unarmed attacks (with baseDamage)
+ */
+function getBaseDamageFromAttack(attack: WeaponAttack): DiceRoll | null {
+  if (attack.baseDamage) {
+    // Unarmed attacks have baseDamage directly
+    return attack.baseDamage;
+  } else if (attack.weaponData) {
+    // Weapon attacks use weaponData with enhancement
+    const enhancementLevel = attack.enhancementLevel || 0;
+    return calculateEnhancedDamage(attack.weaponData, enhancementLevel);
+  }
+  return null;
+}
+
+/**
  * Helper to get equipped weapon with enhancement
  */
 /**
@@ -219,12 +235,6 @@ export class CombatSystem {
   private executeAttack(state: CombatState, targetIndex: number, attack: WeaponAttack): { state: CombatState; result: AttackResult } {
     const target = state.enemies[targetIndex];
 
-    // Special weapon attacks with specified weapon data
-    if (attack.weaponData && attack.enhancementLevel !== undefined && attack.sourceHand) {
-      const weaponLabel = attack.sourceHand === 'mainHand' ? 'main hand' : 'off hand';
-      return this.executeAttackWithSpecifiedWeapon(state, targetIndex, attack, attack.weaponData, attack.enhancementLevel, weaponLabel);
-    }
-
     // Special multi-hit attacks
     if (attack.name === 'Puncture') {
       return this.executePuncture(state, targetIndex, attack);
@@ -271,20 +281,24 @@ export class CombatSystem {
       return this.executeDefensiveBuff(state, targetIndex, attack);
     }
 
-    // Standard attack
+    // Weapon or unarmed attacks with specified source hand
+    if (attack.sourceHand && (attack.weaponData || attack.baseDamage)) {
+      const weaponLabel = attack.sourceHand === 'mainHand' ? 'main hand' : 'off hand';
+      return this.executeAttackWithSpecifiedWeapon(state, targetIndex, attack, weaponLabel);
+    }
+
+    // Standard attack fallback
     return this.executeStandardAttack(state, targetIndex, attack);
   }
 
   /**
-   * Execute attack with specified weapon (for dual wielding)
+   * Execute attack with specified weapon or unarmed attack
    * [SERVER RNG] Attack roll, damage roll, critical hit determination, condition application
    */
   private executeAttackWithSpecifiedWeapon(
     state: CombatState,
     targetIndex: number,
     attack: WeaponAttack,
-    weapon: WeaponData,
-    enhancementLevel: number,
     weaponLabel: string
   ): { state: CombatState; result: AttackResult } {
     const newState = DeepClone.combatState(state);
@@ -300,7 +314,15 @@ export class CombatSystem {
       }
     }
 
-    const baseDamage = calculateEnhancedDamage(weapon, enhancementLevel);
+    // Get base damage - either from baseDamage field (unarmed) or weaponData (weapons)
+    const baseDamage = getBaseDamageFromAttack(attack);
+    if (!baseDamage) {
+      return {
+        state: newState,
+        result: this.createFailedAttack('No damage source found!')
+      };
+    }
+
     const multipliedDamage = this.applyDamageMultiplier(baseDamage, attack.damageMultiplier);
     const critThreshold = this.getCritThreshold(attack);
     
@@ -377,16 +399,15 @@ export class CombatSystem {
     const newState = DeepClone.combatState(state);
     const target = newState.enemies[targetIndex];
 
-    // For standard attacks, weapon data should be in attack.weaponData
-    if (!attack.weaponData) {
+    // Get base damage - either from baseDamage field (unarmed) or weaponData (weapons)
+    const baseDamage = getBaseDamageFromAttack(attack);
+    if (!baseDamage) {
       return {
         state: newState,
-        result: this.createFailedAttack('No weapon data in attack!')
+        result: this.createFailedAttack('No damage source (weapon or unarmed attack) found!')
       };
     }
 
-    const enhancementLevel = attack.enhancementLevel || 0;
-    const baseDamage = calculateEnhancedDamage(attack.weaponData, enhancementLevel);
     const multipliedDamage = this.applyDamageMultiplier(baseDamage, attack.damageMultiplier);
     const critThreshold = this.getCritThreshold(attack);
     
@@ -740,15 +761,14 @@ export class CombatSystem {
     const newState = DeepClone.combatState(state);
     const target = newState.enemies[targetIndex];
 
-    if (!attack.weaponData) {
+    const baseDamage = getBaseDamageFromAttack(attack);
+    if (!baseDamage) {
       return {
         state: newState,
-        result: this.createFailedAttack('No weapon data!')
+        result: this.createFailedAttack('No damage source found!')
       };
     }
 
-    const enhancementLevel = attack.enhancementLevel || 0;
-    const baseDamage = calculateEnhancedDamage(attack.weaponData, enhancementLevel);
     const multipliedDamage = this.applyDamageMultiplier(baseDamage, attack.damageMultiplier);
     
     // [SERVER RNG] Attack roll with crit threshold 18
@@ -818,15 +838,14 @@ export class CombatSystem {
     const newState = DeepClone.combatState(state);
     const target = newState.enemies[targetIndex];
 
-    if (!attack.weaponData) {
+    const baseDamage = getBaseDamageFromAttack(attack);
+    if (!baseDamage) {
       return {
         state: newState,
-        result: this.createFailedAttack('No weapon data!')
+        result: this.createFailedAttack('No damage source found!')
       };
     }
 
-    const enhancementLevel = attack.enhancementLevel || 0;
-    const baseDamage = calculateEnhancedDamage(attack.weaponData, enhancementLevel);
     const multipliedDamage = this.applyDamageMultiplier(baseDamage, attack.damageMultiplier);
     const critThreshold = this.getCritThreshold(attack);
     const attackResult = this.rollAttackWithBonus(newState.player, critThreshold);
@@ -892,15 +911,14 @@ export class CombatSystem {
     const newState = DeepClone.combatState(state);
     const target = newState.enemies[targetIndex];
 
-    if (!attack.weaponData) {
+    const baseDamage = getBaseDamageFromAttack(attack);
+    if (!baseDamage) {
       return {
         state: newState,
-        result: this.createFailedAttack('No weapon data!')
+        result: this.createFailedAttack('No damage source found!')
       };
     }
 
-    const enhancementLevel = attack.enhancementLevel || 0;
-    const baseDamage = calculateEnhancedDamage(attack.weaponData, enhancementLevel);
     const multipliedDamage = this.applyDamageMultiplier(baseDamage, attack.damageMultiplier);
     
     // Savage Strike has crit threshold 19
@@ -985,15 +1003,14 @@ export class CombatSystem {
 
     // Shield Slam
     const target = newState.enemies[targetIndex];
-    if (!attack.weaponData) {
+    const baseDamage = getBaseDamageFromAttack(attack);
+    if (!baseDamage) {
       return {
         state: newState,
-        result: this.createFailedAttack('No weapon data!')
+        result: this.createFailedAttack('No damage source found!')
       };
     }
 
-    const enhancementLevel = attack.enhancementLevel || 0;
-    const baseDamage = calculateEnhancedDamage(attack.weaponData, enhancementLevel);
     const multipliedDamage = this.applyDamageMultiplier(baseDamage, attack.damageMultiplier);
     const critThreshold = this.getCritThreshold(attack);
     const attackResult = this.rollAttackWithBonus(newState.player, critThreshold);
@@ -1057,15 +1074,14 @@ export class CombatSystem {
     const newState = DeepClone.combatState(state);
     const target = newState.enemies[targetIndex];
 
-    if (!attack.weaponData) {
+    const baseDamage = getBaseDamageFromAttack(attack);
+    if (!baseDamage) {
       return {
         state: newState,
-        result: this.createFailedAttack('No weapon data!')
+        result: this.createFailedAttack('No damage source found!')
       };
     }
 
-    const enhancementLevel = attack.enhancementLevel || 0;
-    const baseDamage = calculateEnhancedDamage(attack.weaponData, enhancementLevel);
     const multipliedDamage = this.applyDamageMultiplier(baseDamage, attack.damageMultiplier);
     const critThreshold = this.getCritThreshold(attack);
     const attackResult = this.rollAttackWithBonus(newState.player, critThreshold);
@@ -1136,14 +1152,13 @@ export class CombatSystem {
     attack: WeaponAttack,
     logPrefix: string
   ): { result: AttackResult } {
-    if (!attack.weaponData) {
+    const baseDamage = getBaseDamageFromAttack(attack);
+    if (!baseDamage) {
       return {
-        result: this.createFailedAttack('No weapon data!')
+        result: this.createFailedAttack('No damage source found!')
       };
     }
 
-    const enhancementLevel = attack.enhancementLevel || 0;
-    const baseDamage = calculateEnhancedDamage(attack.weaponData, enhancementLevel);
     const multipliedDamage = this.applyDamageMultiplier(baseDamage, attack.damageMultiplier);
     const critThreshold = this.getCritThreshold(attack);
     
