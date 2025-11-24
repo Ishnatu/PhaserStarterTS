@@ -385,9 +385,15 @@ export class CombatSystem {
     const target = this.combatState.enemies[targetIndex];
     const firstStrike = this.executeSingleStrike(target, attack, 'Vipers Fangs first strike');
 
-    if (firstStrike.hit && target.health > 0) {
+    console.log(`[Viper's Fangs] First strike - Hit: ${firstStrike.hit}, Damage: ${firstStrike.damage}, Target HP: ${target.health}`);
+
+    // If first strike hits, trigger second strike (even if target is dead)
+    if (firstStrike.hit) {
       this.combatState.combatLog.push('Second strike triggered!');
+      console.log(`[Viper's Fangs] Triggering second strike...`);
+      
       const secondStrike = this.executeSingleStrike(target, attack, 'Vipers Fangs second strike');
+      console.log(`[Viper's Fangs] Second strike - Hit: ${secondStrike.hit}, Damage: ${secondStrike.damage}, Target HP: ${target.health}`);
       
       if (target.health <= 0) {
         this.combatState.combatLog.push(`${target.name} has been defeated!`);
@@ -415,6 +421,8 @@ export class CombatSystem {
         message: resultMessage,
       };
     }
+
+    console.log(`[Viper's Fangs] First strike missed, no second strike`);
 
     if (target.health <= 0) {
       this.combatState.combatLog.push(`${target.name} has been defeated!`);
