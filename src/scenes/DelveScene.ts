@@ -117,8 +117,9 @@ export class DelveScene extends Phaser.Scene {
 
       const label = this.add.text(x, y + 35, hasBeenVisited ? this.getRoomLabel(room) : '???', {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: hasBeenVisited ? '#cccccc' : '#666666',
+        resolution: 2,
       }).setOrigin(0.5);
 
       if (index < this.currentDelve.rooms.size - 1) {
