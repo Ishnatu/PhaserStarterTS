@@ -1221,13 +1221,15 @@ export class ExploreScene extends Phaser.Scene {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#ff4444',
+      resolution: 2,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     const descText = this.add.text(width / 2, height / 2 - 170, encounterType.description, {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
+      fontSize: FONTS.size.xsmall,
       color: '#ffffff',
       align: 'center',
       wordWrap: { width: 600 },
+      resolution: 2,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     uiElements.push(overlay, titleText, descText);
@@ -1253,9 +1255,10 @@ export class ExploreScene extends Phaser.Scene {
         const noLootText = this.add.text(width / 2, height / 2 - 50, 
           'The body has already been looted.\nNothing remains.', {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.small,
+          fontSize: FONTS.size.xsmall,
           color: '#888888',
           align: 'center',
+          resolution: 2,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
         uiElements.push(noLootText);
 
@@ -1270,8 +1273,9 @@ export class ExploreScene extends Phaser.Scene {
         const ownerText = this.add.text(width / 2, height / 2 - 120, 
           `${tombstone.owner_name}'s remains`, {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.medium,
+          fontSize: FONTS.size.xsmall,
           color: '#cccccc',
+          resolution: 2,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
         uiElements.push(ownerText);
 
@@ -1286,12 +1290,13 @@ export class ExploreScene extends Phaser.Scene {
           
           const itemText = this.add.text(width / 2 - 280, yPos, itemName, {
             fontFamily: FONTS.primary,
-            fontSize: FONTS.size.small,
+            fontSize: FONTS.size.xsmall,
             color: itemColor,
+            resolution: 2,
           }).setScrollFactor(0).setDepth(1001);
           
           uiElements.push(itemText);
-          yPos += 30;
+          yPos += 28;
         });
 
         // Take All button
@@ -1311,8 +1316,9 @@ export class ExploreScene extends Phaser.Scene {
       const errorText = this.add.text(width / 2, height / 2 - 50, 
         'Failed to examine the remains.', {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: '#ff4444',
+        resolution: 2,
       }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
       uiElements.push(errorText);
 
