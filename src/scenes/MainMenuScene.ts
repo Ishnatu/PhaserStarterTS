@@ -80,16 +80,20 @@ export class MainMenuScene extends Phaser.Scene {
       const saveData = await ApiClient.loadGame();
       const gameState = GameStateManager.getInstance();
       
+      let isNewGame = true;
       if (saveData) {
         // Load existing save from server
         gameState.loadFromObject(saveData);
+        isNewGame = false;
       }
       // If no save data, GameStateManager already has initial state
       
       // Mark game as initialized so scene transitions can save
       gameState.markInitialized();
       gameState.enableAutoSave(30);
-      SceneManager.getInstance().transitionTo('town');
+      
+      // Fresh expedition for new games, preserve state for loaded saves
+      SceneManager.getInstance().transitionTo('town', { freshExpedition: isNewGame });
     });
 
     this.add.text(width / 2, height - 40, '© 2025 - A Dark Fantasy Extraction RPG', {

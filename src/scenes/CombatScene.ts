@@ -1407,7 +1407,8 @@ export class CombatScene extends Phaser.Scene {
         const audioManager = AudioManager.getInstance();
         audioManager.stopMusic(true);
         
-        SceneManager.getInstance().transitionTo('town');
+        // Fresh expedition after death - clear delves and explored tiles
+        SceneManager.getInstance().transitionTo('town', { freshExpedition: true });
       });
       return;
     }
@@ -1474,7 +1475,8 @@ export class CombatScene extends Phaser.Scene {
       const audioManager = AudioManager.getInstance();
       audioManager.stopMusic(true);
       
-      SceneManager.getInstance().transitionTo('town');
+      // Fresh expedition after death - clear delves and explored tiles
+      SceneManager.getInstance().transitionTo('town', { freshExpedition: true });
     });
   }
 

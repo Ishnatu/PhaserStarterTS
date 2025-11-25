@@ -1793,11 +1793,8 @@ export class ExploreScene extends Phaser.Scene {
     );
 
     if (distance < 50) {
-      // Clear delves when returning to town - they'll regenerate on next wilderness visit
-      const state = this.gameState.getState();
-      state.discoveredDelves = [];
-      TerrainGenerator.clearDelvePositions();
-      
+      // Transition back to town - preserve delve state for quick hopping
+      // Delves are only cleared on fresh expeditions (death/respawn)
       SceneManager.getInstance().transitionTo('town');
     }
   }

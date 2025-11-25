@@ -524,7 +524,8 @@ export class DelveScene extends Phaser.Scene {
 
       const continueBtn = this.createButton(width / 2, height / 2 + 130, 'Continue', () => {
         if (player.health <= 0) {
-          SceneManager.getInstance().transitionTo('town');
+          // Fresh expedition after death - clear delves and explored tiles
+          SceneManager.getInstance().transitionTo('town', { freshExpedition: true });
         } else {
           room.completed = true;
           this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
