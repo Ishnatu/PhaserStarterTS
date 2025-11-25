@@ -8,9 +8,18 @@ export class GameStateManager {
   private static instance: GameStateManager;
   private gameState: GameState;
   private autoSaveInterval?: number;
+  private initialized: boolean = false;
 
   private constructor() {
     this.gameState = this.createInitialState();
+  }
+
+  isInitialized(): boolean {
+    return this.initialized;
+  }
+
+  markInitialized(): void {
+    this.initialized = true;
   }
 
   static getInstance(): GameStateManager {
@@ -340,5 +349,9 @@ export class GameStateManager {
   clearExploredTiles(): void {
     this.exploredTilesSet.clear();
     this.gameState.player.exploredTiles = [];
+  }
+
+  getExploredTiles(): Set<string> {
+    return this.exploredTilesSet;
   }
 }

@@ -153,6 +153,65 @@ function showLandingPage(): void {
   root.appendChild(container);
 }
 
+// Set up disconnect/crash handlers for auto-save
+function setupDisconnectHandlers(): void {
+  // Save on page unload (closing tab, navigating away)
+  window.addEventListener('beforeunload', (event) => {
+    try {
+      const gameState = GameStateManager.getInstance();
+      if (gameState.isInitialized()) {
+        // Use synchronous beacon API for reliable save on unload
+        const saveData = JSON.stringify({
+          ...gameState.getState(),
+          player: {
+            ...gameState.getPlayer(),
+            exploredTiles: Array.from(gameState.getExploredTiles())
+          }
+        });
+        navigator.sendBeacon('/api/save', saveData);
+        console.log('Emergency save triggered on page unload');
+      }
+    } catch (error) {
+      console.error('Failed to save on unload:', error);
+    }
+  });
+
+  // Save when tab becomes hidden (user switches tabs, minimizes)
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'hidden') {
+      try {
+        const gameState = GameStateManager.getInstance();
+        if (gameState.isInitialized()) {
+          await gameState.saveToServer();
+          console.log('Auto-save triggered on visibility change');
+        }
+      } catch (error) {
+        console.error('Failed to save on visibility change:', error);
+      }
+    }
+  });
+
+  // Save on page hide (mobile browsers, some desktop scenarios)
+  window.addEventListener('pagehide', (event) => {
+    try {
+      const gameState = GameStateManager.getInstance();
+      if (gameState.isInitialized()) {
+        const saveData = JSON.stringify({
+          ...gameState.getState(),
+          player: {
+            ...gameState.getPlayer(),
+            exploredTiles: Array.from(gameState.getExploredTiles())
+          }
+        });
+        navigator.sendBeacon('/api/save', saveData);
+        console.log('Emergency save triggered on page hide');
+      }
+    } catch (error) {
+      console.error('Failed to save on page hide:', error);
+    }
+  });
+}
+
 // Initialize the game
 function initializeGame(): void {
   const config: Phaser.Types.Core.GameConfig = {
@@ -183,6 +242,9 @@ function initializeGame(): void {
   const game = new Phaser.Game(config);
   SceneManager.initialize(game);
   GameStateManager.getInstance();
+
+  // Set up disconnect/crash handlers for emergency saves
+  setupDisconnectHandlers();
 
   // Start heartbeat monitoring after a brief delay
   setTimeout(() => {

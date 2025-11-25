@@ -86,6 +86,8 @@ export class MainMenuScene extends Phaser.Scene {
       }
       // If no save data, GameStateManager already has initial state
       
+      // Mark game as initialized so scene transitions can save
+      gameState.markInitialized();
       gameState.enableAutoSave(30);
       SceneManager.getInstance().transitionTo('town');
     });
