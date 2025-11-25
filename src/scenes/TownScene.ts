@@ -17,6 +17,7 @@ import { GameConfig } from '../config/GameConfig';
 import { AudioManager } from '../managers/AudioManager';
 import { StatsPanel } from '../ui/StatsPanel';
 import { TerrainGenerator } from '../utils/TerrainGenerator';
+import { WELCOME_MESSAGE } from '../config/StarterKit';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -133,6 +134,11 @@ export class TownScene extends Phaser.Scene {
 
     // Check for looted tombstones and prompt for karma return
     this.checkKarmaPrompt();
+
+    // Check if this is a new player who should see the welcome message
+    if (player.isNewPlayer) {
+      this.showWelcomeTooltip();
+    }
   }
 
   private handleEscapeKey(): void {
@@ -143,6 +149,89 @@ export class TownScene extends Phaser.Scene {
       this.scene.launch('EscMenuScene', { parentKey: this.scene.key });
       this.scene.pause();
     }
+  }
+
+  private showWelcomeTooltip(): void {
+    const { width, height } = this.cameras.main;
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.7)
+      .setOrigin(0).setDepth(3000);
+    uiElements.push(overlay);
+
+    const panelWidth = 550;
+    const panelHeight = 280;
+    const panel = this.add.rectangle(width / 2, height / 2, panelWidth, panelHeight, 0x1a1a2e, 1)
+      .setOrigin(0.5).setDepth(3001).setStrokeStyle(3, 0xf0a020);
+    uiElements.push(panel);
+
+    const title = this.add.text(width / 2, height / 2 - 100, 'Welcome to Roboka!', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#f0a020',
+      fontStyle: 'bold',
+      resolution: 2,
+    }).setOrigin(0.5).setDepth(3002);
+    uiElements.push(title);
+
+    const message = this.add.text(width / 2, height / 2, WELCOME_MESSAGE.text, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.xsmall,
+      color: '#cccccc',
+      wordWrap: { width: panelWidth - 60 },
+      align: 'center',
+      resolution: 2,
+      lineSpacing: 6,
+    }).setOrigin(0.5).setDepth(3002);
+    uiElements.push(message);
+
+    const signature = this.add.text(width / 2, height / 2 + 70, `- ${WELCOME_MESSAGE.signature}`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.xsmall,
+      color: '#88aaff',
+      fontStyle: 'italic',
+      resolution: 2,
+    }).setOrigin(0.5).setDepth(3002);
+    uiElements.push(signature);
+
+    const buttonWidth = 120;
+    const buttonHeight = 36;
+    const buttonY = height / 2 + 110;
+
+    const okayBtn = this.add.rectangle(width / 2, buttonY, buttonWidth, buttonHeight, 0x4488ff)
+      .setInteractive({ useHandCursor: true }).setDepth(3002);
+    uiElements.push(okayBtn);
+
+    const okayText = this.add.text(width / 2, buttonY, 'Okay', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+      resolution: 2,
+    }).setOrigin(0.5).setDepth(3003);
+    uiElements.push(okayText);
+
+    okayBtn.on('pointerover', () => okayBtn.setFillStyle(0x5599ff));
+    okayBtn.on('pointerout', () => okayBtn.setFillStyle(0x4488ff));
+    okayBtn.on('pointerdown', () => {
+      uiElements.forEach(el => el.destroy());
+      
+      const player = this.gameState.getPlayer();
+      player.isNewPlayer = false;
+      this.gameState.updatePlayer(player);
+      this.gameState.saveToServer();
+    });
+
+    this.time.delayedCall(WELCOME_MESSAGE.displayDurationMs, () => {
+      const stillExists = uiElements.some(el => el.active);
+      if (stillExists) {
+        uiElements.forEach(el => el.destroy());
+        
+        const player = this.gameState.getPlayer();
+        player.isNewPlayer = false;
+        this.gameState.updatePlayer(player);
+        this.gameState.saveToServer();
+      }
+    });
   }
 
   private async checkKarmaPrompt(): Promise<void> {

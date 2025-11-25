@@ -452,109 +452,85 @@ function validateItemReconciliation(
   previousItems.footlockerItemIds.forEach(id => allPreviousItemIds.add(id));
 
   const isNewPlayerWithStarterKit = hasReceivedStarterKit && allPreviousItemIds.size === 0;
-  const starterKitCounts = isNewPlayerWithStarterKit ? getStarterKitItemCounts() : new Map<string, number>();
+  
+  const starterKitRemainingAllowance = isNewPlayerWithStarterKit 
+    ? getStarterKitItemCounts() 
+    : new Map<string, number>();
 
-  const newItemsInEquipment: string[] = [];
+  const currentTotalItemCounts = new Map<string, number>();
+  
   if (player.equipment && typeof player.equipment === 'object') {
     for (const slot of Object.keys(player.equipment)) {
       const item = player.equipment[slot];
-      if (item?.itemId && !allPreviousItemIds.has(item.itemId)) {
-        if (isNewPlayerWithStarterKit && STARTER_KIT_ITEM_IDS.has(item.itemId)) {
-          continue;
-        }
-        newItemsInEquipment.push(item.itemId);
+      if (item?.itemId) {
+        currentTotalItemCounts.set(item.itemId, (currentTotalItemCounts.get(item.itemId) || 0) + 1);
       }
     }
   }
-
-  const newItemsInInventory: string[] = [];
+  
   if (Array.isArray(player.inventory)) {
-    const previousInvCount = new Map<string, number>();
-    for (const id of previousItems.inventoryItemIds) {
-      previousInvCount.set(id, (previousInvCount.get(id) || 0) + 1);
-    }
-    
-    const currentInvCount = new Map<string, number>();
     for (const item of player.inventory) {
       if (item?.itemId) {
-        currentInvCount.set(item.itemId, (currentInvCount.get(item.itemId) || 0) + 1);
-      }
-    }
-
-    for (const [itemId, count] of currentInvCount) {
-      const prevCount = previousInvCount.get(itemId) || 0;
-      const equipmentHas = previousItems.equipmentItemIds.has(itemId);
-      const footlockerHas = previousItems.footlockerItemIds.includes(itemId);
-      
-      if (count > prevCount && !equipmentHas && !footlockerHas) {
-        if (!allPreviousItemIds.has(itemId)) {
-          if (isNewPlayerWithStarterKit && STARTER_KIT_ITEM_IDS.has(itemId)) {
-            const allowedCount = starterKitCounts.get(itemId) || 0;
-            if (count <= allowedCount) {
-              continue;
-            }
-          }
-          newItemsInInventory.push(itemId);
-        }
+        currentTotalItemCounts.set(item.itemId, (currentTotalItemCounts.get(item.itemId) || 0) + 1);
       }
     }
   }
-
-  const newItemsInFootlocker: string[] = [];
+  
   if (Array.isArray(player.footlocker)) {
-    const previousFootCount = new Map<string, number>();
-    for (const id of previousItems.footlockerItemIds) {
-      previousFootCount.set(id, (previousFootCount.get(id) || 0) + 1);
-    }
-    
-    const currentFootCount = new Map<string, number>();
     for (const item of player.footlocker) {
       if (item?.itemId) {
-        currentFootCount.set(item.itemId, (currentFootCount.get(item.itemId) || 0) + 1);
+        currentTotalItemCounts.set(item.itemId, (currentTotalItemCounts.get(item.itemId) || 0) + 1);
       }
     }
+  }
 
-    for (const [itemId, count] of currentFootCount) {
-      const prevCount = previousFootCount.get(itemId) || 0;
-      const wasInEquipmentOrInv = previousItems.equipmentItemIds.has(itemId) || 
-                                   previousItems.inventoryItemIds.includes(itemId);
-      
-      if (count > prevCount && !wasInEquipmentOrInv) {
-        if (!allPreviousItemIds.has(itemId)) {
-          if (isNewPlayerWithStarterKit && STARTER_KIT_ITEM_IDS.has(itemId)) {
-            const allowedCount = starterKitCounts.get(itemId) || 0;
-            if (count <= allowedCount) {
-              continue;
-            }
-          }
-          newItemsInFootlocker.push(itemId);
+  const previousTotalItemCounts = new Map<string, number>();
+  previousItems.equipmentItemIds.forEach(id => {
+    previousTotalItemCounts.set(id, (previousTotalItemCounts.get(id) || 0) + 1);
+  });
+  previousItems.inventoryItemIds.forEach(id => {
+    previousTotalItemCounts.set(id, (previousTotalItemCounts.get(id) || 0) + 1);
+  });
+  previousItems.footlockerItemIds.forEach(id => {
+    previousTotalItemCounts.set(id, (previousTotalItemCounts.get(id) || 0) + 1);
+  });
+
+  const mintedItems: string[] = [];
+
+  for (const [itemId, currentCount] of currentTotalItemCounts) {
+    const previousCount = previousTotalItemCounts.get(itemId) || 0;
+    const newItemCount = currentCount - previousCount;
+
+    if (newItemCount <= 0) {
+      continue;
+    }
+
+    if (isNewPlayerWithStarterKit && STARTER_KIT_ITEM_IDS.has(itemId)) {
+      const remaining = starterKitRemainingAllowance.get(itemId) || 0;
+      if (newItemCount <= remaining) {
+        starterKitRemainingAllowance.set(itemId, remaining - newItemCount);
+        continue;
+      } else {
+        const exceededBy = newItemCount - remaining;
+        starterKitRemainingAllowance.set(itemId, 0);
+        for (let i = 0; i < exceededBy; i++) {
+          mintedItems.push(itemId);
         }
+        continue;
       }
+    }
+
+    for (let i = 0; i < newItemCount; i++) {
+      mintedItems.push(itemId);
     }
   }
 
-  if (newItemsInEquipment.length > 0) {
-    logSecurityEvent(playerId, 'ITEM_MINTING_EQUIPMENT', 'CRITICAL', {
-      newItems: newItemsInEquipment,
-      message: 'Player attempted to add items to equipment that were never obtained'
+  if (mintedItems.length > 0) {
+    logSecurityEvent(playerId, 'ITEM_MINTING_DETECTED', 'CRITICAL', {
+      mintedItems,
+      message: 'Player attempted to add items that were never legitimately obtained'
     });
-    errors.push(`Unauthorized items in equipment: ${newItemsInEquipment.join(', ')}`);
-  }
-
-  if (newItemsInInventory.length > 0) {
-    logSecurityEvent(playerId, 'ITEM_MINTING_INVENTORY', 'CRITICAL', {
-      newItems: newItemsInInventory,
-      message: 'Player attempted to add items to inventory that were never obtained'
-    });
-    errors.push(`Unauthorized items in inventory: ${newItemsInInventory.join(', ')}`);
-  }
-
-  if (newItemsInFootlocker.length > 0) {
-    logSecurityEvent(playerId, 'ITEM_MINTING_FOOTLOCKER', 'CRITICAL', {
-      newItems: newItemsInFootlocker,
-      message: 'Player attempted to add items to footlocker that were never obtained'
-    });
-    errors.push(`Unauthorized items in footlocker: ${newItemsInFootlocker.join(', ')}`);
+    errors.push(`Unauthorized items detected: ${mintedItems.join(', ')}`);
   }
 
   return { errors, warnings };
@@ -569,7 +545,8 @@ export interface PreviousItemData {
 export function validateSavePayload(
   saveData: any, 
   playerId: string = 'unknown',
-  previousItems?: PreviousItemData
+  previousItems?: PreviousItemData,
+  serverAuthoritativeHasReceivedStarterKit: boolean = false
 ): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -619,13 +596,14 @@ export function validateSavePayload(
   sanitized.player.footlocker = footlockerResult.inventory;
 
   // SECURITY: Item minting prevention - validate items against previous server state
+  // NOTE: hasReceivedStarterKit MUST come from server-authoritative source (previous save),
+  // NOT from client input, to prevent spoofing attacks
   if (previousItems) {
-    const hasReceivedStarterKit = sanitized.player.hasReceivedStarterKit === true;
     const mintingResult = validateItemReconciliation(
       sanitized.player,
       previousItems,
       playerId,
-      hasReceivedStarterKit
+      serverAuthoritativeHasReceivedStarterKit
     );
     if (mintingResult.errors.length > 0) {
       errors.push(...mintingResult.errors);

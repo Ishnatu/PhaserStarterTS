@@ -324,8 +324,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const previousSave = await storage.getGameSaveByUserId(userId);
       const previousItems = extractAllItems(previousSave);
       
+      // SECURITY: Get hasReceivedStarterKit from server-authoritative previous save
+      // This prevents clients from spoofing the flag to bypass item minting detection
+      // EXCEPTION: For brand new players (no previous save), we trust the client's first
+      // save to set hasReceivedStarterKit=true since there's nothing to spoof yet.
+      // The item minting validation will still enforce quantity limits.
+      const prevSaveData = previousSave?.saveData as any;
+      const isFirstSaveEver = previousSave === null || previousSave === undefined;
+      const serverAuthoritativeHasReceivedStarterKit = isFirstSaveEver
+        ? (saveData?.player?.hasReceivedStarterKit === true)
+        : (prevSaveData?.player?.hasReceivedStarterKit === true);
+      
       // SECURITY: Validate and sanitize save payload with canonical item reconstruction
-      const validation = validateSavePayload(saveData, userId, previousItems);
+      const validation = validateSavePayload(
+        saveData, 
+        userId, 
+        previousItems, 
+        serverAuthoritativeHasReceivedStarterKit
+      );
       if (!validation.valid) {
         return res.status(400).json({ 
           message: "Invalid save data",
