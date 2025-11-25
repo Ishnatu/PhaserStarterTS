@@ -266,6 +266,21 @@ export class EquipmentManager {
       });
     }
     
+    // Add unarmed off-hand attacks when main hand has a one-handed weapon but off-hand is empty
+    const hasOneHandedMainWeapon = mainWeapon && !mainWeapon.twoHanded;
+    const hasEmptyOffHand = !offHandItem;
+    
+    if (hasOneHandedMainWeapon && hasEmptyOffHand) {
+      const unarmedAttacks = WeaponAttackDatabase.getAttacksForWeapon('unarmed');
+      
+      unarmedAttacks.forEach(attack => {
+        attacks.push({
+          ...attack,
+          sourceHand: 'offHand',
+        });
+      });
+    }
+    
     return attacks;
   }
 

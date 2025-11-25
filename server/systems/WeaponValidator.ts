@@ -41,9 +41,20 @@ export class WeaponValidator {
     
     // Check for unarmed attacks if no weapons equipped
     if (!equipment.mainHand && !equipment.offHand) {
-      const unarmedAttack = this.getUnarmedAttack(attackName);
+      const unarmedAttack = this.getUnarmedAttack(attackName, 'mainHand');
       if (unarmedAttack) {
         return unarmedAttack;
+      }
+    }
+    
+    // Check for unarmed off-hand attacks when main hand has a one-handed weapon but off-hand is empty
+    if (equipment.mainHand && !equipment.offHand) {
+      const mainWeapon = ItemDatabase.getWeapon(equipment.mainHand.itemId);
+      if (mainWeapon && !mainWeapon.twoHanded) {
+        const unarmedAttack = this.getUnarmedAttack(attackName, 'offHand');
+        if (unarmedAttack) {
+          return unarmedAttack;
+        }
       }
     }
     
@@ -105,8 +116,17 @@ export class WeaponValidator {
     
     // Get unarmed attacks if no weapons equipped
     if (!equipment.mainHand && !equipment.offHand) {
-      const unarmedAttacks = this.getUnarmedAttacks();
+      const unarmedAttacks = this.getUnarmedAttacks('mainHand');
       attacks.push(...unarmedAttacks);
+    }
+    
+    // Get unarmed off-hand attacks when main hand has a one-handed weapon but off-hand is empty
+    if (equipment.mainHand && !equipment.offHand) {
+      const mainWeapon = ItemDatabase.getWeapon(equipment.mainHand.itemId);
+      if (mainWeapon && !mainWeapon.twoHanded) {
+        const unarmedAttacks = this.getUnarmedAttacks('offHand');
+        attacks.push(...unarmedAttacks);
+      }
     }
 
     return attacks;
@@ -139,7 +159,7 @@ export class WeaponValidator {
    * Get unarmed attack by name
    * Uses baseDamage field instead of weaponData for damage calculation
    */
-  private static getUnarmedAttack(attackName: string): WeaponAttack | null {
+  private static getUnarmedAttack(attackName: string, sourceHand: 'mainHand' | 'offHand' = 'mainHand'): WeaponAttack | null {
     const unarmedAttacks = WeaponAttackDatabase.getAttacksForWeapon('unarmed');
     const attack = unarmedAttacks.find((a: WeaponAttack) => a.name === attackName);
     
@@ -150,7 +170,7 @@ export class WeaponValidator {
     // Return attack without weaponData - baseDamage field contains damage dice
     return {
       ...attack,
-      sourceHand: 'mainHand',
+      sourceHand,
       weaponData: undefined,
       enhancementLevel: 0
     };
@@ -160,13 +180,13 @@ export class WeaponValidator {
    * Get all unarmed attacks
    * Uses baseDamage field instead of weaponData for damage calculation
    */
-  private static getUnarmedAttacks(): WeaponAttack[] {
+  private static getUnarmedAttacks(sourceHand: 'mainHand' | 'offHand' = 'mainHand'): WeaponAttack[] {
     const attacks = WeaponAttackDatabase.getAttacksForWeapon('unarmed');
     
     // Return attacks without weaponData - baseDamage field contains damage dice
     return attacks.map((attack: WeaponAttack) => ({
       ...attack,
-      sourceHand: 'mainHand',
+      sourceHand,
       weaponData: undefined,
       enhancementLevel: 0
     }));
