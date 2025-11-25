@@ -390,12 +390,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Heartbeat endpoint for multi-instance detection (Replit Auth only)
+  // Security: playerId comes from authenticated session, not client request
   app.post("/api/game/heartbeat", isAuthenticated, async (req: any, res) => {
     try {
       const playerId = req.user.claims.sub;
       const instanceId = req.body.instanceId; // Unique per tab/window
       
-      if (!instanceId) {
+      // Validate playerId is a non-empty string (should always be true via isAuthenticated)
+      if (!playerId || typeof playerId !== 'string') {
+        console.error('[SECURITY] Heartbeat received without valid playerId');
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      if (!instanceId || typeof instanceId !== 'string') {
         return res.status(400).json({ message: "Instance ID required" });
       }
 

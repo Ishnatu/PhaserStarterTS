@@ -260,12 +260,66 @@ function initializeGame(): void {
   // Set up disconnect/crash handlers for emergency saves
   setupDisconnectHandlers();
 
-  // Start heartbeat monitoring after a brief delay
+  // Heartbeat monitoring with self-healing watchdog mechanism
+  // Watchdog runs continuously and re-arms when heartbeat stops unexpectedly
+  let watchdogIntervalId: number | null = null;
+  
+  const rearmWatchdog = () => {
+    // Called when heartbeat stops unexpectedly to resume monitoring
+    console.warn('[SECURITY] Heartbeat stopped - re-arming watchdog for recovery');
+    if (watchdogIntervalId === null) {
+      startWatchdog();
+    }
+  };
+  
+  const tryStartHeartbeat = (): boolean => {
+    const heartbeat = HeartbeatManager.getInstance();
+    
+    // Already running - no action needed
+    if (heartbeat.isRunning()) {
+      return true;
+    }
+    
+    const userId = window.authenticatedUser?.id;
+    if (userId) {
+      heartbeat.setPlayerId(userId);
+      const started = heartbeat.start(
+        () => showDuplicateInstanceModal(),
+        rearmWatchdog // Callback if heartbeat stops unexpectedly
+      );
+      if (started) {
+        console.log('[SECURITY] Heartbeat monitoring started for authenticated user');
+        return true;
+      }
+    }
+    return false;
+  };
+  
+  const startWatchdog = () => {
+    // Persistent check every 5 seconds until heartbeat starts
+    // This handles delayed auth, reconnection, tab resume, and recovery scenarios
+    watchdogIntervalId = window.setInterval(() => {
+      if (tryStartHeartbeat()) {
+        if (watchdogIntervalId !== null) {
+          clearInterval(watchdogIntervalId);
+          watchdogIntervalId = null;
+        }
+      } else {
+        console.warn('[SECURITY] Heartbeat watchdog: waiting for authenticated user');
+      }
+    }, 5000);
+  };
+  
+  // Start watchdog initially
+  startWatchdog();
+  
+  // Initial attempt after brief delay for game initialization (fast path)
   setTimeout(() => {
-    HeartbeatManager.getInstance().start(() => {
-      showDuplicateInstanceModal();
-    });
-  }, 2000);
+    if (tryStartHeartbeat() && watchdogIntervalId !== null) {
+      clearInterval(watchdogIntervalId);
+      watchdogIntervalId = null;
+    }
+  }, 1000);
 
   console.log('Gemforge Chronicles - Phase One: The Hunt');
   console.log('Game initialized successfully!');

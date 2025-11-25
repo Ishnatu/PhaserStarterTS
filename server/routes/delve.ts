@@ -43,7 +43,6 @@ export function registerDelveRoutes(app: Express) {
           entranceRoomId: delve.entranceRoomId,
           tier: delve.tier,
         },
-        rngSeed: seed, // Return seed for debugging/audit purposes
       });
     } catch (error) {
       console.error("Error generating delve:", error);

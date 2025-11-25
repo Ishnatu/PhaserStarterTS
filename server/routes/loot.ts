@@ -44,7 +44,6 @@ export function registerLootRoutes(app: Express) {
           items,
           arcaneAsh,
         },
-        rngSeed: seed, // Return seed for debugging/audit purposes
       });
     } catch (error) {
       console.error("Error rolling loot:", error);

@@ -64,6 +64,14 @@ This is a long-term solo project built collaboratively with an AI assistant. The
   - **Sorted Multiset Matching**: Handles duplicate items by sorting both client submissions and server slots by (enhancement DESC, durability DESC), then matching positionally - prevents value swapping/ratcheting exploits
   - **Enhancement/Durability Enforcement**: Enhancement levels are immutable via save (must use forging API), durability can only decrease
   - **Security Logging**: Multi-level events (LOW/MEDIUM/HIGH/CRITICAL) track all tampering attempts
+- **Security Hardening (2025-11-25)**:
+  - **Web3 Withdrawals Disabled**: Feature flag `ENABLE_WEB3_WITHDRAWALS` must be explicitly set to `true` - prevents exploitation until smart contract is deployed
+  - **Authentication Required**: No anonymous play supported. All game endpoints require Replit Auth. Anonymous session code removed from client.
+  - **SESSION_SECRET Validation**: Server fails fast if SESSION_SECRET is missing or < 32 characters
+  - **Rate Limiting**: General API limiter (100 req/min), auth endpoint limiter (10 attempts/15min) via express-rate-limit
+  - **Security Headers**: Helmet.js configured with CSP for Phaser game (allows inline scripts for game engine), cross-origin policies for Replit iframe embedding
+  - **RNG Seed Removal**: RNG seeds no longer returned in API responses (delve/loot endpoints) to prevent predictability exploits
+  - **Hosting**: Replit provides WAF protection for deployed applications
 
 ## External Dependencies
 

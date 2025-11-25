@@ -28,6 +28,12 @@ export class WithdrawalService {
   private static MAX_WITHDRAWAL_AMOUNT_AA = 10000;
   private static MAX_WITHDRAWAL_AMOUNT_CA = 1000;
   
+  private static checkWithdrawalsEnabled(): void {
+    if (process.env.ENABLE_WEB3_WITHDRAWALS !== 'true') {
+      throw new Error('Web3 withdrawals are currently disabled. Smart contract not yet deployed.');
+    }
+  }
+  
   private static getSignerWallet(): ethers.Wallet {
     const signingKey = process.env.WITHDRAWAL_SIGNER_KEY;
     if (!signingKey) {
@@ -65,6 +71,8 @@ export class WithdrawalService {
     ipAddress?: string,
     userAgent?: string
   ): Promise<{ success: boolean; error?: string; withdrawalId?: string }> {
+    this.checkWithdrawalsEnabled();
+    
     return db.transaction(async (tx) => {
       const playerBalances = await tx
         .select()
@@ -187,6 +195,8 @@ export class WithdrawalService {
     withdrawalId: string,
     verifyingContract?: string
   ): Promise<{ success: boolean; error?: string; signature?: WithdrawalSignature }> {
+    this.checkWithdrawalsEnabled();
+    
     return db.transaction(async (tx) => {
       const [withdrawal] = await tx
         .select()
@@ -304,6 +314,8 @@ export class WithdrawalService {
     withdrawalId: string,
     txHash: string
   ): Promise<{ success: boolean; error?: string }> {
+    this.checkWithdrawalsEnabled();
+    
     return db.transaction(async (tx) => {
       const [withdrawal] = await tx
         .select()
@@ -386,6 +398,8 @@ export class WithdrawalService {
     withdrawalId: string,
     playerId: string
   ): Promise<{ success: boolean; error?: string }> {
+    this.checkWithdrawalsEnabled();
+    
     return db.transaction(async (tx) => {
       const [withdrawal] = await tx
         .select()

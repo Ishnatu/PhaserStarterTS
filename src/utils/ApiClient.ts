@@ -1,4 +1,5 @@
-// API client for both authenticated and anonymous session requests to backend
+// API client for authenticated session requests to backend
+// All game endpoints require authentication via Replit Auth
 import { SessionManager } from './SessionManager';
 
 export class ApiClient {
@@ -7,15 +8,11 @@ export class ApiClient {
   static async fetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
     const url = `${this.baseUrl}${endpoint}`;
     
-    // Include session ID in headers for anonymous users
-    const sessionId = SessionManager.getOrCreateSessionId();
-    
     const response = await fetch(url, {
       ...options,
-      credentials: 'include', // Include cookies for session auth (if authenticated)
+      credentials: 'include', // Include cookies for session auth
       headers: {
         'Content-Type': 'application/json',
-        'X-Session-Id': sessionId, // Send session ID for anonymous sessions
         ...options.headers,
       },
     });
@@ -87,9 +84,10 @@ export class ApiClient {
   }
 
   // Heartbeat for multi-instance detection
-  static async sendHeartbeat(playerId: string, instanceId: string): Promise<{ hasDuplicate: boolean; activeSessionCount: number }> {
+  // Server derives playerId from authenticated session - no client parameter needed
+  static async sendHeartbeat(instanceId: string): Promise<{ hasDuplicate: boolean; activeSessionCount: number }> {
     try {
-      const response = await this.post('/api/game/heartbeat', { playerId, instanceId });
+      const response = await this.post('/api/game/heartbeat', { instanceId });
       return {
         hasDuplicate: response.hasDuplicate || false,
         activeSessionCount: response.activeSessionCount || 1,
