@@ -788,19 +788,23 @@ export class CombatScene extends Phaser.Scene {
   private usePotion(itemId: string): void {
     const player = this.gameState.getPlayer();
     const potion = ItemDatabase.getPotion(itemId);
+    const combatState = this.combatSystem.getCombatState();
     
-    if (!potion) return;
+    if (!potion || !combatState) return;
 
     const restorationRoll = DiceRoller.rollDiceTotal(potion.restoration);
     const amount = restorationRoll.total;
 
+    // Use combat state values for current HP/Stamina during combat
     if (potion.type === 'health') {
-      player.health = Math.min(player.maxHealth, player.health + amount);
-      this.combatSystem.updatePlayerHealth(player.health);
+      const newHealth = Math.min(player.maxHealth, combatState.player.health + amount);
+      player.health = newHealth;
+      this.combatSystem.updatePlayerHealth(newHealth);
       this.showMessage(`Used ${potion.name}! Restored ${amount} HP`);
     } else if (potion.type === 'stamina') {
-      player.stamina = Math.min(player.maxStamina, player.stamina + amount);
-      this.combatSystem.updatePlayerStamina(player.stamina);
+      const newStamina = Math.min(player.maxStamina, combatState.player.stamina + amount);
+      player.stamina = newStamina;
+      this.combatSystem.updatePlayerStamina(newStamina);
       this.showMessage(`Used ${potion.name}! Restored ${amount} Stamina`);
     }
 
@@ -827,18 +831,22 @@ export class CombatScene extends Phaser.Scene {
   private usePotionNoTurnEnd(itemId: string): void {
     const player = this.gameState.getPlayer();
     const potion = ItemDatabase.getPotion(itemId);
+    const combatState = this.combatSystem.getCombatState();
     
-    if (!potion) return;
+    if (!potion || !combatState) return;
 
     const restorationRoll = DiceRoller.rollDiceTotal(potion.restoration);
     const amount = restorationRoll.total;
 
+    // Use combat state values for current HP/Stamina during combat
     if (potion.type === 'health') {
-      player.health = Math.min(player.maxHealth, player.health + amount);
-      this.combatSystem.updatePlayerHealth(player.health);
+      const newHealth = Math.min(player.maxHealth, combatState.player.health + amount);
+      player.health = newHealth;
+      this.combatSystem.updatePlayerHealth(newHealth);
     } else if (potion.type === 'stamina') {
-      player.stamina = Math.min(player.maxStamina, player.stamina + amount);
-      this.combatSystem.updatePlayerStamina(player.stamina);
+      const newStamina = Math.min(player.maxStamina, combatState.player.stamina + amount);
+      player.stamina = newStamina;
+      this.combatSystem.updatePlayerStamina(newStamina);
     }
 
     this.gameState.removeItemFromInventory(itemId, 1);
