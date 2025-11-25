@@ -24,6 +24,175 @@ interface SessionInfo {
 const activeSessions = new Map<string, SessionInfo[]>();
 const SESSION_TIMEOUT = 15000; // 15 seconds
 
+// Helper to extract all item data from a save for minting prevention and value preservation
+interface ItemValueRecord {
+  enhancementLevel: number;
+  durability: number;
+  maxDurability: number;
+  used: boolean; // Track if this slot has been matched
+}
+
+interface PreviousItemData {
+  equipmentItemIds: Set<string>;
+  inventoryItemIds: string[];
+  footlockerItemIds: string[];
+  // Map itemId -> array of all instances with their values (supports duplicates)
+  itemValuesList: Map<string, ItemValueRecord[]>;
+}
+
+function extractAllItems(gameSave: any): PreviousItemData {
+  const result: PreviousItemData = {
+    equipmentItemIds: new Set<string>(),
+    inventoryItemIds: [],
+    footlockerItemIds: [],
+    itemValuesList: new Map(),
+  };
+
+  if (!gameSave?.saveData?.player) {
+    return result;
+  }
+
+  const player = gameSave.saveData.player;
+
+  const recordItemValues = (item: any) => {
+    if (item?.itemId) {
+      const values: ItemValueRecord = {
+        enhancementLevel: item.enhancementLevel ?? 0,
+        durability: item.durability ?? 100,
+        maxDurability: item.maxDurability ?? 100,
+        used: false,
+      };
+      
+      if (!result.itemValuesList.has(item.itemId)) {
+        result.itemValuesList.set(item.itemId, []);
+      }
+      result.itemValuesList.get(item.itemId)!.push(values);
+    }
+  };
+
+  if (player.equipment && typeof player.equipment === 'object') {
+    for (const slot of Object.keys(player.equipment)) {
+      const item = player.equipment[slot];
+      if (item?.itemId) {
+        result.equipmentItemIds.add(item.itemId);
+        recordItemValues(item);
+      }
+    }
+  }
+
+  if (Array.isArray(player.inventory)) {
+    for (const item of player.inventory) {
+      if (item?.itemId) {
+        result.inventoryItemIds.push(item.itemId);
+        recordItemValues(item);
+      }
+    }
+  }
+
+  if (Array.isArray(player.footlocker)) {
+    for (const item of player.footlocker) {
+      if (item?.itemId) {
+        result.footlockerItemIds.push(item.itemId);
+        recordItemValues(item);
+      }
+    }
+  }
+
+  return result;
+}
+
+// Enforce server-authoritative item values (enhancement, durability)
+// Uses sorted multiset matching to prevent value swapping between duplicates
+function enforceItemValues(player: any, previousItems: PreviousItemData, playerId: string): void {
+  
+  // Collect all items from the new save, grouped by itemId
+  const collectItems = (player: any): Map<string, Array<{ item: any; context: string }>> => {
+    const itemsByType = new Map<string, Array<{ item: any; context: string }>>();
+    
+    if (player.equipment && typeof player.equipment === 'object') {
+      for (const slot of Object.keys(player.equipment)) {
+        const item = player.equipment[slot];
+        if (item?.itemId) {
+          if (!itemsByType.has(item.itemId)) itemsByType.set(item.itemId, []);
+          itemsByType.get(item.itemId)!.push({ item, context: `equipment.${slot}` });
+        }
+      }
+    }
+    
+    if (Array.isArray(player.inventory)) {
+      for (let i = 0; i < player.inventory.length; i++) {
+        const item = player.inventory[i];
+        if (item?.itemId) {
+          if (!itemsByType.has(item.itemId)) itemsByType.set(item.itemId, []);
+          itemsByType.get(item.itemId)!.push({ item, context: `inventory[${i}]` });
+        }
+      }
+    }
+    
+    if (Array.isArray(player.footlocker)) {
+      for (let i = 0; i < player.footlocker.length; i++) {
+        const item = player.footlocker[i];
+        if (item?.itemId) {
+          if (!itemsByType.has(item.itemId)) itemsByType.set(item.itemId, []);
+          itemsByType.get(item.itemId)!.push({ item, context: `footlocker[${i}]` });
+        }
+      }
+    }
+    
+    return itemsByType;
+  };
+
+  const clientItems = collectItems(player);
+  
+  // For each itemId, sort both client items and server slots by (enhancement DESC, durability DESC)
+  // Then match positionally - this prevents value swapping
+  for (const [itemId, clientList] of clientItems) {
+    const serverSlots = previousItems.itemValuesList.get(itemId);
+    if (!serverSlots || serverSlots.length === 0) continue; // New items, already validated
+    
+    // Sort client items by enhancement DESC, then durability DESC (best items first)
+    const sortedClient = [...clientList].sort((a, b) => {
+      const enhA = a.item.enhancementLevel ?? 0;
+      const enhB = b.item.enhancementLevel ?? 0;
+      if (enhB !== enhA) return enhB - enhA;
+      const durA = a.item.durability ?? 100;
+      const durB = b.item.durability ?? 100;
+      return durB - durA;
+    });
+    
+    // Sort server slots the same way (best slots first)
+    const sortedServer = [...serverSlots].sort((a, b) => {
+      if (b.enhancementLevel !== a.enhancementLevel) return b.enhancementLevel - a.enhancementLevel;
+      return b.durability - a.durability;
+    });
+    
+    // Match positionally - best client item must pair with best server slot
+    for (let i = 0; i < sortedClient.length; i++) {
+      const { item, context } = sortedClient[i];
+      
+      if (i >= sortedServer.length) {
+        // More client items than server slots - this shouldn't happen if minting check passed
+        console.error(`[SECURITY:CRITICAL] ${playerId}: ${context} - Extra item ${itemId} without matching server slot`);
+        continue;
+      }
+      
+      const serverSlot = sortedServer[i];
+      const clientEnhancement = item.enhancementLevel ?? 0;
+      const clientDurability = item.durability ?? 100;
+      
+      // Detect inflation attempts
+      if (clientEnhancement > serverSlot.enhancementLevel || clientDurability > serverSlot.durability) {
+        console.error(`[SECURITY:CRITICAL] ${playerId}: ${context} - Item value inflation blocked for ${itemId} (client: enh=${clientEnhancement} dur=${clientDurability}, server: enh=${serverSlot.enhancementLevel} dur=${serverSlot.durability})`);
+      }
+      
+      // Enforce server values - items can only match or decrease
+      item.enhancementLevel = serverSlot.enhancementLevel;
+      item.durability = Math.min(clientDurability, serverSlot.durability);
+      item.maxDurability = serverSlot.maxDurability;
+    }
+  }
+}
+
 // Clean up stale sessions
 setInterval(() => {
   const now = Date.now();
@@ -151,10 +320,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Save data required" });
       }
       
-      // SECURITY: Validate and sanitize save payload
-      const validation = validateSavePayload(saveData);
+      // SECURITY: Load previous save state for item reconciliation
+      const previousSave = await storage.getGameSaveByUserId(userId);
+      const previousItems = extractAllItems(previousSave);
+      
+      // SECURITY: Validate and sanitize save payload with canonical item reconstruction
+      const validation = validateSavePayload(saveData, userId, previousItems);
       if (!validation.valid) {
-        logSecurityEvent(userId, 'SAVE_VALIDATION_FAILED', { errors: validation.errors });
         return res.status(400).json({ 
           message: "Invalid save data",
           errors: validation.errors
@@ -163,6 +335,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Use sanitized data with forbidden fields stripped
       const sanitizedData = validation.sanitizedData;
+      
+      // SECURITY: Enforce server-authoritative item values (enhancement, durability)
+      // This prevents clients from inflating enhancement levels or repairing items via save
+      enforceItemValues(sanitizedData.player, previousItems, userId);
       
       // Ensure server-authoritative state exists
       let serverState = await storage.getPlayerCurrency(userId);
