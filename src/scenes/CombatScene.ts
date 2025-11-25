@@ -1035,6 +1035,12 @@ export class CombatScene extends Phaser.Scene {
       this.combatSystem.playerTurnStart();
       this.updateCombatDisplay();
       
+      // Check if player died from condition damage (poison/bleed) at start of turn
+      if (this.combatSystem.isCombatComplete()) {
+        this.time.delayedCall(1000, () => this.endCombat());
+        return;
+      }
+      
       // If player is stunned, playerTurnStart() switches to enemy turn
       const state = this.combatSystem.getCombatState();
       if (state && state.currentTurn === 'enemy') {
