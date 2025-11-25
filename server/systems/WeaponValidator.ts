@@ -23,6 +23,13 @@ export class WeaponValidator {
   static validateAttack(attackName: string, player: PlayerData): WeaponAttack | null {
     const equipment = player.equipment;
     
+    // Check if main hand has a two-handed weapon
+    let mainHandIsTwoHanded = false;
+    if (equipment.mainHand) {
+      const mainWeapon = ItemDatabase.getWeapon(equipment.mainHand.itemId);
+      mainHandIsTwoHanded = mainWeapon?.twoHanded ?? false;
+    }
+    
     // Check mainhand weapon
     if (equipment.mainHand) {
       const mainHandAttack = this.getWeaponAttack(equipment.mainHand, attackName, 'mainHand');
@@ -31,30 +38,35 @@ export class WeaponValidator {
       }
     }
     
-    // Check offhand weapon
-    if (equipment.offHand) {
+    // Check offhand weapon (not available if main hand has 2H weapon)
+    if (equipment.offHand && !mainHandIsTwoHanded) {
       const offHandAttack = this.getWeaponAttack(equipment.offHand, attackName, 'offHand');
       if (offHandAttack) {
         return offHandAttack;
       }
     }
     
-    // Check for unarmed attacks if no weapons equipped
+    // Both hands empty: Allow ALL unarmed attacks (including both-hands-free abilities)
     if (!equipment.mainHand && !equipment.offHand) {
-      const unarmedAttack = this.getUnarmedAttack(attackName, 'mainHand');
+      const unarmedAttack = this.getUnarmedAttack(attackName, 'mainHand', true);
       if (unarmedAttack) {
         return unarmedAttack;
       }
     }
     
-    // Check for unarmed off-hand attacks when main hand has a one-handed weapon but off-hand is empty
-    if (equipment.mainHand && !equipment.offHand) {
-      const mainWeapon = ItemDatabase.getWeapon(equipment.mainHand.itemId);
-      if (mainWeapon && !mainWeapon.twoHanded) {
-        const unarmedAttack = this.getUnarmedAttack(attackName, 'offHand');
-        if (unarmedAttack) {
-          return unarmedAttack;
-        }
+    // Main hand has 1H weapon, off-hand empty: Allow only one-hand unarmed attacks
+    if (equipment.mainHand && !equipment.offHand && !mainHandIsTwoHanded) {
+      const unarmedAttack = this.getUnarmedAttack(attackName, 'offHand', false);
+      if (unarmedAttack) {
+        return unarmedAttack;
+      }
+    }
+    
+    // Off-hand has weapon, main hand empty: Allow only one-hand unarmed attacks
+    if (!equipment.mainHand && equipment.offHand) {
+      const unarmedAttack = this.getUnarmedAttack(attackName, 'mainHand', false);
+      if (unarmedAttack) {
+        return unarmedAttack;
       }
     }
     
@@ -97,10 +109,22 @@ export class WeaponValidator {
   /**
    * Get all available attacks for player's equipped weapons
    * Used for validation and UI display
+   * 
+   * Unarmed attack logic:
+   * - Both hands empty: Get ALL unarmed attacks (including both-hands-free abilities)
+   * - One hand has 1H weapon, other empty: Get only one-hand unarmed attacks (not requiresBothHandsFree)
+   * - Both hands have weapons OR 2H weapon: No unarmed attacks
    */
   static getAvailableAttacks(player: PlayerData): WeaponAttack[] {
     const attacks: WeaponAttack[] = [];
     const equipment = player.equipment;
+    
+    // Check if main hand has a two-handed weapon
+    let mainHandIsTwoHanded = false;
+    if (equipment.mainHand) {
+      const mainWeapon = ItemDatabase.getWeapon(equipment.mainHand.itemId);
+      mainHandIsTwoHanded = mainWeapon?.twoHanded ?? false;
+    }
 
     // Get mainhand attacks
     if (equipment.mainHand) {
@@ -108,25 +132,28 @@ export class WeaponValidator {
       attacks.push(...mainHandAttacks);
     }
 
-    // Get offhand attacks
-    if (equipment.offHand) {
+    // Get offhand attacks (not available if main hand has 2H weapon)
+    if (equipment.offHand && !mainHandIsTwoHanded) {
       const offHandAttacks = this.getWeaponAttacks(equipment.offHand, 'offHand');
       attacks.push(...offHandAttacks);
     }
     
-    // Get unarmed attacks if no weapons equipped
+    // Both hands empty: Get ALL unarmed attacks (including both-hands-free abilities)
     if (!equipment.mainHand && !equipment.offHand) {
-      const unarmedAttacks = this.getUnarmedAttacks('mainHand');
+      const unarmedAttacks = this.getUnarmedAttacks('mainHand', true);
       attacks.push(...unarmedAttacks);
     }
     
-    // Get unarmed off-hand attacks when main hand has a one-handed weapon but off-hand is empty
-    if (equipment.mainHand && !equipment.offHand) {
-      const mainWeapon = ItemDatabase.getWeapon(equipment.mainHand.itemId);
-      if (mainWeapon && !mainWeapon.twoHanded) {
-        const unarmedAttacks = this.getUnarmedAttacks('offHand');
-        attacks.push(...unarmedAttacks);
-      }
+    // Main hand has 1H weapon, off-hand empty: Get only one-hand unarmed attacks
+    if (equipment.mainHand && !equipment.offHand && !mainHandIsTwoHanded) {
+      const unarmedAttacks = this.getUnarmedAttacks('offHand', false);
+      attacks.push(...unarmedAttacks);
+    }
+    
+    // Off-hand has weapon, main hand empty: Get only one-hand unarmed attacks
+    if (!equipment.mainHand && equipment.offHand) {
+      const unarmedAttacks = this.getUnarmedAttacks('mainHand', false);
+      attacks.push(...unarmedAttacks);
     }
 
     return attacks;
@@ -158,12 +185,25 @@ export class WeaponValidator {
   /**
    * Get unarmed attack by name
    * Uses baseDamage field instead of weaponData for damage calculation
+   * 
+   * @param attackName - Name of the attack to find
+   * @param sourceHand - Which hand the unarmed attack comes from
+   * @param allowBothHandsFree - If true, allow attacks that require both hands free
    */
-  private static getUnarmedAttack(attackName: string, sourceHand: 'mainHand' | 'offHand' = 'mainHand'): WeaponAttack | null {
+  private static getUnarmedAttack(
+    attackName: string, 
+    sourceHand: 'mainHand' | 'offHand' = 'mainHand',
+    allowBothHandsFree: boolean = true
+  ): WeaponAttack | null {
     const unarmedAttacks = WeaponAttackDatabase.getAttacksForWeapon('unarmed');
     const attack = unarmedAttacks.find((a: WeaponAttack) => a.name === attackName);
     
     if (!attack) {
+      return null;
+    }
+    
+    // Check if this attack requires both hands free and we're not allowing that
+    if (attack.requiresBothHandsFree && !allowBothHandsFree) {
       return null;
     }
 
@@ -179,9 +219,20 @@ export class WeaponValidator {
   /**
    * Get all unarmed attacks
    * Uses baseDamage field instead of weaponData for damage calculation
+   * 
+   * @param sourceHand - Which hand the unarmed attack comes from
+   * @param includeBothHandsFree - If true, include attacks that require both hands free (Fists of Fury, Rear Naked Choke)
    */
-  private static getUnarmedAttacks(sourceHand: 'mainHand' | 'offHand' = 'mainHand'): WeaponAttack[] {
-    const attacks = WeaponAttackDatabase.getAttacksForWeapon('unarmed');
+  private static getUnarmedAttacks(
+    sourceHand: 'mainHand' | 'offHand' = 'mainHand', 
+    includeBothHandsFree: boolean = true
+  ): WeaponAttack[] {
+    let attacks = WeaponAttackDatabase.getAttacksForWeapon('unarmed');
+    
+    // Filter out both-hands-free attacks if not allowed
+    if (!includeBothHandsFree) {
+      attacks = attacks.filter((attack: WeaponAttack) => !attack.requiresBothHandsFree);
+    }
     
     // Return attacks without weaponData - baseDamage field contains damage dice
     return attacks.map((attack: WeaponAttack) => ({

@@ -29,6 +29,7 @@ export interface WeaponAttack {
   cleave?: number;
   availableWithShield: boolean;
   requiresDualWield: boolean;
+  requiresBothHandsFree?: boolean;
   sourceHand?: WeaponSlot;
   weaponData?: WeaponData;
   enhancementLevel?: number;
