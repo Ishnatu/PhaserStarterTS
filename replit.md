@@ -65,6 +65,11 @@ This is a long-term solo project built collaboratively with an AI assistant. The
   - **Sorted Multiset Matching**: Handles duplicate items by sorting both client submissions and server slots by (enhancement DESC, durability DESC), then matching positionally - prevents value swapping/ratcheting exploits
   - **Enhancement/Durability Enforcement**: Enhancement levels are immutable via save (must use forging API), durability can only decrease
   - **Security Logging**: Multi-level events (LOW/MEDIUM/HIGH/CRITICAL) track all tampering attempts
+- **Starter Kit System (2025-11-25)**: New players receive comprehensive equipment kit in their vault (footlocker):
+  - **Contents**: 19 base weapons (daggers, swords, axes, maces, etc.), 13 armor pieces (leather/heavy sets), 6 potions
+  - **Welcome Tooltip**: 10-second modal message directs new players to Vault Keeper
+  - **Security**: Server-authoritative starter kit whitelisting prevents item minting false positives. Cross-container item count aggregation prevents duplication exploits. First-save exception allows client flag for new players; subsequent saves use server-authoritative previous save value.
+  - **Shared Config**: `shared/starterKit.ts` defines item IDs and quantities used by both client and server
 - **Security Hardening (2025-11-25)**:
   - **Web3 Withdrawals Disabled**: Feature flag `ENABLE_WEB3_WITHDRAWALS` must be explicitly set to `true` - prevents exploitation until smart contract is deployed
   - **Authentication Required**: No anonymous play supported. All game endpoints require Replit Auth. Anonymous session code removed from client.
