@@ -856,9 +856,20 @@ export class CombatScene extends Phaser.Scene {
 
   private attemptRun(): void {
     const state = this.combatSystem.getCombatState();
+    
+    // Running costs 1 action
+    if (!state || state.actionsRemaining < 1) {
+      this.showMessage('Not enough actions to run!');
+      return;
+    }
+    
+    // Consume 1 action for the run attempt
+    this.combatSystem.deductActions(1);
+    this.updateCombatDisplay();
+    
     let baseChance = 0.5;
     
-    if (state && ConditionManager.hasCondition(state.player, 'slowed')) {
+    if (ConditionManager.hasCondition(state.player, 'slowed')) {
       baseChance = 0.25;
       this.showMessage('The void goo makes it harder to run! (25% flee chance)');
       this.time.delayedCall(1000, () => {
@@ -885,10 +896,17 @@ export class CombatScene extends Phaser.Scene {
         }
       });
     } else {
-      this.showMessage('Failed to escape!');
-      this.time.delayedCall(1500, () => {
-        this.enemyTurn();
-      });
+      const state = this.combatSystem.getCombatState();
+      
+      // If player still has actions remaining, let them continue their turn
+      if (state && state.actionsRemaining > 0) {
+        this.showMessage('Failed to escape! You still have actions remaining.');
+      } else {
+        this.showMessage('Failed to escape!');
+        this.time.delayedCall(1500, () => {
+          this.enemyTurn();
+        });
+      }
     }
   }
 
