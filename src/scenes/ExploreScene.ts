@@ -758,23 +758,23 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
 
-    const overlay = this.add.rectangle(width / 2, height / 2, 500, 350, 0x2a0a2a, 0.95)
+    const overlay = this.add.rectangle(width / 2, height / 2, 520, 280, 0x2a0a2a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    const titleText = this.add.text(width / 2, height / 2 - 130, 'Shrine to the Faceless Old God', {
+    const titleText = this.add.text(width / 2, height / 2 - 110, 'Shrine to the Faceless Old God', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.large,
+      fontSize: FONTS.size.medium,
       color: '#aa44ff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const descText = this.add.text(width / 2, height / 2 - 70, encounterType.description, {
+    const descText = this.add.text(width / 2, height / 2 - 50, 'Corrupted whispers promise\npower for the faithful.', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
       align: 'center',
-      wordWrap: { width: 450 },
+      lineSpacing: 6,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const choiceText = this.add.text(width / 2, height / 2, 'Offer 50 Arcane Ash?', {
+    const choiceText = this.add.text(width / 2, height / 2 + 20, 'Offer 50 Arcane Ash?', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.medium,
+      fontSize: FONTS.size.small,
       color: '#ffcc88',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
@@ -803,7 +803,7 @@ export class ExploreScene extends Phaser.Scene {
     this.currentMenuCloseFunction = destroyAll;
     this.menuState = 'encounter';
 
-    const yesBtnBg = this.add.rectangle(width / 2 - 70, height / 2 + 60, 140, 30, 0x444466)
+    const yesBtnBg = this.add.rectangle(width / 2 - 90, height / 2 + 80, 130, 34, 0x444466)
       .setScrollFactor(0).setDepth(1002)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
@@ -860,20 +860,20 @@ export class ExploreScene extends Phaser.Scene {
       }
     });
 
-    const yesBtnLabel = this.add.text(width / 2 - 70, height / 2 + 60, 'Offer (50 AA)', {
+    const yesBtnLabel = this.add.text(width / 2 - 90, height / 2 + 80, 'Offer 50AA', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
 
-    const noBtnBg = this.add.rectangle(width / 2 + 70, height / 2 + 60, 140, 30, 0x444466)
+    const noBtnBg = this.add.rectangle(width / 2 + 90, height / 2 + 80, 130, 34, 0x444466)
       .setScrollFactor(0).setDepth(1002)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         destroyAll();
       });
 
-    const noBtnLabel = this.add.text(width / 2 + 70, height / 2 + 60, 'Decline', {
+    const noBtnLabel = this.add.text(width / 2 + 90, height / 2 + 80, 'Decline', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
