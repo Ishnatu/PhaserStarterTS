@@ -102,11 +102,14 @@ export const karmaEvents = pgTable("karma_events", {
   index("IDX_karma_events_player").on(table.playerId),
 ]);
 
-// Player currencies - server-authoritative currency tracking (cannot be tampered by client)
+// Player state - server-authoritative player data (cannot be tampered by client)
+// This table stores all values that must be protected from client manipulation
 export const playerCurrencies = pgTable("player_currencies", {
   playerId: varchar("player_id").primaryKey(), // userId
   arcaneAsh: integer("arcane_ash").default(0).notNull(),
   crystallineAnimus: integer("crystalline_animus").default(0).notNull(),
+  level: integer("level").default(1).notNull(),
+  experience: integer("experience").default(0).notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   index("IDX_player_currencies_player").on(table.playerId),

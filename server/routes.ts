@@ -6,6 +6,13 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { registerCombatRoutes } from "./routes/combat";
 import { registerDelveRoutes } from "./routes/delve";
 import { registerLootRoutes } from "./routes/loot";
+import { 
+  validateSavePayload, 
+  recalculatePlayerStats, 
+  calculateMaxHealth, 
+  calculateMaxStamina,
+  logSecurityEvent 
+} from "./security";
 
 // Session tracking for multi-instance detection
 interface SessionInfo {
@@ -95,19 +102,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const saveData = gameSave.saveData as any;
       
-      // Ensure currency record exists - initialize with defaults if missing
-      // After migration, this should rarely be needed (only for brand new players)
-      let currency = await storage.getPlayerCurrency(userId);
-      if (!currency) {
-        // New player - initialize with server-defined defaults
-        // Legacy players should have been migrated by backfill script
-        currency = await storage.ensurePlayerCurrency(userId, 0, 0);
+      // Ensure server-authoritative state exists
+      let serverState = await storage.getPlayerCurrency(userId);
+      if (!serverState) {
+        serverState = await storage.ensurePlayerCurrency(userId, 0, 0);
       }
       
-      // Inject server-authoritative currency values into save data
-      // Client-side currency values are NEVER trusted
-      saveData.arcaneAsh = currency.arcaneAsh;
-      saveData.crystallineAnimus = currency.crystallineAnimus;
+      // SECURITY: Inject ALL server-authoritative values
+      // These values can NEVER be set by the client
+      saveData.player.arcaneAsh = serverState.arcaneAsh;
+      saveData.player.crystallineAnimus = serverState.crystallineAnimus;
+      saveData.player.level = serverState.level;
+      saveData.player.experience = serverState.experience;
+      
+      // Calculate max HP/SP based on server-authoritative level
+      saveData.player.maxHealth = calculateMaxHealth(serverState.level);
+      saveData.player.maxStamina = calculateMaxStamina(serverState.level);
+      
+      // Clamp current HP/SP to max values (prevent exploits)
+      if (saveData.player.health > saveData.player.maxHealth) {
+        saveData.player.health = saveData.player.maxHealth;
+      }
+      if (saveData.player.stamina > saveData.player.maxStamina) {
+        saveData.player.stamina = saveData.player.maxStamina;
+      }
+      
+      // SECURITY: Recalculate stats from equipment - NEVER trust client stats
+      // Always recalculate even with empty equipment to ensure baseline stats
+      saveData.player.stats = recalculatePlayerStats(saveData.player.equipment || {});
       
       res.json({
         saveData,
@@ -123,31 +145,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/game/save", isAuthenticated, async (req: any, res) => {
     try {
       const { saveData } = req.body;
+      const userId = req.user.claims.sub;
       
       if (!saveData) {
         return res.status(400).json({ message: "Save data required" });
       }
       
-      // SECURITY: Reject save payloads containing currency fields
-      // Currencies are server-authoritative and stored in playerCurrencies table
-      if (saveData.arcaneAsh !== undefined || saveData.crystallineAnimus !== undefined) {
+      // SECURITY: Validate and sanitize save payload
+      const validation = validateSavePayload(saveData);
+      if (!validation.valid) {
+        logSecurityEvent(userId, 'SAVE_VALIDATION_FAILED', { errors: validation.errors });
         return res.status(400).json({ 
-          message: "Currency fields not allowed in save data. Currencies are server-managed."
+          message: "Invalid save data",
+          errors: validation.errors
         });
       }
       
-      const userId = req.user.claims.sub;
+      // Use sanitized data with forbidden fields stripped
+      const sanitizedData = validation.sanitizedData;
       
-      // Ensure currency record exists for new players
-      let currency = await storage.getPlayerCurrency(userId);
-      if (!currency) {
-        // Initialize new player with defaults
-        currency = await storage.ensurePlayerCurrency(userId, 0, 0);
+      // Ensure server-authoritative state exists
+      let serverState = await storage.getPlayerCurrency(userId);
+      if (!serverState) {
+        serverState = await storage.ensurePlayerCurrency(userId, 0, 0);
       }
+      
+      // SECURITY: Re-inject server-authoritative values before saving
+      // This ensures even if validation missed something, server values prevail
+      sanitizedData.player.level = serverState.level;
+      sanitizedData.player.experience = serverState.experience;
+      sanitizedData.player.arcaneAsh = serverState.arcaneAsh;
+      sanitizedData.player.crystallineAnimus = serverState.crystallineAnimus;
+      sanitizedData.player.maxHealth = calculateMaxHealth(serverState.level);
+      sanitizedData.player.maxStamina = calculateMaxStamina(serverState.level);
+      
+      // Clamp current HP/SP
+      if (sanitizedData.player.health > sanitizedData.player.maxHealth) {
+        sanitizedData.player.health = sanitizedData.player.maxHealth;
+      }
+      if (sanitizedData.player.stamina > sanitizedData.player.maxStamina) {
+        sanitizedData.player.stamina = sanitizedData.player.maxStamina;
+      }
+      
+      // Recalculate stats from equipment (always, even if empty)
+      sanitizedData.player.stats = recalculatePlayerStats(sanitizedData.player.equipment || {});
       
       const result = await storage.saveGame({
         userId,
-        saveData,
+        saveData: sanitizedData,
       });
       
       res.json({

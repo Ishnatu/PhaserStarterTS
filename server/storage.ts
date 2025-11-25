@@ -315,6 +315,8 @@ export class DatabaseStorage implements IStorage {
           playerId,
           arcaneAsh,
           crystallineAnimus,
+          level: 1,
+          experience: 0,
         })
         .onConflictDoNothing() // Critical: do NOT update on conflict
         .returning();
@@ -333,6 +335,52 @@ export class DatabaseStorage implements IStorage {
       console.error(`Error ensuring currency for player ${playerId}:`, error);
       throw error;
     }
+  }
+
+  async grantExperience(playerId: string, xpAmount: number): Promise<{ newLevel: number; newExperience: number; leveledUp: boolean }> {
+    const current = await this.getPlayerCurrency(playerId);
+    if (!current) {
+      throw new Error(`Player ${playerId} not found`);
+    }
+
+    let newExperience = current.experience + xpAmount;
+    let newLevel = current.level;
+    let leveledUp = false;
+
+    // Level up logic: 100 XP per level
+    const xpForNextLevel = (level: number) => level * 100;
+    
+    while (newExperience >= xpForNextLevel(newLevel) && newLevel < 50) {
+      newExperience -= xpForNextLevel(newLevel);
+      newLevel++;
+      leveledUp = true;
+    }
+
+    const [updated] = await db
+      .update(playerCurrencies)
+      .set({
+        level: newLevel,
+        experience: newExperience,
+        updatedAt: new Date(),
+      })
+      .where(eq(playerCurrencies.playerId, playerId))
+      .returning();
+
+    return { newLevel: updated.level, newExperience: updated.experience, leveledUp };
+  }
+
+  async addCurrency(playerId: string, arcaneAsh: number, crystallineAnimus: number): Promise<PlayerCurrency> {
+    const [updated] = await db
+      .update(playerCurrencies)
+      .set({
+        arcaneAsh: drizzleSql`${playerCurrencies.arcaneAsh} + ${arcaneAsh}`,
+        crystallineAnimus: drizzleSql`${playerCurrencies.crystallineAnimus} + ${crystallineAnimus}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(playerCurrencies.playerId, playerId))
+      .returning();
+
+    return updated;
   }
 
   async deductCrystallineAnimus(playerId: string, amount: number): Promise<PlayerCurrency | null> {
