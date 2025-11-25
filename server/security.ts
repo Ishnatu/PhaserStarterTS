@@ -1,5 +1,6 @@
 import { calculatePlayerStats, getAllValidItemIds, getWeapon, getArmor, getPotion, initializeItemData } from '../shared/itemData';
 import type { PlayerEquipment, InventoryItem, PlayerStats, EquippedItem } from '../shared/types';
+import { STARTER_KIT_ITEM_IDS, getStarterKitItemCounts } from '../shared/starterKit';
 
 const FORBIDDEN_SAVE_FIELDS = [
   'stats',
@@ -439,7 +440,8 @@ function validateItemReconciliation(
     inventoryItemIds: string[];
     footlockerItemIds: string[];
   },
-  playerId: string
+  playerId: string,
+  hasReceivedStarterKit: boolean = false
 ): { errors: string[]; warnings: string[] } {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -449,11 +451,17 @@ function validateItemReconciliation(
   previousItems.inventoryItemIds.forEach(id => allPreviousItemIds.add(id));
   previousItems.footlockerItemIds.forEach(id => allPreviousItemIds.add(id));
 
+  const isNewPlayerWithStarterKit = hasReceivedStarterKit && allPreviousItemIds.size === 0;
+  const starterKitCounts = isNewPlayerWithStarterKit ? getStarterKitItemCounts() : new Map<string, number>();
+
   const newItemsInEquipment: string[] = [];
   if (player.equipment && typeof player.equipment === 'object') {
     for (const slot of Object.keys(player.equipment)) {
       const item = player.equipment[slot];
       if (item?.itemId && !allPreviousItemIds.has(item.itemId)) {
+        if (isNewPlayerWithStarterKit && STARTER_KIT_ITEM_IDS.has(item.itemId)) {
+          continue;
+        }
         newItemsInEquipment.push(item.itemId);
       }
     }
@@ -480,6 +488,12 @@ function validateItemReconciliation(
       
       if (count > prevCount && !equipmentHas && !footlockerHas) {
         if (!allPreviousItemIds.has(itemId)) {
+          if (isNewPlayerWithStarterKit && STARTER_KIT_ITEM_IDS.has(itemId)) {
+            const allowedCount = starterKitCounts.get(itemId) || 0;
+            if (count <= allowedCount) {
+              continue;
+            }
+          }
           newItemsInInventory.push(itemId);
         }
       }
@@ -507,6 +521,12 @@ function validateItemReconciliation(
       
       if (count > prevCount && !wasInEquipmentOrInv) {
         if (!allPreviousItemIds.has(itemId)) {
+          if (isNewPlayerWithStarterKit && STARTER_KIT_ITEM_IDS.has(itemId)) {
+            const allowedCount = starterKitCounts.get(itemId) || 0;
+            if (count <= allowedCount) {
+              continue;
+            }
+          }
           newItemsInFootlocker.push(itemId);
         }
       }
@@ -600,10 +620,12 @@ export function validateSavePayload(
 
   // SECURITY: Item minting prevention - validate items against previous server state
   if (previousItems) {
+    const hasReceivedStarterKit = sanitized.player.hasReceivedStarterKit === true;
     const mintingResult = validateItemReconciliation(
       sanitized.player,
       previousItems,
-      playerId
+      playerId,
+      hasReceivedStarterKit
     );
     if (mintingResult.errors.length > 0) {
       errors.push(...mintingResult.errors);
