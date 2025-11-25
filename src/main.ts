@@ -6,6 +6,7 @@ import { DelveScene } from './scenes/DelveScene';
 import { CombatScene } from './scenes/CombatScene';
 import { EscMenuScene } from './scenes/EscMenuScene';
 import { InterfaceMenuScene } from './scenes/InterfaceMenuScene';
+import { FungalHollowsScene } from './scenes/FungalHollowsScene';
 import { SceneManager } from './systems/SceneManager';
 import { GameStateManager } from './systems/GameStateManager';
 import { ItemDatabase } from './config/ItemDatabase';
@@ -238,7 +239,7 @@ function initializeGame(): void {
     dom: {
       createContainer: true,
     },
-    scene: [MainMenuScene, TownScene, ExploreScene, DelveScene, CombatScene, EscMenuScene, InterfaceMenuScene],
+    scene: [MainMenuScene, TownScene, ExploreScene, DelveScene, CombatScene, EscMenuScene, InterfaceMenuScene, FungalHollowsScene],
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,

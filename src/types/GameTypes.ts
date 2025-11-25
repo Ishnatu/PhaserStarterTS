@@ -141,6 +141,7 @@ export interface PlayerData {
   statusConditions: StatusCondition[];
   wildernessRestsRemaining: number;
   lastRestTimestamp: number;
+  fungalHollowsPortalPosition?: { x: number; y: number };
 }
 
 export interface DelveRoom {
@@ -206,7 +207,7 @@ export interface CombatState {
   currentRound?: number;
 }
 
-export type GameScene = 'town' | 'explore' | 'delve' | 'combat';
+export type GameScene = 'town' | 'explore' | 'delve' | 'combat' | 'fungalHollows';
 
 export type EncounterType = 'combat' | 'treasure' | 'event' | 'nothing';
 

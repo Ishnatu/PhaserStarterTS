@@ -6,7 +6,7 @@ export class SceneManager {
   private game: Phaser.Game;
   private static instance: SceneManager;
 
-  private readonly GAMEPLAY_SCENES: GameScene[] = ['town', 'explore', 'delve'];
+  private readonly GAMEPLAY_SCENES: GameScene[] = ['town', 'explore', 'delve', 'fungalHollows'];
 
   private constructor(game: Phaser.Game) {
     this.game = game;
@@ -58,6 +58,7 @@ export class SceneManager {
       'ExploreScene': 'explore',
       'DelveScene': 'delve',
       'CombatScene': 'combat',
+      'FungalHollowsScene': 'fungalHollows',
     };
     return reverseMap[key] || null;
   }
@@ -68,6 +69,7 @@ export class SceneManager {
       explore: 'ExploreScene',
       delve: 'DelveScene',
       combat: 'CombatScene',
+      fungalHollows: 'FungalHollowsScene',
     };
     return sceneMap[sceneName];
   }

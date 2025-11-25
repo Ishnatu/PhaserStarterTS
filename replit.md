@@ -44,6 +44,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Loot System**: Tier-based item drops with enhancement metadata. Tombstone encounters allow looting from other players.
 - **Random Encounters**: Varied types (Combat, Treasure, Shrine, Corrupted Void Portal, Trapped Chest, Tombstone, Wandering Merchant), with a chance for Aetherbear boss in combat.
 - **Buff System**: Time-based temporary effects managed by `BuffManager`.
+- **Tier 2 Zone - Fungal Hollows**: Unlocks after completing 5 T1 delves. Portal spawns on random map edge tile. Swampy/fungal theme with 50% harder enemies (placeholder scene currently).
 - **Wilderness Exploration**: 6000x6000 world with camera-follow, procedural terrain, Y-sorted rendering, fog of war, and limited rests.
 - **UI System**: Viewport-locked, interactive, blocking overlays with hierarchical ESC key navigation.
 - **Menu System**: Dual-menu architecture (ESC for system, M for character functions) with tabbed interface settings.

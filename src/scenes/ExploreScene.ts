@@ -42,6 +42,7 @@ export class ExploreScene extends Phaser.Scene {
   private delveMarkers: Phaser.GameObjects.Container[] = [];
   private tombstoneMarkers: Map<number, Phaser.GameObjects.Container> = new Map();
   private townPortal!: Phaser.GameObjects.Container;
+  private fungalHollowsPortal: Phaser.GameObjects.Container | null = null;
   private statsPanel!: StatsPanel;
   private movementStepCounter: number = 0;
   private encounterCooldown: boolean = false;
@@ -233,6 +234,7 @@ export class ExploreScene extends Phaser.Scene {
         this.checkDelveProximity();
         this.checkTombstoneProximity();
         this.checkTownPortalProximity();
+        this.checkFungalHollowsPortalProximity();
       }
     }
 
@@ -245,6 +247,7 @@ export class ExploreScene extends Phaser.Scene {
     this.generateDelves();
     this.createTownPortal();
     this.loadTombstones();
+    this.checkAndSpawnFungalHollowsPortal();
   }
 
   private generateDelves(): void {
@@ -322,6 +325,107 @@ export class ExploreScene extends Phaser.Scene {
 
     this.townPortal = this.add.container(x, y, [citySprite, label]);
     this.townPortal.setDepth(7);
+  }
+
+  private async checkAndSpawnFungalHollowsPortal(): Promise<void> {
+    if (!this.gameState.hasUnlockedFungalHollows()) {
+      return;
+    }
+
+    const state = this.gameState.getState();
+    let portalPosition = state.player.fungalHollowsPortalPosition;
+
+    if (!portalPosition) {
+      portalPosition = this.generateEdgePortalPosition();
+      state.player.fungalHollowsPortalPosition = portalPosition;
+      
+      try {
+        await this.gameState.saveToServer();
+        console.log('Fungal Hollows portal position saved:', portalPosition);
+      } catch (error) {
+        console.error('Failed to save Fungal Hollows portal position:', error);
+      }
+    }
+
+    this.createFungalHollowsPortal(portalPosition.x, portalPosition.y);
+  }
+
+  private generateEdgePortalPosition(): { x: number; y: number } {
+    const margin = 150;
+    const edge = Math.floor(Math.random() * 4);
+
+    let x: number, y: number;
+
+    switch (edge) {
+      case 0: // Top edge
+        x = margin + Math.random() * (this.WORLD_SIZE - margin * 2);
+        y = margin;
+        break;
+      case 1: // Right edge
+        x = this.WORLD_SIZE - margin;
+        y = margin + Math.random() * (this.WORLD_SIZE - margin * 2);
+        break;
+      case 2: // Bottom edge
+        x = margin + Math.random() * (this.WORLD_SIZE - margin * 2);
+        y = this.WORLD_SIZE - margin;
+        break;
+      case 3: // Left edge
+      default:
+        x = margin;
+        y = margin + Math.random() * (this.WORLD_SIZE - margin * 2);
+        break;
+    }
+
+    return { x, y };
+  }
+
+  private createFungalHollowsPortal(x: number, y: number): void {
+    const portalGlow = this.add.circle(0, 0, 50, 0x44aa44, 0.3);
+    const portalCore = this.add.circle(0, 0, 35, 0x228822, 0.6);
+    const portalInner = this.add.circle(0, 0, 20, 0x116611, 0.8);
+
+    const label = this.add.text(0, -80, 'Fungal Hollows', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#66ff66',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5);
+
+    const tierLabel = this.add.text(0, -60, 'Tier 2 Zone', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.xsmall,
+      color: '#44cc44',
+      stroke: '#000000',
+      strokeThickness: 2,
+    }).setOrigin(0.5);
+
+    this.tweens.add({
+      targets: portalGlow,
+      scale: 1.3,
+      alpha: 0.15,
+      duration: 1500,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    this.tweens.add({
+      targets: portalCore,
+      rotation: Math.PI * 2,
+      duration: 8000,
+      repeat: -1,
+    });
+
+    this.tweens.add({
+      targets: portalInner,
+      rotation: -Math.PI * 2,
+      duration: 5000,
+      repeat: -1,
+    });
+
+    this.fungalHollowsPortal = this.add.container(x, y, [portalGlow, portalCore, portalInner, label, tierLabel]);
+    this.fungalHollowsPortal.setDepth(7);
   }
 
   private createDelveMarker(x: number, y: number, tier: number): Phaser.GameObjects.Container {
@@ -1695,6 +1799,21 @@ export class ExploreScene extends Phaser.Scene {
       TerrainGenerator.clearDelvePositions();
       
       SceneManager.getInstance().transitionTo('town');
+    }
+  }
+
+  private checkFungalHollowsPortalProximity(): void {
+    if (!this.fungalHollowsPortal) return;
+
+    const distance = Phaser.Math.Distance.Between(
+      this.player.x,
+      this.player.y,
+      this.fungalHollowsPortal.x,
+      this.fungalHollowsPortal.y
+    );
+
+    if (distance < 60) {
+      SceneManager.getInstance().transitionTo('fungalHollows');
     }
   }
 

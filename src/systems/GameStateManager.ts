@@ -354,4 +354,35 @@ export class GameStateManager {
   getExploredTiles(): Set<string> {
     return this.exploredTilesSet;
   }
+
+  getCompletedDelveCountByTier(tier: number): number {
+    if (!this.gameState.player.completedDelves) {
+      return 0;
+    }
+    
+    const discoveredDelves = this.gameState.discoveredDelves || [];
+    let count = 0;
+    
+    for (const delveKey of this.gameState.player.completedDelves) {
+      const [xStr, yStr] = delveKey.split(',');
+      const x = parseFloat(xStr);
+      const y = parseFloat(yStr);
+      
+      const delve = discoveredDelves.find(d => {
+        const dxFloored = Math.floor(d.x);
+        const dyFloored = Math.floor(d.y);
+        return Math.floor(x) === dxFloored && Math.floor(y) === dyFloored;
+      });
+      
+      if (delve && delve.tier === tier) {
+        count++;
+      }
+    }
+    
+    return count;
+  }
+
+  hasUnlockedFungalHollows(): boolean {
+    return this.getCompletedDelveCountByTier(1) >= 5;
+  }
 }
