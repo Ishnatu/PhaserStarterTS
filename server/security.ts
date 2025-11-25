@@ -152,19 +152,27 @@ function validateEquipment(equipment: any): ValidationResult {
   }
 
   const validItemIds = getAllValidItemIds();
-  const weaponSlots = ['mainHand', 'offHand'];
-  const armorSlots = ['helmet', 'chest', 'legs', 'boots', 'shoulders', 'cape'];
+  const VALID_EQUIPMENT_SLOTS = new Set(['mainHand', 'offHand', 'helmet', 'chest', 'legs', 'boots', 'shoulders', 'cape']);
 
-  for (const slot of [...weaponSlots, ...armorSlots]) {
-    const equipped = equipment[slot];
-    if (equipped) {
-      if (!validItemIds.has(equipped.itemId)) {
-        errors.push(`Invalid item in ${slot}: ${equipped.itemId}`);
-      }
-      if (equipped.enhancementLevel !== undefined && 
-          (equipped.enhancementLevel < 0 || equipped.enhancementLevel > MAX_ENHANCEMENT_LEVEL)) {
-        errors.push(`Invalid enhancement in ${slot}: ${equipped.enhancementLevel}`);
-      }
+  for (const [slot, equipped] of Object.entries(equipment)) {
+    if (!equipped || typeof equipped !== 'object') continue;
+    
+    if (!VALID_EQUIPMENT_SLOTS.has(slot)) {
+      errors.push(`Invalid equipment slot: ${slot}`);
+      continue;
+    }
+    
+    const item = equipped as any;
+    if (!item.itemId || !validItemIds.has(item.itemId)) {
+      errors.push(`Invalid item in ${slot}: ${item.itemId}`);
+    }
+    if (item.enhancementLevel !== undefined && 
+        (item.enhancementLevel < 0 || item.enhancementLevel > MAX_ENHANCEMENT_LEVEL)) {
+      errors.push(`Invalid enhancement in ${slot}: ${item.enhancementLevel}`);
+    }
+    if (item.durability !== undefined && 
+        (item.durability < 0 || item.durability > MAX_ITEM_DURABILITY)) {
+      errors.push(`Invalid durability in ${slot}: ${item.durability}`);
     }
   }
 
