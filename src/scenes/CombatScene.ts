@@ -317,26 +317,15 @@ export class CombatScene extends Phaser.Scene {
         enemyVisual = this.add.rectangle(x, y, 80, 80, 0xff4444);
       }
       
-      // Nameplate positioned above sprite - centered
-      const plateY = y - 80;
-      const enemyInfoBg = this.add.rectangle(x - 90, plateY, 180, 65, 0x2a2a3e, 0.9).setOrigin(0);
-      
-      const nameText = this.add.text(x, plateY + 10, enemy.name, {
-        fontFamily: FONTS.primary,
-        fontSize: FONTS.size.xsmall,
-        color: '#ffffff',
-        fontStyle: 'bold',
-        resolution: 2,
-      }).setOrigin(0.5, 0);
-
-      // Create HP bar for enemy with built-in tooltip
+      // HP bar positioned ~20px above the sprite (no title needed)
+      const hpBarY = y - 100;
       const hpBar = new PixelArtBar(
         this,
         x - 80,
-        plateY + 32,
-        'HP', // Label for tooltip
-        0xcc3333,  // Red fill
-        0x4a5a8a,  // Blue-gray empty
+        hpBarY,
+        'HP',
+        0xcc3333,
+        0x4a5a8a,
         160,
         20
       );
@@ -347,7 +336,7 @@ export class CombatScene extends Phaser.Scene {
       const healthText = this.add.text(0, 0, '', { fontSize: '1px' }).setVisible(false);
       this.enemyHealthTexts.push(healthText);
 
-      const container = this.add.container(0, 0, [enemyVisual, enemyInfoBg, nameText]);
+      const container = this.add.container(0, 0, [enemyVisual]);
       container.setData('index', index);
       this.enemyContainers.push(container);
 
