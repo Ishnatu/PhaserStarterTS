@@ -9,6 +9,7 @@ import { ItemColorUtil } from '../utils/ItemColorUtil';
 import { GameConfig } from '../config/GameConfig';
 import { AudioManager } from '../managers/AudioManager';
 import { getXpReward, getNewLevel } from '../systems/xpSystem';
+import { StatsPanel } from '../ui/StatsPanel';
 
 export class DelveScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -19,6 +20,7 @@ export class DelveScene extends Phaser.Scene {
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
   private returnToLocation?: { x: number; y: number };
+  private statsPanel!: StatsPanel;
 
   constructor() {
     super('DelveScene');
@@ -38,6 +40,7 @@ export class DelveScene extends Phaser.Scene {
     this.gameState.setScene('delve');
 
     const { width, height } = this.cameras.main;
+    const playerData = this.gameState.getPlayer();
 
     this.add.rectangle(0, 0, width, height, 0x1a1a2e).setOrigin(0);
 
@@ -46,6 +49,11 @@ export class DelveScene extends Phaser.Scene {
       fontSize: FONTS.size.large,
       color: '#ff8844',
     }).setOrigin(0.5);
+
+    // Create stats panel in top-left corner
+    this.statsPanel = new StatsPanel(this, 20, 20);
+    this.statsPanel.setDepth(100);
+    this.statsPanel.update(playerData);
 
     this.renderDelveMap();
     this.renderCurrentRoom();
@@ -133,6 +141,9 @@ export class DelveScene extends Phaser.Scene {
   private renderCurrentRoom(): void {
     const { width, height } = this.cameras.main;
     const currentRoom = this.currentDelve.rooms.get(this.currentDelve.currentRoomId);
+
+    // Update stats panel when room is rendered (e.g., after returning from combat)
+    this.updateStatsPanel();
 
     if (!currentRoom) return;
 
@@ -483,6 +494,7 @@ export class DelveScene extends Phaser.Scene {
       const damage = DiceRoller.rollDiceTotal({ numDice: 2, dieSize: 10, modifier: 4 }).total;
       player.health = Math.max(0, player.health - damage);
       this.gameState.updatePlayer(player);
+      this.updateStatsPanel();
 
       const trapName = trapType === 'spike' ? 'floor spikes' : 'poison darts';
       const resultText = this.add.text(width / 2, height / 2 - 80, 
@@ -798,6 +810,16 @@ export class DelveScene extends Phaser.Scene {
       this.showMessage(`Used ${potion.name}! Restored ${amount} Stamina`);
       this.gameState.removeItemFromInventory(itemId, 1);
       this.gameState.updatePlayer({ stamina: newStamina });
+    }
+    
+    // Update stats panel after using potion
+    this.updateStatsPanel();
+  }
+  
+  private updateStatsPanel(): void {
+    if (this.statsPanel) {
+      const player = this.gameState.getPlayer();
+      this.statsPanel.update(player);
     }
   }
 }
