@@ -97,8 +97,9 @@ export class TownScene extends Phaser.Scene {
       .on('pointerover', () => ventureForthBtn.setTint(0xcccccc))
       .on('pointerout', () => ventureForthBtn.clearTint())
       .on('pointerdown', () => {
-        const robokaX = 1550;
-        const robokaY = 1550;
+        const WORLD_SIZE = 6000;
+        const robokaX = WORLD_SIZE / 2 + 100;
+        const robokaY = WORLD_SIZE / 2;
         SceneManager.getInstance().transitionTo('explore', { 
           returnToLocation: { x: robokaX, y: robokaY } 
         });

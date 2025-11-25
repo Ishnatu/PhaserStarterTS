@@ -310,7 +310,7 @@ export class DelveScene extends Phaser.Scene {
     SceneManager.getInstance().transitionTo('combat', {
       delve: this.currentDelve,
       room: room,
-      returnToLocation: this.returnToLocation || this.currentDelve.location || { x: 1500, y: 1500 },
+      returnToLocation: this.returnToLocation || this.currentDelve.location || { x: 3000, y: 3000 },
     });
   }
 
@@ -697,8 +697,8 @@ export class DelveScene extends Phaser.Scene {
         this.gameState.markDelveCompleted(this.currentDelve.location.x, this.currentDelve.location.y);
       }
       
-      const spawnX = this.currentDelve.location ? this.currentDelve.location.x - 100 : 1500;
-      const spawnY = this.currentDelve.location ? this.currentDelve.location.y - 100 : 1500;
+      const spawnX = this.currentDelve.location ? this.currentDelve.location.x - 100 : 3000;
+      const spawnY = this.currentDelve.location ? this.currentDelve.location.y - 100 : 3000;
       
       SceneManager.getInstance().transitionTo('explore', { 
         returnToLocation: { x: spawnX, y: spawnY }

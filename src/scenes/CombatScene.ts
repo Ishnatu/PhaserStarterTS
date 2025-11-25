@@ -1447,7 +1447,7 @@ export class CombatScene extends Phaser.Scene {
     // Create tombstone if there are unbound items
     if (unboundItems.length > 0) {
       // Use stored return location for tombstone position
-      const deathLocation = this.returnToLocation || player.position || { x: 1500, y: 1500 };
+      const deathLocation = this.returnToLocation || player.position || { x: 3000, y: 3000 };
       
       await ApiClient.createTombstone({
         ownerName: 'Player',  // Use generic name for now
