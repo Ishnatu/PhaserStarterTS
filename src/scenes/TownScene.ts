@@ -39,6 +39,7 @@ export class TownScene extends Phaser.Scene {
     this.load.image('garthek-button', '/assets/ui/shop-buttons/garthek-button.png');
     this.load.image('evasion-icon', '/assets/ui/evasion-icon.png');
     this.load.image('shield-icon', '/assets/ui/shield-icon.png');
+    this.load.image('venture-forth-button', '/assets/ui/venture-forth-button.png');
     this.load.audio('town-music', '/assets/audio/town-music.mp3');
     
     const itemSprites = ItemSprites.getAllSpritePaths();
@@ -90,13 +91,18 @@ export class TownScene extends Phaser.Scene {
 
     this.createNPCs();
 
-    const exploreBtn = this.createButton(width / 2, height - 100, 'Venture Into the Wilds', () => {
-      const robokaX = 1550;
-      const robokaY = 1550;
-      SceneManager.getInstance().transitionTo('explore', { 
-        returnToLocation: { x: robokaX, y: robokaY } 
+    const ventureForthBtn = this.add.image(width / 2, height - 100, 'venture-forth-button')
+      .setScale(0.35)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => ventureForthBtn.setTint(0xcccccc))
+      .on('pointerout', () => ventureForthBtn.clearTint())
+      .on('pointerdown', () => {
+        const robokaX = 1550;
+        const robokaY = 1550;
+        SceneManager.getInstance().transitionTo('explore', { 
+          returnToLocation: { x: robokaX, y: robokaY } 
+        });
       });
-    });
 
     this.createButton(width - 120, height - 100, 'Inventory', () => {
       this.openInventory();
