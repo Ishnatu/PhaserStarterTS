@@ -81,6 +81,7 @@ export interface InventoryItem {
   durability?: number;
   maxDurability?: number;
   isShiny?: boolean;
+  isStarterKit?: boolean;
 }
 
 export interface EquippedItem {
@@ -143,6 +144,8 @@ export interface PlayerData {
   wildernessRestsRemaining: number;
   lastRestTimestamp: number;
   fungalHollowsPortalPosition?: { x: number; y: number };
+  hasReceivedStarterKit?: boolean;
+  isNewPlayer?: boolean;
 }
 
 export interface DelveRoom {

@@ -2,8 +2,8 @@ export const GameConfig = {
   PLAYER: {
     STARTING_HEALTH: 100,
     STARTING_STAMINA: 100,
-    STARTING_AA: 500,
-    STARTING_CA: 10,
+    STARTING_AA: 0,
+    STARTING_CA: 0,
     STARTING_LEVEL: 1,
   },
 

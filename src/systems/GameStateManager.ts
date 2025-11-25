@@ -3,6 +3,7 @@ import { GameConfig } from '../config/GameConfig';
 import { EquipmentManager } from './EquipmentManager';
 import { ApiClient } from '../utils/ApiClient';
 import { ItemDatabase } from '../config/ItemDatabase';
+import { generateStarterKitItems } from '../config/StarterKit';
 
 export class GameStateManager {
   private static instance: GameStateManager;
@@ -92,19 +93,16 @@ export class GameStateManager {
   }
 
   private createInitialState(): GameState {
+    const starterKitItems = generateStarterKitItems();
+    
     const player: PlayerData = {
       health: GameConfig.PLAYER.STARTING_HEALTH,
       maxHealth: GameConfig.PLAYER.STARTING_HEALTH,
       stamina: GameConfig.PLAYER.STARTING_STAMINA,
       maxStamina: GameConfig.PLAYER.STARTING_STAMINA,
       position: { x: 0, y: 0 },
-      inventory: [
-        { itemId: 'shortsword_basic', quantity: 1, enhancementLevel: 0, durability: 100, maxDurability: 100 },
-        { itemId: 'chest_leather', quantity: 1, enhancementLevel: 0, durability: 100, maxDurability: 100 },
-        { itemId: 'potion_health', quantity: 3 },
-        { itemId: 'potion_stamina', quantity: 3 },
-      ],
-      footlocker: [],
+      inventory: [],
+      footlocker: starterKitItems,
       equipment: {},
       stats: {
         baseEvasion: 10,
@@ -125,6 +123,8 @@ export class GameStateManager {
       statusConditions: [],
       wildernessRestsRemaining: GameConfig.STAMINA.MAX_WILDERNESS_RESTS,
       lastRestTimestamp: 0,
+      hasReceivedStarterKit: true,
+      isNewPlayer: true,
     };
     this.exploredTilesSet = new Set();
 
