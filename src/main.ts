@@ -155,24 +155,48 @@ function showLandingPage(): void {
 
 // Set up disconnect/crash handlers for auto-save
 function setupDisconnectHandlers(): void {
-  // Save on page unload (closing tab, navigating away)
-  window.addEventListener('beforeunload', (event) => {
+  // Helper to create save payload for sendBeacon (removes currency fields, proper format)
+  const createBeaconPayload = (): Blob | null => {
     try {
       const gameState = GameStateManager.getInstance();
-      if (gameState.isInitialized()) {
-        // Use synchronous beacon API for reliable save on unload
-        const saveData = JSON.stringify({
-          ...gameState.getState(),
-          player: {
-            ...gameState.getPlayer(),
-            exploredTiles: Array.from(gameState.getExploredTiles())
-          }
-        });
-        navigator.sendBeacon('/api/save', saveData);
-        console.log('Emergency save triggered on page unload');
-      }
+      if (!gameState.isInitialized()) return null;
+      
+      const state = gameState.getState();
+      const player = gameState.getPlayer();
+      
+      // Create save data WITHOUT currency fields (server-authoritative)
+      const saveData = {
+        ...state,
+        player: {
+          ...player,
+          exploredTiles: Array.from(gameState.getExploredTiles()),
+          // Explicitly remove currency fields - server manages these
+          arcaneAsh: undefined,
+          crystallineAnimus: undefined,
+        }
+      };
+      
+      // Remove currency from top-level too if present
+      delete (saveData as any).arcaneAsh;
+      delete (saveData as any).crystallineAnimus;
+      delete (saveData.player as any).arcaneAsh;
+      delete (saveData.player as any).crystallineAnimus;
+      
+      // Wrap in expected format and create Blob with proper content type
+      const payload = JSON.stringify({ saveData });
+      return new Blob([payload], { type: 'application/json' });
     } catch (error) {
-      console.error('Failed to save on unload:', error);
+      console.error('Failed to create beacon payload:', error);
+      return null;
+    }
+  };
+
+  // Save on page unload (closing tab, navigating away)
+  window.addEventListener('beforeunload', (event) => {
+    const payload = createBeaconPayload();
+    if (payload) {
+      navigator.sendBeacon('/api/game/save', payload);
+      console.log('Emergency save triggered on page unload');
     }
   });
 
@@ -193,21 +217,10 @@ function setupDisconnectHandlers(): void {
 
   // Save on page hide (mobile browsers, some desktop scenarios)
   window.addEventListener('pagehide', (event) => {
-    try {
-      const gameState = GameStateManager.getInstance();
-      if (gameState.isInitialized()) {
-        const saveData = JSON.stringify({
-          ...gameState.getState(),
-          player: {
-            ...gameState.getPlayer(),
-            exploredTiles: Array.from(gameState.getExploredTiles())
-          }
-        });
-        navigator.sendBeacon('/api/save', saveData);
-        console.log('Emergency save triggered on page hide');
-      }
-    } catch (error) {
-      console.error('Failed to save on page hide:', error);
+    const payload = createBeaconPayload();
+    if (payload) {
+      navigator.sendBeacon('/api/game/save', payload);
+      console.log('Emergency save triggered on page hide');
     }
   });
 }

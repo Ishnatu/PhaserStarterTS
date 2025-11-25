@@ -67,7 +67,18 @@ export class ApiClient {
   // Save game state to server
   static async saveGame(saveData: any): Promise<boolean> {
     try {
-      await this.post('/api/game/save', { saveData });
+      // IMPORTANT: Strip currency fields - server manages these authoritatively
+      // The save endpoint rejects payloads containing currency to prevent tampering
+      const cleanedSaveData = { ...saveData };
+      if (cleanedSaveData.player) {
+        cleanedSaveData.player = { ...cleanedSaveData.player };
+        delete cleanedSaveData.player.arcaneAsh;
+        delete cleanedSaveData.player.crystallineAnimus;
+      }
+      delete cleanedSaveData.arcaneAsh;
+      delete cleanedSaveData.crystallineAnimus;
+      
+      await this.post('/api/game/save', { saveData: cleanedSaveData });
       return true;
     } catch (error) {
       console.error('Failed to save game:', error);
