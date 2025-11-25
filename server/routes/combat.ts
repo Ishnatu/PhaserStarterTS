@@ -7,6 +7,7 @@ import { EnemyFactory } from "../systems/EnemyFactory";
 import { WeaponValidator } from "../systems/WeaponValidator";
 import { SeededRNG } from "../utils/SeededRNG";
 import { storage } from "../storage";
+import { validateSavePayload, enforceServerAuthoritativeValues } from "../security";
 import type { CombatState, Enemy, PlayerData, WeaponAttack } from "../../shared/types";
 
 /**
@@ -25,6 +26,79 @@ interface CombatSession {
  */
 const activeCombatSessions = new Map<string, CombatSession>();
 
+/**
+ * Persist player state when combat is abandoned (fled or disconnected)
+ * This prevents stamina/HP exploitation by bailing on combat
+ * 
+ * Resources that persist on abandonment:
+ * - health: Damage taken during combat
+ * - stamina: Stamina spent on attacks
+ * - inventory: Items consumed during combat
+ * - statusConditions: Any conditions applied during combat
+ * 
+ * Resources NOT given on abandonment:
+ * - No loot/rewards (didn't win)
+ * - No XP (didn't complete combat)
+ */
+async function finalizeAbandonedCombat(session: CombatSession): Promise<boolean> {
+  try {
+    const userId = session.userId;
+    const combatPlayer = session.combatState.player;
+    
+    // Load FULL current save to preserve all data (delve state, map progress, etc)
+    const gameSave = await storage.getGameSaveByUserId(userId);
+    if (!gameSave || !gameSave.saveData) {
+      console.error(`[COMBAT ABANDON] Failed to load save for ${userId}`);
+      return false;
+    }
+    
+    // Work with the full save data structure
+    const fullSaveData = gameSave.saveData as any;
+    const savedPlayer = fullSaveData.player || fullSaveData as PlayerData;
+    
+    // Merge ONLY combat-relevant fields into the existing player data
+    // This preserves all other save data (delve, map, currencies, etc)
+    const updatedPlayer: PlayerData = {
+      ...savedPlayer,
+      health: combatPlayer.health,
+      stamina: combatPlayer.stamina,
+      inventory: combatPlayer.inventory,
+      statusConditions: combatPlayer.statusConditions,
+    };
+    
+    // Reconstruct the full save with updated player data
+    // Preserve any other top-level fields (delve state, explored tiles, etc)
+    const updatedSaveData = fullSaveData.player 
+      ? { ...fullSaveData, player: updatedPlayer }
+      : updatedPlayer;
+    
+    // Validate and sanitize the complete save payload
+    const validated = validateSavePayload(
+      fullSaveData.player ? updatedSaveData : { player: updatedPlayer }, 
+      userId
+    );
+    
+    if (!validated.valid || !validated.sanitizedData) {
+      console.error(`[COMBAT ABANDON] Validation failed for ${userId}:`, validated.errors);
+      return false;
+    }
+    
+    // Enforce server-authoritative values (level, stats, etc)
+    const enforced = await enforceServerAuthoritativeValues(userId, validated.sanitizedData);
+    
+    // Save the complete updated save data (preserving all non-combat fields)
+    await storage.saveGame({
+      userId,
+      saveData: enforced,
+    });
+    
+    console.log(`[COMBAT ABANDON] Saved abandoned combat state for ${userId} - HP: ${combatPlayer.health}, SP: ${combatPlayer.stamina}`);
+    return true;
+  } catch (error) {
+    console.error('[COMBAT ABANDON] Error finalizing abandoned combat:', error);
+    return false;
+  }
+}
 
 export function registerCombatRoutes(app: Express) {
   /**
@@ -206,8 +280,29 @@ export function registerCombatRoutes(app: Express) {
         case 'item':
           return res.status(400).json({ message: "Item usage not yet implemented" });
 
-        case 'run':
-          return res.status(400).json({ message: "Running not yet implemented" });
+        case 'run': {
+          // Attempt to flee from combat
+          // Save current combat state (stamina/HP spent) before allowing escape
+          await finalizeAbandonedCombat(session);
+          
+          // Clean up combat session
+          activeCombatSessions.delete(sessionId);
+          
+          // Mark combat as fled (player didn't win, but escaped)
+          const fledState: CombatState = {
+            ...session.combatState,
+            isComplete: true,
+            playerVictory: false,
+          };
+          
+          return res.json({
+            success: true,
+            combatState: fledState,
+            combatEnded: true,
+            fled: true,
+            result: { message: "You fled from combat! Your stamina and health costs remain." },
+          });
+        }
 
         case 'end_turn': {
           // End player turn and process all enemy turns
@@ -342,6 +437,10 @@ export function registerCombatRoutes(app: Express) {
   /**
    * DELETE /api/combat/:sessionId
    * Ends/abandons a combat session
+   * 
+   * [ANTI-EXPLOIT] Saves player state before cleanup to prevent stamina exploitation
+   * When combat is abandoned (disconnect, browser close, explicit abandon), 
+   * the stamina/HP costs from combat are persisted.
    */
   app.delete("/api/combat/:sessionId", isAuthenticated, async (req: any, res) => {
     try {
@@ -353,11 +452,17 @@ export function registerCombatRoutes(app: Express) {
         return res.status(403).json({ message: "Unauthorized access to combat session" });
       }
 
+      // Save combat state before abandonment to persist stamina/HP costs
+      if (session) {
+        await finalizeAbandonedCombat(session);
+      }
+
       const existed = activeCombatSessions.delete(sessionId);
 
       res.json({
         success: true,
         existed,
+        message: existed ? "Combat abandoned - stamina and health costs saved" : "Session not found",
       });
     } catch (error) {
       console.error("Error ending combat session:", error);
