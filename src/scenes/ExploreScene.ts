@@ -48,7 +48,7 @@ export class ExploreScene extends Phaser.Scene {
   private staminaDebt: number = 0;
   private isOverlayActive: boolean = false;
   private readonly TILE_SIZE: number = 32;
-  private readonly WORLD_SIZE: number = 3000;
+  private readonly WORLD_SIZE: number = 6000;
   private readonly CHUNK_SIZE: number = 800;
   private menuState: 'none' | 'main' | 'inventory' | 'equipment' | 'quit' | 'encounter' = 'none';
   private currentMenuCloseFunction: (() => void) | null = null;
@@ -271,7 +271,9 @@ export class ExploreScene extends Phaser.Scene {
     const minDistanceFromTown = 200;
     const newDelves: { x: number; y: number; tier: number }[] = [];
 
-    for (let i = 0; i < 8; i++) {
+    // Scale delve count with map size (roughly 8 per 3000x3000 area = 32 for 6000x6000)
+    const numDelves = 24 + Math.floor(Math.random() * 8); // 24-31 delves
+    for (let i = 0; i < numDelves; i++) {
       let x: number;
       let y: number;
       let attempts = 0;
