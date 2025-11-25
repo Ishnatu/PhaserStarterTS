@@ -229,12 +229,12 @@ export class DelveScene extends Phaser.Scene {
       resolution: 2,
     }).setOrigin(0.5);
 
-    this.createButton(width / 2, height / 2 + 80, 'Exit Delve', () => {
-      this.exitDelve();
+    this.createButton(width / 2, height / 2 + 80, 'Exit Delve', async () => {
+      await this.exitDelve();
     });
   }
 
-  private exitDelve(): void {
+  private async exitDelve(): Promise<void> {
     const player = this.gameState.getPlayer();
     player.wildernessRestsRemaining = GameConfig.STAMINA.MAX_WILDERNESS_RESTS;
     
@@ -253,6 +253,9 @@ export class DelveScene extends Phaser.Scene {
     }
     
     this.gameState.updatePlayer(player);
+    
+    // Save current player state to server before exiting - await to ensure state is persisted
+    await this.gameState.saveToServer();
     
     // Mark delve as completed (only for real map delves with location)
     if (this.currentDelve.location) {
@@ -684,11 +687,11 @@ export class DelveScene extends Phaser.Scene {
     }, true);
     uiElements.push(inventoryBtn);
 
-    const abandonBtn = this.createButton(width / 2, height / 2 - 10, 'Abandon Delve', () => {
+    const abandonBtn = this.createButton(width / 2, height / 2 - 10, 'Abandon Delve', async () => {
       destroyAll();
       
-      // Save current player state to server before abandoning
-      this.gameState.saveToServer();
+      // Save current player state to server before abandoning - await to ensure state is persisted
+      await this.gameState.saveToServer();
       
       if (this.currentDelve.location) {
         this.gameState.markDelveCompleted(this.currentDelve.location.x, this.currentDelve.location.y);
