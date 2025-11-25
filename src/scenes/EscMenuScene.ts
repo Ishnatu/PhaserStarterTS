@@ -76,10 +76,11 @@ export class EscMenuScene extends Phaser.Scene {
   private showExitConfirmation(): void {
     const { width, height } = this.cameras.main;
 
-    // Darker overlay for confirmation
+    // Darker overlay for confirmation - must be ABOVE main menu buttons (10008-10009)
     const confirmOverlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.5)
       .setOrigin(0)
-      .setDepth(10005);
+      .setInteractive()
+      .setDepth(10100);
     this.uiElements.push(confirmOverlay);
 
     // Confirmation panel - slightly larger for better spacing
@@ -87,14 +88,14 @@ export class EscMenuScene extends Phaser.Scene {
     const panelHeight = 220;
     const confirmPanel = this.add.rectangle(width / 2, height / 2, panelWidth, panelHeight, 0x1a1a2e)
       .setOrigin(0.5)
-      .setDepth(10006);
+      .setDepth(10101);
     this.uiElements.push(confirmPanel);
 
     // Panel border for polish
     const border = this.add.rectangle(width / 2, height / 2, panelWidth, panelHeight)
       .setOrigin(0.5)
       .setStrokeStyle(2, 0xff8844)
-      .setDepth(10006);
+      .setDepth(10101);
     this.uiElements.push(border);
 
     // Confirmation text
@@ -103,7 +104,7 @@ export class EscMenuScene extends Phaser.Scene {
       fontSize: FONTS.size.large,
       color: '#ff8844',
       resolution: 2,
-    }).setOrigin(0.5).setDepth(10007);
+    }).setOrigin(0.5).setDepth(10102);
     this.uiElements.push(confirmText);
 
     const warningText = this.add.text(width / 2, height / 2 - 20, 'Progress is auto-saved', {
@@ -111,7 +112,7 @@ export class EscMenuScene extends Phaser.Scene {
       fontSize: FONTS.size.small,
       color: '#88ff88',
       resolution: 2,
-    }).setOrigin(0.5).setDepth(10007);
+    }).setOrigin(0.5).setDepth(10102);
     this.uiElements.push(warningText);
 
     // Yes button - smaller and better positioned
@@ -159,7 +160,7 @@ export class EscMenuScene extends Phaser.Scene {
     const elements: Phaser.GameObjects.GameObject[] = [];
 
     const bg = this.add.rectangle(x, y, width, 45, 0x444466)
-      .setDepth(10008)
+      .setDepth(10103)
       .setInteractive({ useHandCursor: true })
       .on('pointerover', () => bg.setFillStyle(0x666688))
       .on('pointerout', () => bg.setFillStyle(0x444466))
@@ -171,7 +172,7 @@ export class EscMenuScene extends Phaser.Scene {
       fontSize: FONTS.size.medium,
       color: '#ffffff',
       resolution: 2,
-    }).setOrigin(0.5).setDepth(10009);
+    }).setOrigin(0.5).setDepth(10104);
     elements.push(label);
 
     return { elements };
