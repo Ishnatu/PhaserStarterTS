@@ -339,6 +339,7 @@ export class CombatSystem {
       return this.createFailedAttack('No combat state!');
     }
 
+    console.log(`[Puncture] Starting 3-strike attack on enemy ${targetIndex}`);
     this.combatState.combatLog.push(`Executing Puncture - 3 consecutive attacks!`);
     
     let totalDamage = 0;
@@ -349,9 +350,15 @@ export class CombatSystem {
 
     for (let i = 0; i < 3; i++) {
       const target = this.combatState.enemies[targetIndex];
-      if (!target) break;
+      if (!target) {
+        console.log(`[Puncture] Strike ${i + 1} - No target found, breaking`);
+        break;
+      }
 
+      console.log(`[Puncture] Executing strike ${i + 1}...`);
       const result = this.executeSingleStrike(target, attack, `Puncture strike ${i + 1}`);
+      console.log(`[Puncture] Strike ${i + 1} - Hit: ${result.hit}, Damage: ${result.damage}, Target HP: ${target.health}`);
+      
       anyHit = anyHit || result.hit;
       anyCrit = anyCrit || result.critical;
       attackRoll = Math.max(attackRoll, result.attackRoll);
@@ -362,6 +369,8 @@ export class CombatSystem {
         this.combatState.combatLog.push(`${target.name} has been defeated!`);
       }
     }
+    
+    console.log(`[Puncture] Complete - Total damage: ${totalDamage}, Combat log entries: ${this.combatState.combatLog.length}`);
 
     this.deductActions(attack.actionCost);
     this.checkCombatEnd();
