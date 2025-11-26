@@ -70,6 +70,7 @@ export class CombatScene extends Phaser.Scene {
     this.load.image('aetherbear', '/assets/enemies/aetherbear.png');
     this.load.image('hollow-husk', '/assets/enemies/hollow-husk.png');
     this.load.image('crawley-crow', '/assets/enemies/crawley-crow.png');
+    this.load.image('wailing-wisp', '/assets/enemies/wisp.png');
     this.load.image('combat-background', '/assets/combat-background.png');
     this.load.image('wilderness-combat-background', '/assets/wilderness-combat-background.png');
     this.load.audio('combat-music', '/assets/audio/combat-music.mp3');

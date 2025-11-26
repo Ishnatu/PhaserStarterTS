@@ -477,7 +477,8 @@ export class EnemyFactory {
       'Skitterthid': 'skitterthid',
       'Aetherbear': 'aetherbear',
       'Hollow Husk': 'hollow-husk',
-      'Crawley Crow': 'crawley-crow'
+      'Crawley Crow': 'crawley-crow',
+      'Wailing Wisp': 'wailing-wisp'
     };
 
     return spriteMap[enemyName] || null;
