@@ -40,9 +40,8 @@ export function registerLootRoutes(app: Express) {
       const items = lootEngine.rollLoot(tier, isBoss || false);
       const arcaneAsh = lootEngine.rollCurrencyReward(tier, isBoss || false);
       
-      // Calculate XP reward based on tier and boss status
-      // Base XP: 10 * tier for normal enemies, 25 * tier for bosses
-      const xpReward = isBoss ? 25 * tier : 10 * tier;
+      // Calculate XP reward using LootEngine (T1 mob = 5 XP, T1 boss = 15 XP, scales with tier)
+      const xpReward = lootEngine.rollExperienceReward(tier, isBoss || false);
 
       // CRITICAL: Ensure player currency record exists before adding rewards
       await storage.ensurePlayerCurrency(userId, 0, 0);

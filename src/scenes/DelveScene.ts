@@ -239,18 +239,25 @@ export class DelveScene extends Phaser.Scene {
     player.wildernessRestsRemaining = GameConfig.STAMINA.MAX_WILDERNESS_RESTS;
     player.lastRestTimestamp = 0;  // Reset cooldown after completing delve
     
-    // Award XP for delve completion
-    const xpReward = getXpReward(this.currentDelve.tier, 'delveCompletion');
-    const oldXp = player.experience;
-    const newXp = oldXp + xpReward;
-    const newLevel = getNewLevel(oldXp, newXp);
-    
-    // Update player XP and level
-    if (newLevel !== null) {
-      player.experience = newXp;
-      player.level = newLevel;
-    } else {
-      player.experience = newXp;
+    // Award XP for delve completion via server (server-authoritative, persisted to database)
+    try {
+      const response = await fetch('/api/delve/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ tier: this.currentDelve.tier }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        // Update local player state with server-authoritative values (always sync both)
+        player.experience = result.newExperience;
+        player.level = result.newLevel;
+      } else {
+        console.error('Failed to grant delve completion XP:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error granting delve completion XP:', error);
     }
     
     this.gameState.updatePlayer(player);

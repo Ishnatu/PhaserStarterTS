@@ -122,19 +122,12 @@ export class LootEngine {
     return 30 * tier;
   }
 
-  rollExperienceReward(enemyTier: number, isBoss: boolean, enemyMaxHealth: number): number {
-    // Experience calculation based on tier and health (deterministic, no RNG)
-    // Base XP = tier × 10
-    let baseXP = enemyTier * 10;
-    
-    // Boss multiplier
+  rollExperienceReward(enemyTier: number, isBoss: boolean): number {
+    // Simple XP calculation: T1 mob = 5 XP, T1 boss = 15 XP
+    // Higher tiers scale: mob = 5 * tier, boss = 15 * tier
     if (isBoss) {
-      baseXP *= 2;
+      return 15 * enemyTier;
     }
-    
-    // Health factor (enemies with more HP give slightly more XP)
-    const healthBonus = Math.floor(enemyMaxHealth / 10);
-    
-    return baseXP + healthBonus;
+    return 5 * enemyTier;
   }
 }
