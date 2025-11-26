@@ -3,6 +3,7 @@ import type { Express } from "express";
 import { isAuthenticated } from "../replitAuth";
 import { LootEngine } from "../systems/LootEngine";
 import { SeededRNG } from "../utils/SeededRNG";
+import { storage } from "../storage";
 import type { InventoryItem } from "../../shared/types";
 
 export function registerLootRoutes(app: Express) {
@@ -11,6 +12,7 @@ export function registerLootRoutes(app: Express) {
    * Server-side loot generation for combat victories
    * Accepts enemy tier/boss flag, returns items with enhancement levels
    * SERVER-AUTHORITATIVE: All loot rolls happen server-side with seeded RNG
+   * CRITICAL: Currency and XP rewards are persisted to database immediately
    */
   app.post("/api/loot/roll", isAuthenticated, async (req: any, res) => {
     try {
@@ -37,6 +39,20 @@ export function registerLootRoutes(app: Express) {
       // Generate loot server-side
       const items = lootEngine.rollLoot(tier, isBoss || false);
       const arcaneAsh = lootEngine.rollCurrencyReward(tier, isBoss || false);
+      
+      // Calculate XP reward based on tier and boss status
+      // Base XP: 10 * tier for normal enemies, 25 * tier for bosses
+      const xpReward = isBoss ? 25 * tier : 10 * tier;
+
+      // CRITICAL: Ensure player currency record exists before adding rewards
+      await storage.ensurePlayerCurrency(userId, 0, 0);
+      
+      // CRITICAL: Persist currency reward to database immediately
+      // This ensures the reward survives the save/load security sanitization
+      const updatedCurrency = await storage.addCurrency(userId, arcaneAsh, 0);
+      
+      // CRITICAL: Persist XP reward to database immediately
+      const xpResult = await storage.grantExperience(userId, xpReward);
 
       res.json({
         success: true,
@@ -44,6 +60,12 @@ export function registerLootRoutes(app: Express) {
           items,
           arcaneAsh,
         },
+        xpReward,
+        leveledUp: xpResult.leveledUp,
+        newLevel: xpResult.newLevel,
+        newExperience: xpResult.newExperience,
+        newArcaneAsh: updatedCurrency.arcaneAsh,
+        newCrystallineAnimus: updatedCurrency.crystallineAnimus,
       });
     } catch (error) {
       console.error("Error rolling loot:", error);
