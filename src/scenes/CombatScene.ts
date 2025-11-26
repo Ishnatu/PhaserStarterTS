@@ -1320,7 +1320,42 @@ export class CombatScene extends Phaser.Scene {
         player.experience = serverNewExperience;
         this.gameState.updatePlayer(player);
         
-        // Save state after combat victory (persists HP/SP, durability, inventory changes)
+        // CRITICAL: Add loot items to inventory BEFORE save to prevent loss on disconnect
+        // Items must be persisted before showing victory screen
+        interface LootItemInfo {
+          name: string;
+          enhancementLevel: number;
+          isShiny: boolean;
+        }
+        const itemsAdded: LootItemInfo[] = [];
+        const itemsFailed: LootItemInfo[] = [];
+        
+        for (const lootItem of allLoot) {
+          const item = ItemDatabase.getItem(lootItem.itemId);
+          if (item) {
+            const targetEnhancement = lootItem.enhancementLevel || 0;
+            if (this.gameState.addItemToInventory(lootItem.itemId, 1, targetEnhancement)) {
+              // Find the most recently added item by matching both itemId and enhancementLevel
+              const updatedPlayer = this.gameState.getPlayer();
+              const addedItem = updatedPlayer.inventory.slice().reverse().find(invItem => 
+                invItem.itemId === lootItem.itemId && invItem.enhancementLevel === targetEnhancement
+              );
+              itemsAdded.push({
+                name: item.name,
+                enhancementLevel: addedItem?.enhancementLevel || targetEnhancement,
+                isShiny: addedItem?.isShiny || false
+              });
+            } else {
+              itemsFailed.push({
+                name: item.name,
+                enhancementLevel: targetEnhancement,
+                isShiny: false
+              });
+            }
+          }
+        }
+        
+        // Save state after combat victory (persists HP/SP, durability, AND inventory with new items)
         await this.gameState.saveToServer();
         
       } catch (error) {
@@ -1330,7 +1365,7 @@ export class CombatScene extends Phaser.Scene {
         return;
       }
       
-      this.showVictoryScreen(totalAaReward, totalCaReward, totalXpReward, serverNewLevel, allLoot, durabilityMessages);
+      this.showVictoryScreen(totalAaReward, totalCaReward, totalXpReward, serverNewLevel, itemsAdded, itemsFailed, durabilityMessages);
     } else {
       // Save state after combat defeat (persists HP/SP state)
       await this.gameState.saveToServer();
@@ -1338,7 +1373,15 @@ export class CombatScene extends Phaser.Scene {
     }
   }
 
-  private showVictoryScreen(aa: number, ca: number, xp: number, newLevel: number | null, loot: Array<{ itemId: string; enhancementLevel?: number }>, durabilityMessages: string[]): void {
+  private showVictoryScreen(
+    aa: number, 
+    ca: number, 
+    xp: number, 
+    newLevel: number | null, 
+    itemsAdded: Array<{ name: string; enhancementLevel: number; isShiny: boolean }>,
+    itemsFailed: Array<{ name: string; enhancementLevel: number; isShiny: boolean }>,
+    durabilityMessages: string[]
+  ): void {
     const { width, height } = this.cameras.main;
     
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
@@ -1364,41 +1407,6 @@ export class CombatScene extends Phaser.Scene {
     }
 
     const baseRewardText = `Rewards:\n+${aa} AA\n+${ca.toFixed(1)} CA\n+${xp} XP`;
-    
-    interface LootItemInfo {
-      name: string;
-      enhancementLevel?: number;
-      isShiny?: boolean;
-    }
-    
-    const itemsAdded: LootItemInfo[] = [];
-    const itemsFailed: LootItemInfo[] = [];
-    
-    const player = this.gameState.getPlayer();
-    
-    for (const lootItem of loot) {
-      const item = ItemDatabase.getItem(lootItem.itemId);
-      if (item) {
-        const targetEnhancement = lootItem.enhancementLevel || 0;
-        if (this.gameState.addItemToInventory(lootItem.itemId, 1, targetEnhancement)) {
-          // Find the most recently added item by matching both itemId and enhancementLevel
-          const addedItem = player.inventory.slice().reverse().find(invItem => 
-            invItem.itemId === lootItem.itemId && invItem.enhancementLevel === targetEnhancement
-          );
-          itemsAdded.push({
-            name: item.name,
-            enhancementLevel: addedItem?.enhancementLevel || targetEnhancement,
-            isShiny: addedItem?.isShiny || false
-          });
-        } else {
-          itemsFailed.push({
-            name: item.name,
-            enhancementLevel: targetEnhancement,
-            isShiny: false
-          });
-        }
-      }
-    }
     
     let currentY = height / 2 - 20;
     const lineHeight = 20;
