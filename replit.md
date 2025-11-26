@@ -78,7 +78,14 @@ This is a long-term solo project built collaboratively with an AI assistant. The
   - **Security Headers**: Helmet.js configured with CSP for Phaser game (allows inline scripts for game engine), cross-origin policies for Replit iframe embedding
   - **RNG Seed Removal**: RNG seeds no longer returned in API responses (delve/loot endpoints) to prevent predictability exploits
   - **Hosting**: Replit provides WAF protection for deployed applications
-- **Loot Reward Persistence Fix (2025-11-26)**: Critical bug fix - currency (Arcane Ash) and XP rewards are now persisted to the database immediately when loot is rolled via `/api/loot/roll`. Previously, rewards were only returned to client but never saved, causing them to be lost when the security system stripped client-submitted values and re-injected database values (which were 0). XP calculation: 5 × tier for normal enemies, 15 × tier for bosses. Delve completion grants 25 × tier XP via `/api/delve/complete` endpoint.
+- **Server-Authoritative Economy System (2025-11-26)**: Comprehensive overhaul ensuring all currency transactions are atomic and server-controlled:
+  - **Combat Rewards**: CombatScene calls `/api/loot/roll` for each defeated enemy. Server persists AA, CA (0.3×tier), and XP immediately to database. No client-side fallback (shows error on connection failure to prevent exploitation).
+  - **Shop Purchases**: `/api/shop/purchase` endpoint validates item availability, deducts currency atomically, adds item to inventory, and saves to database. TownScene uses server response for authoritative balances.
+  - **Item Repairs**: `/api/repair/attempt` (single) and `/api/repair/bulk` (multiple) endpoints handle durability restoration. Currency is deducted server-side before durability is updated.
+  - **Forging**: `/api/forge/attempt` handles enhancement with atomic currency deduction and item updates.
+  - **Soulbinding**: `/api/soulbound/slots` deducts CA per newly bound item.
+  - **All client currency modifications have been removed** - player balances come exclusively from server responses.
+- **XP Rewards**: 5 × tier for normal enemies, 15 × tier for bosses. Delve completion grants 25 × tier XP via `/api/delve/complete` endpoint.
 
 ## External Dependencies
 

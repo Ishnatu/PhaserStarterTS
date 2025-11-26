@@ -7,6 +7,8 @@ import { registerCombatRoutes } from "./routes/combat";
 import { registerDelveRoutes } from "./routes/delve";
 import { registerLootRoutes } from "./routes/loot";
 import { registerForgeRoutes } from "./routes/forge";
+import { registerShopRoutes } from "./routes/shop";
+import { registerRepairRoutes } from "./routes/repair";
 import { 
   validateSavePayload, 
   recalculatePlayerStats, 
@@ -222,6 +224,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register forge routes (server-authoritative item enhancement)
   registerForgeRoutes(app);
+
+  // Register shop routes (server-authoritative shop purchases)
+  registerShopRoutes(app);
+
+  // Register repair routes (server-authoritative item repairs)
+  registerRepairRoutes(app);
 
   // Logout endpoint
   app.post('/api/auth/logout', async (req, res) => {

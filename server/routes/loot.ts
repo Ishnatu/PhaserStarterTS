@@ -40,15 +40,18 @@ export function registerLootRoutes(app: Express) {
       const items = lootEngine.rollLoot(tier, isBoss || false);
       const arcaneAsh = lootEngine.rollCurrencyReward(tier, isBoss || false);
       
+      // Calculate CA reward: 0.3 × tier per enemy
+      const crystallineAnimus = 0.3 * tier;
+      
       // Calculate XP reward using LootEngine (T1 mob = 5 XP, T1 boss = 15 XP, scales with tier)
       const xpReward = lootEngine.rollExperienceReward(tier, isBoss || false);
 
       // CRITICAL: Ensure player currency record exists before adding rewards
       await storage.ensurePlayerCurrency(userId, 0, 0);
       
-      // CRITICAL: Persist currency reward to database immediately
+      // CRITICAL: Persist currency rewards (both AA and CA) to database immediately
       // This ensures the reward survives the save/load security sanitization
-      const updatedCurrency = await storage.addCurrency(userId, arcaneAsh, 0);
+      const updatedCurrency = await storage.addCurrency(userId, arcaneAsh, crystallineAnimus);
       
       // CRITICAL: Persist XP reward to database immediately
       const xpResult = await storage.grantExperience(userId, xpReward);
@@ -58,6 +61,7 @@ export function registerLootRoutes(app: Express) {
         loot: {
           items,
           arcaneAsh,
+          crystallineAnimus,
         },
         xpReward,
         leveledUp: xpResult.leveledUp,

@@ -1616,7 +1616,7 @@ export class TownScene extends Phaser.Scene {
     renderShop();
   }
 
-  private purchaseItem(itemId: string, price: number, currency: 'AA' | 'CA'): void {
+  private async purchaseItem(itemId: string, price: number, currency: 'AA' | 'CA'): Promise<void> {
     const player = this.gameState.getPlayer();
     
     const playerCurrency = currency === 'AA' ? player.arcaneAsh : player.crystallineAnimus;
@@ -1633,24 +1633,41 @@ export class TownScene extends Phaser.Scene {
       return;
     }
 
-    if (currency === 'AA') {
-      player.arcaneAsh -= price;
-    } else {
-      player.crystallineAnimus -= price;
-    }
-    
-    const existing = player.inventory.find(item => item.itemId === itemId);
-    if (existing) {
-      existing.quantity += 1;
-    } else {
-      player.inventory.push({ itemId, quantity: 1 });
-    }
+    try {
+      const response = await fetch('/api/shop/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ itemId, price, currency }),
+      });
 
-    this.gameState.updatePlayer(player);
-    
-    const item = ItemDatabase.getItem(itemId);
-    this.showMessage(`Purchased ${item?.name || 'item'} for ${price} ${currency}!`);
-    this.updatePlayerDisplay();
+      if (!response.ok) {
+        const error = await response.json();
+        this.showMessage(error.message || 'Purchase failed!');
+        return;
+      }
+
+      const result = await response.json();
+
+      if (result.newArcaneAsh !== undefined) {
+        player.arcaneAsh = result.newArcaneAsh;
+      }
+      if (result.newCrystallineAnimus !== undefined) {
+        player.crystallineAnimus = result.newCrystallineAnimus;
+      }
+      if (result.inventory) {
+        player.inventory = result.inventory;
+      }
+
+      this.gameState.updatePlayer(player);
+      
+      const item = ItemDatabase.getItem(itemId);
+      this.showMessage(`Purchased ${item?.name || 'item'} for ${price} ${currency}!`);
+      this.updatePlayerDisplay();
+    } catch (error) {
+      console.error('Purchase error:', error);
+      this.showMessage('Purchase failed - please try again');
+    }
   }
 
   private openForge(): void {
@@ -2085,7 +2102,7 @@ export class TownScene extends Phaser.Scene {
     }
   }
 
-  private attemptRepair(itemData: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }, currency: 'AA' | 'CA'): void {
+  private async attemptRepair(itemData: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null; inventoryIndex?: number }, currency: 'AA' | 'CA'): Promise<void> {
     const player = this.gameState.getPlayer();
     const cost = ForgingSystem.getRepairCost(itemData.item);
     
@@ -2099,26 +2116,74 @@ export class TownScene extends Phaser.Scene {
         this.showMessage(`Insufficient funds! Need ${cost.aa} AA`);
         return;
       }
-      player.arcaneAsh -= cost.aa;
     } else {
       if (player.crystallineAnimus < cost.ca) {
         this.showMessage(`Insufficient funds! Need ${cost.ca.toFixed(2)} CA`);
         return;
       }
-      player.crystallineAnimus -= cost.ca;
     }
-    
-    ForgingSystem.repairItem(itemData.item);
-    
+
+    let itemLocation: 'equipment' | 'inventory';
+    let itemIndex: number | undefined;
+    let slotName: string | undefined;
+
     if (itemData.equippedSlot) {
-      player.equipment[itemData.equippedSlot] = itemData.item;
+      itemLocation = 'equipment';
+      slotName = itemData.equippedSlot;
+    } else if (itemData.inventoryIndex !== undefined) {
+      itemLocation = 'inventory';
+      itemIndex = itemData.inventoryIndex;
+    } else {
+      itemIndex = player.inventory.findIndex(i => i === itemData.item);
+      if (itemIndex === -1) {
+        this.showMessage('Item not found!');
+        return;
+      }
+      itemLocation = 'inventory';
     }
-    
-    this.gameState.updatePlayer(player);
-    
-    const costText = currency === 'AA' ? `${cost.aa} AA` : `${cost.ca.toFixed(2)} CA`;
-    this.showMessage(`Item repaired for ${costText}!`);
-    this.updatePlayerDisplay();
+
+    try {
+      const response = await fetch('/api/repair/attempt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          itemLocation,
+          itemIndex,
+          slotName,
+          currency,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        this.showMessage(error.message || 'Repair failed!');
+        return;
+      }
+
+      const result = await response.json();
+
+      if (result.newArcaneAsh !== undefined) {
+        player.arcaneAsh = result.newArcaneAsh;
+      }
+      if (result.newCrystallineAnimus !== undefined) {
+        player.crystallineAnimus = result.newCrystallineAnimus;
+      }
+
+      itemData.item.durability = result.newDurability;
+      
+      if (itemData.equippedSlot) {
+        player.equipment[itemData.equippedSlot] = itemData.item;
+      }
+      
+      this.gameState.updatePlayer(player);
+      
+      this.showMessage(result.message);
+      this.updatePlayerDisplay();
+    } catch (error) {
+      console.error('Repair error:', error);
+      this.showMessage('Repair failed - please try again');
+    }
   }
 
   private showRepairAllConfirmation(repairableItems: Array<{ item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }>): void {
@@ -2182,7 +2247,7 @@ export class TownScene extends Phaser.Scene {
     uiElements.push(cancelBtn);
   }
 
-  private executeRepairAll(repairableItems: Array<{ item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }>, currency: 'AA' | 'CA'): void {
+  private async executeRepairAll(repairableItems: Array<{ item: InventoryItem; equippedSlot: keyof PlayerEquipment | null; inventoryIndex?: number }>, currency: 'AA' | 'CA'): Promise<void> {
     const player = this.gameState.getPlayer();
     
     let totalAA = 0;
@@ -2199,31 +2264,64 @@ export class TownScene extends Phaser.Scene {
         this.showMessage(`Insufficient funds! Need ${totalAA} AA`);
         return;
       }
-      player.arcaneAsh -= totalAA;
     } else {
       if (player.crystallineAnimus < totalCA) {
         this.showMessage(`Insufficient funds! Need ${totalCA.toFixed(2)} CA`);
         return;
       }
-      player.crystallineAnimus -= totalCA;
     }
 
-    let repairedCount = 0;
-    for (const itemData of repairableItems) {
-      ForgingSystem.repairItem(itemData.item);
+    const items = repairableItems.map((itemData, idx) => {
       if (itemData.equippedSlot) {
-        player.equipment[itemData.equippedSlot] = itemData.item;
+        return { location: 'equipment', slotName: itemData.equippedSlot };
+      } else if (itemData.inventoryIndex !== undefined) {
+        return { location: 'inventory', index: itemData.inventoryIndex };
+      } else {
+        const index = player.inventory.findIndex(i => i === itemData.item);
+        return { location: 'inventory', index };
       }
-      repairedCount++;
-    }
+    });
 
-    this.gameState.updatePlayer(player);
-    
-    const costText = currency === 'AA' ? `${totalAA} AA` : `${totalCA.toFixed(2)} CA`;
-    this.showMessage(`Repaired ${repairedCount} items for ${costText}!`);
-    this.updatePlayerDisplay();
-    
-    this.openForge();
+    try {
+      const response = await fetch('/api/repair/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ items, currency }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        this.showMessage(error.message || 'Bulk repair failed!');
+        return;
+      }
+
+      const result = await response.json();
+
+      if (result.newArcaneAsh !== undefined) {
+        player.arcaneAsh = result.newArcaneAsh;
+      }
+      if (result.newCrystallineAnimus !== undefined) {
+        player.crystallineAnimus = result.newCrystallineAnimus;
+      }
+
+      for (const itemData of repairableItems) {
+        itemData.item.durability = itemData.item.maxDurability || 100;
+        if (itemData.equippedSlot) {
+          player.equipment[itemData.equippedSlot] = itemData.item;
+        }
+      }
+
+      this.gameState.updatePlayer(player);
+      
+      this.showMessage(result.message);
+      this.updatePlayerDisplay();
+      
+      this.openForge();
+    } catch (error) {
+      console.error('Bulk repair error:', error);
+      this.showMessage('Bulk repair failed - please try again');
+    }
   }
 
   private async attemptForging(itemData: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null; inventoryIndex?: number }): Promise<void> {

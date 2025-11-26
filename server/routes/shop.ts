@@ -1,0 +1,106 @@
+import { Express } from "express";
+import { isAuthenticated } from "../replitAuth";
+import { storage } from "../storage";
+import { recalculatePlayerStats } from "../security";
+
+interface ShopItem {
+  itemId: string;
+  price: number;
+  currency: 'AA' | 'CA';
+}
+
+const SHOP_INVENTORY: ShopItem[] = [
+  { itemId: 'potion_health', price: 50, currency: 'AA' },
+  { itemId: 'potion_stamina', price: 50, currency: 'AA' },
+];
+
+export function registerShopRoutes(app: Express) {
+  app.post("/api/shop/purchase", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { itemId, price, currency } = req.body;
+
+      if (!itemId || typeof price !== 'number' || !['AA', 'CA'].includes(currency)) {
+        return res.status(400).json({ message: "Invalid purchase request" });
+      }
+
+      const shopItem = SHOP_INVENTORY.find(item => item.itemId === itemId);
+      if (!shopItem) {
+        return res.status(400).json({ message: "Item not available in shop" });
+      }
+
+      if (shopItem.price !== price || shopItem.currency !== currency) {
+        return res.status(400).json({ message: "Price mismatch - please refresh shop" });
+      }
+
+      const gameSave = await storage.getGameSaveByUserId(userId);
+      if (!gameSave) {
+        return res.status(404).json({ message: "No save found" });
+      }
+
+      const saveData = gameSave.saveData as any;
+      const player = saveData.player;
+
+      const totalInventory = player.inventory.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0);
+      if (totalInventory >= (player.inventorySlots || 15)) {
+        return res.status(400).json({ message: "Inventory is full!" });
+      }
+
+      const playerCurrency = await storage.getPlayerCurrency(userId);
+      if (!playerCurrency) {
+        return res.status(400).json({ message: "Player currency not found" });
+      }
+
+      const hasEnough = currency === 'AA' 
+        ? playerCurrency.arcaneAsh >= price 
+        : playerCurrency.crystallineAnimus >= price;
+
+      if (!hasEnough) {
+        const currencyName = currency === 'AA' ? 'Arcane Ash' : 'Crystalline Animus';
+        return res.status(400).json({ message: `Not enough ${currencyName}!` });
+      }
+
+      const deductResult = currency === 'AA'
+        ? await storage.deductCurrency(userId, price, 0)
+        : await storage.deductCurrency(userId, 0, price);
+
+      if (!deductResult) {
+        return res.status(400).json({ message: "Failed to deduct currency" });
+      }
+
+      const existing = player.inventory.find((item: any) => item.itemId === itemId);
+      if (existing) {
+        existing.quantity = (existing.quantity || 1) + 1;
+      } else {
+        player.inventory.push({ itemId, quantity: 1 });
+      }
+
+      player.stats = recalculatePlayerStats(player.equipment || {});
+
+      await storage.saveGame({
+        userId,
+        saveData
+      });
+
+      res.json({
+        success: true,
+        message: `Purchased item for ${price} ${currency}!`,
+        newArcaneAsh: deductResult.arcaneAsh,
+        newCrystallineAnimus: deductResult.crystallineAnimus,
+        inventory: player.inventory
+      });
+    } catch (error) {
+      console.error("Error in shop purchase:", error);
+      res.status(500).json({ message: "Failed to complete purchase" });
+    }
+  });
+
+  app.get("/api/shop/inventory", isAuthenticated, async (req: any, res) => {
+    try {
+      res.json({ items: SHOP_INVENTORY });
+    } catch (error) {
+      console.error("Error getting shop inventory:", error);
+      res.status(500).json({ message: "Failed to get shop inventory" });
+    }
+  });
+}

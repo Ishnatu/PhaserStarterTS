@@ -1220,7 +1220,7 @@ export class CombatScene extends Phaser.Scene {
     });
   }
 
-  private endCombat(): void {
+  private async endCombat(): Promise<void> {
     const state = this.combatSystem.getCombatState();
     if (!state) return;
 
@@ -1246,42 +1246,72 @@ export class CombatScene extends Phaser.Scene {
       // Save durability changes
       this.gameState.updatePlayer(player);
       
-      // Calculate AA rewards - sum per enemy using their tier field
-      let totalAaReward = 0;
-      
-      state.enemies.forEach(enemy => {
-        totalAaReward += EnemyFactory.rollCurrencyReward(enemy.tier, enemy.isBoss);
-      });
-      
-      const caReward = 0.3 * this.currentDelve.tier;
-      
-      this.gameState.addArcaneAsh(totalAaReward);
-      this.gameState.addCrystallineAnimus(caReward);
-      
-      // Calculate XP reward based on enemy type and tier
+      // SERVER-AUTHORITATIVE: Roll loot and rewards via API for each enemy
+      // This persists AA and XP to the database immediately
       const isBossEncounter = state.enemies.some(enemy => enemy.isBoss);
-      const xpAction = isBossEncounter ? 'boss' : 'mob';
-      const xpReward = getXpReward(this.currentDelve.tier, xpAction);
+      let totalAaReward = 0;
+      let totalXpReward = 0;
+      let serverNewLevel: number | null = null;
+      let serverNewExperience: number = player.experience;
+      const allLoot: Array<{ itemId: string; enhancementLevel?: number }> = [];
       
-      // Check for level-up
-      const oldXp = player.experience;
-      const newXp = oldXp + xpReward;
-      const newLevel = getNewLevel(oldXp, newXp);
+      let totalCaReward = 0;
       
-      // Update player XP and level
-      if (newLevel !== null) {
-        this.gameState.updatePlayer({ experience: newXp, level: newLevel });
-      } else {
-        this.gameState.updatePlayer({ experience: newXp });
+      try {
+        // Call server for each enemy to get loot and rewards
+        for (const enemy of state.enemies) {
+          const response = await fetch('/api/loot/roll', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              enemyName: enemy.name,
+              tier: enemy.tier,
+              isBoss: enemy.isBoss,
+              playerLevel: player.level,
+            }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            
+            // Accumulate rewards
+            totalAaReward += result.loot?.arcaneAsh || 0;
+            totalCaReward += result.loot?.crystallineAnimus || 0;
+            totalXpReward += result.xpReward || 0;
+            
+            // Collect loot items
+            if (result.loot?.items) {
+              allLoot.push(...result.loot.items);
+            }
+            
+            // Update server-authoritative values
+            if (result.newArcaneAsh !== undefined) {
+              player.arcaneAsh = result.newArcaneAsh;
+            }
+            if (result.newCrystallineAnimus !== undefined) {
+              player.crystallineAnimus = result.newCrystallineAnimus;
+            }
+            if (result.leveledUp) {
+              serverNewLevel = result.newLevel;
+            }
+            serverNewExperience = result.newExperience;
+          }
+        }
+        
+        // Update player with server-authoritative level/XP
+        player.level = serverNewLevel !== null ? serverNewLevel : player.level;
+        player.experience = serverNewExperience;
+        this.gameState.updatePlayer(player);
+        
+      } catch (error) {
+        console.error('Error rolling loot from server:', error);
+        // Show error and return to wilderness without rewards (server-authoritative - no fallback)
+        this.showRewardError();
+        return;
       }
       
-      const allLoot: Array<{ itemId: string; enhancementLevel?: number }> = [];
-      state.enemies.forEach(enemy => {
-        const loot = EnemyFactory.rollLoot(enemy);
-        allLoot.push(...loot);
-      });
-      
-      this.showVictoryScreen(totalAaReward, caReward, xpReward, newLevel, allLoot, durabilityMessages);
+      this.showVictoryScreen(totalAaReward, totalCaReward, totalXpReward, serverNewLevel, allLoot, durabilityMessages);
     } else {
       this.showDefeatScreen();
     }
@@ -1422,6 +1452,36 @@ export class CombatScene extends Phaser.Scene {
       const audioManager = AudioManager.getInstance();
       audioManager.restorePreviousMusic(this);
       
+      if (this.isWildEncounter) {
+        SceneManager.getInstance().transitionTo('explore', { returnToLocation: this.returnToLocation });
+      } else {
+        SceneManager.getInstance().transitionTo('delve', { 
+          delve: this.currentDelve,
+          returnToLocation: this.returnToLocation 
+        });
+      }
+    });
+  }
+
+  private showRewardError(): void {
+    const { width, height } = this.cameras.main;
+    
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
+    
+    this.add.text(width / 2, height / 2 - 40, 'CONNECTION ERROR', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#ff6666',
+    }).setOrigin(0.5);
+
+    this.add.text(width / 2, height / 2, 'Failed to claim rewards.\nYour victory was not recorded.', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#cccccc',
+      align: 'center',
+    }).setOrigin(0.5);
+
+    this.createMenuButton(width / 2, height / 2 + 60, 'Continue', () => {
       if (this.isWildEncounter) {
         SceneManager.getInstance().transitionTo('explore', { returnToLocation: this.returnToLocation });
       } else {
