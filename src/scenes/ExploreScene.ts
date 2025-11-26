@@ -266,7 +266,9 @@ export class ExploreScene extends Phaser.Scene {
       state.discoveredDelves.forEach(delve => {
         // Don't create markers for completed delves
         if (!this.gameState.isDelveCompleted(delve.x, delve.y)) {
-          const marker = this.createDelveMarker(delve.x, delve.y, delve.tier);
+          // Default to tier 1 if tier is undefined (legacy data fix)
+          const tier = delve.tier ?? 1;
+          const marker = this.createDelveMarker(delve.x, delve.y, tier);
           this.delveMarkers.push(marker);
         }
       });
@@ -436,12 +438,15 @@ export class ExploreScene extends Phaser.Scene {
   }
 
   private createDelveMarker(x: number, y: number, tier: number): Phaser.GameObjects.Container {
+    // Safety fallback: default to tier 1 if undefined
+    const safeTier = tier ?? 1;
+    
     const entrance = this.add.sprite(0, 0, 'delve-entrance');
     entrance.setScale(0.15);
     entrance.setOrigin(0.5, 0.75);
     
     const glow = this.add.circle(0, 0, 32, 0x8844ff, 0.2);
-    const label = this.add.text(0, -60, `Delve T${tier}`, {
+    const label = this.add.text(0, -60, `Delve T${safeTier}`, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#aa88ff',
@@ -458,7 +463,7 @@ export class ExploreScene extends Phaser.Scene {
     });
 
     const container = this.add.container(x, y, [glow, entrance, label]);
-    container.setData('tier', tier);
+    container.setData('tier', safeTier);
     container.setDepth(7);
     
     return container;
@@ -637,9 +642,12 @@ export class ExploreScene extends Phaser.Scene {
     uiElements.push(leaveBtn);
   }
 
-  private enterDelve(tier: number, x: number, y: number): void{
+  private enterDelve(tier: number, x: number, y: number): void {
+    // Safety fallback: default to tier 1 if undefined
+    const safeTier = tier ?? 1;
+    
     const generator = new DelveGenerator();
-    const delve = generator.generateDelve(tier);
+    const delve = generator.generateDelve(safeTier);
     delve.location = { x, y };
     
     SceneManager.getInstance().transitionTo('delve', { delve });
