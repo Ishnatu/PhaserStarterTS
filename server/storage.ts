@@ -60,6 +60,7 @@ export interface IStorage {
   getPlayerCurrency(playerId: string): Promise<PlayerCurrency | undefined>;
   ensurePlayerCurrency(playerId: string, arcaneAsh: number, crystallineAnimus: number): Promise<PlayerCurrency>;
   deductCrystallineAnimus(playerId: string, amount: number): Promise<PlayerCurrency | null>;
+  deductCurrency(playerId: string, arcaneAsh: number, crystallineAnimus: number): Promise<PlayerCurrency | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -395,6 +396,27 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(playerCurrencies.playerId, playerId),
           drizzleSql`${playerCurrencies.crystallineAnimus} >= ${amount}`
+        )
+      )
+      .returning();
+    
+    return updated || null;
+  }
+
+  async deductCurrency(playerId: string, arcaneAsh: number, crystallineAnimus: number): Promise<PlayerCurrency | null> {
+    // Atomic update - deduct only if sufficient balance for BOTH currencies
+    const [updated] = await db
+      .update(playerCurrencies)
+      .set({
+        arcaneAsh: drizzleSql`${playerCurrencies.arcaneAsh} - ${arcaneAsh}`,
+        crystallineAnimus: drizzleSql`${playerCurrencies.crystallineAnimus} - ${crystallineAnimus}`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(playerCurrencies.playerId, playerId),
+          drizzleSql`${playerCurrencies.arcaneAsh} >= ${arcaneAsh}`,
+          drizzleSql`${playerCurrencies.crystallineAnimus} >= ${crystallineAnimus}`
         )
       )
       .returning();

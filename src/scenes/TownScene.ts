@@ -1657,7 +1657,7 @@ export class TownScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
     const uiElements: Phaser.GameObjects.GameObject[] = [];
-    let selectedItem: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null } | null = null;
+    let selectedItem: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null; inventoryIndex?: number } | null = null;
     let mode: 'enhance' | 'repair' = 'enhance';
 
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
@@ -1804,14 +1804,16 @@ export class TownScene extends Phaser.Scene {
     renderForge();
   }
 
-  private renderEnhanceMode(uiElements: Phaser.GameObjects.GameObject[], selectedItem: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null } | null, onSelect: (item: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null } | null) => void): void {
+  private renderEnhanceMode(uiElements: Phaser.GameObjects.GameObject[], selectedItem: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null; inventoryIndex?: number } | null, onSelect: (item: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null; inventoryIndex?: number } | null) => void): void {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
     
-    const forgeableItems: Array<{ item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }> = [];
+    const forgeableItems: Array<{ item: InventoryItem; equippedSlot: keyof PlayerEquipment | null; inventoryIndex?: number }> = [];
     
-    player.inventory.filter(item => ForgingSystem.canForgeItem(item)).forEach(item => {
-      forgeableItems.push({ item, equippedSlot: null });
+    player.inventory.forEach((item, index) => {
+      if (ForgingSystem.canForgeItem(item)) {
+        forgeableItems.push({ item, equippedSlot: null, inventoryIndex: index });
+      }
     });
     
     Object.entries(player.equipment).forEach(([slot, equipped]) => {
@@ -2224,7 +2226,7 @@ export class TownScene extends Phaser.Scene {
     this.openForge();
   }
 
-  private attemptForging(itemData: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null }): void {
+  private async attemptForging(itemData: { item: InventoryItem; equippedSlot: keyof PlayerEquipment | null; inventoryIndex?: number }): Promise<void> {
     const player = this.gameState.getPlayer();
     const targetLevel = (itemData.item.enhancementLevel || 0) + 1;
     const cost = ForgingSystem.getForgingCost(targetLevel);
@@ -2238,33 +2240,88 @@ export class TownScene extends Phaser.Scene {
       this.showMessage(`Insufficient funds! Need ${cost.aa} AA and ${cost.ca.toFixed(1)} CA`);
       return;
     }
-    
-    const result = ForgingSystem.attemptForging(itemData.item, player.arcaneAsh, player.crystallineAnimus);
 
-    player.arcaneAsh -= cost.aa;
-    player.crystallineAnimus -= cost.ca;
+    // Determine item location for server API
+    let itemLocation: 'equipment' | 'inventory' | 'footlocker';
+    let itemIndex: number | undefined;
+    let slotName: string | undefined;
 
-    if (!result.success && result.destroyed) {
-      if (itemData.equippedSlot) {
-        player.equipment[itemData.equippedSlot] = undefined;
-      } else {
-        this.gameState.removeItemFromInventory(itemData.item.itemId, 1);
+    if (itemData.equippedSlot) {
+      itemLocation = 'equipment';
+      slotName = itemData.equippedSlot;
+    } else if (itemData.inventoryIndex !== undefined) {
+      itemLocation = 'inventory';
+      itemIndex = itemData.inventoryIndex;
+    } else {
+      // Fallback: find item in inventory by reference
+      itemIndex = player.inventory.findIndex(i => i === itemData.item);
+      if (itemIndex === -1) {
+        this.showMessage('Item not found!');
+        return;
       }
+      itemLocation = 'inventory';
+    }
+
+    try {
+      const response = await fetch('/api/forge/attempt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          itemLocation,
+          itemIndex,
+          slotName,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        this.showMessage(error.message || 'Forging failed!');
+        return;
+      }
+
+      const result = await response.json();
+
+      // Update local player state with server-authoritative values
+      if (result.newArcaneAsh !== undefined) {
+        player.arcaneAsh = result.newArcaneAsh;
+      }
+      if (result.newCrystallineAnimus !== undefined) {
+        player.crystallineAnimus = result.newCrystallineAnimus;
+      }
+
+      if (result.destroyed) {
+        // Item was destroyed - reload the save to get updated state
+        const saveData = await ApiClient.loadGame();
+        if (saveData) {
+          this.gameState.loadFromObject(saveData);
+        }
+      } else {
+        // Update the item in local state
+        itemData.item.enhancementLevel = result.newLevel;
+        if (result.newDurability !== undefined) {
+          itemData.item.durability = result.newDurability;
+        }
+        if (result.newMaxDurability !== undefined) {
+          itemData.item.maxDurability = result.newMaxDurability;
+        }
+        if (result.shinyCreated) {
+          itemData.item.isShiny = true;
+        }
+
+        if (itemData.equippedSlot) {
+          player.equipment[itemData.equippedSlot] = itemData.item;
+        }
+      }
+
       this.gameState.updatePlayer(player);
       this.showMessage(result.message);
       this.updatePlayerDisplay();
-      return;
-    }
 
-    itemData.item.enhancementLevel = result.newLevel;
-    
-    if (itemData.equippedSlot) {
-      player.equipment[itemData.equippedSlot] = itemData.item;
+    } catch (error) {
+      console.error('Error calling forge API:', error);
+      this.showMessage('Failed to connect to server for forging!');
     }
-    
-    this.gameState.updatePlayer(player);
-    this.showMessage(result.message);
-    this.updatePlayerDisplay();
   }
 
   private openInn(): void {

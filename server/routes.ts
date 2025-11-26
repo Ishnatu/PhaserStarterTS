@@ -6,6 +6,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { registerCombatRoutes } from "./routes/combat";
 import { registerDelveRoutes } from "./routes/delve";
 import { registerLootRoutes } from "./routes/loot";
+import { registerForgeRoutes } from "./routes/forge";
 import { 
   validateSavePayload, 
   recalculatePlayerStats, 
@@ -218,6 +219,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register loot rolling routes (server-authoritative loot system)
   registerLootRoutes(app);
+
+  // Register forge routes (server-authoritative item enhancement)
+  registerForgeRoutes(app);
 
   // Logout endpoint
   app.post('/api/auth/logout', async (req, res) => {
