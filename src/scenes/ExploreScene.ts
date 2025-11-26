@@ -94,6 +94,13 @@ export class ExploreScene extends Phaser.Scene {
   create() {
     this.gameState = GameStateManager.getInstance();
     this.gameState.setScene('explore');
+    
+    // Reset encounter state - ensures fresh encounters after death/respawn
+    this.movementStepCounter = 0;
+    this.encounterCooldown = false;
+    this.isOverlayActive = false;
+    this.menuState = 'none';
+    this.currentMenuCloseFunction = null;
 
     const { width, height } = this.cameras.main;
 
