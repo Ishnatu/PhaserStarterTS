@@ -835,7 +835,7 @@ export class CombatSystem {
   }
 
   /**
-   * Bloodfury - Vampiric attack that heals player
+   * Bloodfury - Heals player for 50% of damage dealt, but ONLY if target is bleeding
    * [SERVER RNG] Attack roll, damage roll
    */
   private executeBloodfury(state: CombatState, targetIndex: number, attack: WeaponAttack): { state: CombatState; result: AttackResult } {
@@ -879,11 +879,19 @@ export class CombatSystem {
     target.health = Math.max(0, target.health - damage);
     this.trackDamageToEnemy(newState, target, damage);
 
-    // Heal for 50% of damage dealt
-    const healing = Math.floor(damage * 0.5);
-    newState.player.health = Math.min(newState.player.maxHealth, newState.player.health + healing);
-
-    let logMessage = `Bloodfury hits ${target.name}! ${damageRollInfo} -> ${damage} damage, healed ${healing} HP`;
+    // Only heal if target is bleeding - this is a one-time heal for this attack only
+    const targetIsBleeding = ConditionManager.hasCondition(target, 'bleeding');
+    let healing = 0;
+    let logMessage: string;
+    
+    if (targetIsBleeding) {
+      healing = Math.floor(damage * 0.5);
+      newState.player.health = Math.min(newState.player.maxHealth, newState.player.health + healing);
+      logMessage = `Bloodfury hits ${target.name}! ${damageRollInfo} -> ${damage} damage, healed ${healing} HP from bleeding target!`;
+    } else {
+      logMessage = `Bloodfury hits ${target.name}! ${damageRollInfo} -> ${damage} damage (no heal - target not bleeding)`;
+    }
+    
     newState.combatLog.push(logMessage);
 
     if (target.health <= 0) {
@@ -901,7 +909,7 @@ export class CombatSystem {
         critical: attackResult.critical,
         attackRoll: attackResult.d20,
         damage,
-        healing,
+        healing: targetIsBleeding ? healing : undefined,
         message: logMessage,
       }
     };
