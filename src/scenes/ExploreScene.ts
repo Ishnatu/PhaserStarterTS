@@ -546,7 +546,13 @@ export class ExploreScene extends Phaser.Scene {
       const tombstone = tombstones.find((t: any) => t.id === tombstoneId);
       
       if (!tombstone) {
-        this.showMessage('Tombstone has already been looted or expired');
+        this.showMessage('On investigation, it appears someone has been here already');
+        // Remove the marker from the map since it's already looted
+        const marker = this.tombstoneMarkers.get(tombstoneId);
+        if (marker) {
+          marker.destroy();
+          this.tombstoneMarkers.delete(tombstoneId);
+        }
         this.isOverlayActive = false;
         return;
       }
