@@ -224,6 +224,28 @@ export function registerCombatRoutes(app: Express) {
       const diceRoller = new DiceRoller(rng);
       const combatSystem = new CombatSystem(diceRoller);
 
+      // Process player turn start if this is the first action of the player's turn
+      // This ticks player conditions (poison, bleed) at the proper time
+      let currentState = session.combatState;
+      if (currentState.currentTurn === 'player' && 
+          currentState.actionsRemaining === currentState.maxActionsPerTurn &&
+          !currentState.turnStartProcessed) {
+        currentState = combatSystem.playerTurnStart(currentState);
+        currentState.turnStartProcessed = true;
+        session.combatState = currentState;
+        
+        // Check if player died from condition damage
+        if (currentState.isComplete) {
+          activeCombatSessions.delete(sessionId);
+          return res.json({
+            success: true,
+            combatState: currentState,
+            combatEnded: true,
+            result: { message: "You succumbed to your conditions..." },
+          });
+        }
+      }
+
       // Process action server-side
       let updatedState: CombatState;
       let actionResult: any = null;

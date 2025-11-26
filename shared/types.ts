@@ -183,6 +183,7 @@ export interface CombatState {
   actionsRemaining: number;
   maxActionsPerTurn: number;
   currentRound: number;
+  turnStartProcessed?: boolean;
 }
 
 export interface DelveRoom {

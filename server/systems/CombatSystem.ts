@@ -1559,6 +1559,7 @@ export class CombatSystem {
 
     if (!newState.isComplete) {
       newState.currentTurn = 'player';
+      newState.turnStartProcessed = false;
       if (newState.currentRound !== undefined) {
         newState.currentRound++;
       }

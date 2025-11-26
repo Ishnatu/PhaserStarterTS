@@ -1118,7 +1118,7 @@ export class CombatScene extends Phaser.Scene {
       }
     });
 
-    const recentLogs = state.combatLog.slice(-4).join('\n');
+    const recentLogs = state.combatLog.slice(-6).join('\n');
     this.logText.setText(recentLogs);
     
     this.updateStatusIndicators();
