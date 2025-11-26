@@ -747,20 +747,19 @@ export class TownScene extends Phaser.Scene {
     }
   }
 
-  private openFootlocker(footlockerScroll: number = 0, inventoryScroll: number = 0): void {
+  private openFootlocker(): void {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
     const uiElements: Phaser.GameObjects.GameObject[] = [];
+    let wheelHandler: ((pointer: any, gameObjects: any, deltaX: number, deltaY: number) => void) | null = null;
 
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
     const panel = this.add.rectangle(width / 2, height / 2, 900, 550, 0x2a2a3e).setOrigin(0.5);
     uiElements.push(overlay, panel);
 
-    // Header layout with unified design pattern
     const headerBaseY = height / 2 - 240;
     const verticalGap = 65;
 
-    // Row 1: Title
     const title = this.add.text(width / 2, headerBaseY, 'Vault Keeper - Storage Footlocker', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
@@ -769,6 +768,10 @@ export class TownScene extends Phaser.Scene {
     uiElements.push(title);
 
     const destroyAll = () => {
+      if (wheelHandler) {
+        this.input.off('wheel', wheelHandler);
+        wheelHandler = null;
+      }
       uiElements.forEach(el => el.destroy());
       this.menuState = 'none';
       this.currentMenuCloseFunction = null;
@@ -780,167 +783,193 @@ export class TownScene extends Phaser.Scene {
     const footlockerCount = player.footlocker.reduce((sum, item) => sum + item.quantity, 0);
     const inventoryCount = player.inventory.reduce((sum, item) => sum + item.quantity, 0);
 
-    // Row 3: Column headers (after standard 2-row gap)
-    const headerY = headerBaseY + (verticalGap * 2);
+    const headerY = headerBaseY + verticalGap;
     
-    const footlockerTitle = this.add.text(width / 2 - 300, headerY, `Footlocker (${footlockerCount}/${player.footlockerSlots})`, {
+    const footlockerTitle = this.add.text(width / 2 - 220, headerY, `Footlocker (${footlockerCount}/${player.footlockerSlots})`, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xsmall,
       color: '#88ddff',
-    });
+    }).setOrigin(0.5);
     uiElements.push(footlockerTitle);
 
-    const inventoryTitle = this.add.text(width / 2 + 100, headerY, `Inventory (${inventoryCount}/${player.inventorySlots})`, {
+    const inventoryTitle = this.add.text(width / 2 + 220, headerY, `Inventory (${inventoryCount}/${player.inventorySlots})`, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xsmall,
       color: '#f0a020',
-    });
+    }).setOrigin(0.5);
     uiElements.push(inventoryTitle);
 
-    // Content area starts 40px below headers
-    const itemsStartY = headerY + 40;
+    const scrollAreaTop = headerY + 30;
+    const scrollAreaHeight = 320;
+    const scrollAreaBottom = scrollAreaTop + scrollAreaHeight;
     const itemHeight = 28;
-    const maxDisplay = 14;
+    const columnWidth = 400;
+
+    const footlockerContainer = this.add.container(0, 0);
+    uiElements.push(footlockerContainer);
+    const inventoryContainer = this.add.container(0, 0);
+    uiElements.push(inventoryContainer);
 
     const footlockerItems = player.footlocker;
-    const clampedFootlockerScroll = Math.max(0, Math.min(footlockerScroll, Math.max(0, footlockerItems.length - maxDisplay)));
-    const footlockerStart = clampedFootlockerScroll;
-    const footlockerEnd = Math.min(footlockerStart + maxDisplay, footlockerItems.length);
+    const inventoryItems = player.inventory;
 
-    for (let i = footlockerStart; i < footlockerEnd; i++) {
-      const invItem = footlockerItems[i];
+    footlockerItems.forEach((invItem, index) => {
       const item = ItemDatabase.getItem(invItem.itemId);
-      if (!item) continue;
+      if (!item) return;
 
-      const displayIndex = i - footlockerStart;
-      const y = itemsStartY + displayIndex * itemHeight;
-      
+      const y = scrollAreaTop + index * itemHeight;
       const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
-      const itemLabel = this.add.text(width / 2 - 400, y, `${item.name} x${invItem.quantity}`, {
+      
+      const itemLabel = this.add.text(width / 2 - 420, y, `${item.name} x${invItem.quantity}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.xsmall,
         color: itemColor,
       });
-      uiElements.push(itemLabel);
+      footlockerContainer.add(itemLabel);
 
-      const retrieveBtn = this.add.text(width / 2 - 120, y, '[Retrieve]', {
+      const retrieveBtn = this.add.text(width / 2 - 80, y, '[Retrieve]', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.xsmall,
         color: '#88ff88',
       }).setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => {
+        .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+          if (pointer.worldY < scrollAreaTop || pointer.worldY > scrollAreaBottom) return;
           if (this.gameState.moveFromFootlocker(invItem.itemId, 1)) {
             this.showMessage(`Retrieved ${item.name}`);
             destroyAll();
-            this.openFootlocker(clampedFootlockerScroll, clampedInventoryScroll);
+            this.openFootlocker();
           } else {
             this.showMessage('Inventory is full!');
           }
         });
-      uiElements.push(retrieveBtn);
-    }
+      footlockerContainer.add(retrieveBtn);
+    });
 
     if (footlockerItems.length === 0) {
-      const emptyText = this.add.text(width / 2 - 300, itemsStartY, 'Footlocker is empty', {
+      const emptyText = this.add.text(width / 2 - 220, scrollAreaTop + 20, 'Footlocker is empty', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.xsmall,
         color: '#666666',
-      });
-      uiElements.push(emptyText);
-    } else {
-      if (clampedFootlockerScroll > 0) {
-        const upBtn = this.add.text(width / 2 - 400, headerY, '▲', {
-          fontFamily: FONTS.primary,
-          fontSize: FONTS.size.xsmall,
-          color: '#88ddff',
-        }).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => {
-            destroyAll();
-            this.openFootlocker(clampedFootlockerScroll - 1, inventoryScroll);
-          });
-        uiElements.push(upBtn);
-      }
-      if (footlockerEnd < footlockerItems.length) {
-        const downBtn = this.add.text(width / 2 - 400, height / 2 + 200, '▼', {
-          fontFamily: FONTS.primary,
-          fontSize: FONTS.size.xsmall,
-          color: '#88ddff',
-        }).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => {
-            destroyAll();
-            this.openFootlocker(clampedFootlockerScroll + 1, inventoryScroll);
-          });
-        uiElements.push(downBtn);
-      }
+      }).setOrigin(0.5);
+      footlockerContainer.add(emptyText);
     }
 
-    const inventoryItems = player.inventory;
-    const clampedInventoryScroll = Math.max(0, Math.min(inventoryScroll, Math.max(0, inventoryItems.length - maxDisplay)));
-    const inventoryStart = clampedInventoryScroll;
-    const inventoryEnd = Math.min(inventoryStart + maxDisplay, inventoryItems.length);
-
-    for (let i = inventoryStart; i < inventoryEnd; i++) {
-      const invItem = inventoryItems[i];
+    inventoryItems.forEach((invItem, index) => {
       const item = ItemDatabase.getItem(invItem.itemId);
-      if (!item) continue;
+      if (!item) return;
 
-      const displayIndex = i - inventoryStart;
-      const y = itemsStartY + displayIndex * itemHeight;
-      
+      const y = scrollAreaTop + index * itemHeight;
       const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
-      const itemLabel = this.add.text(width / 2 + 100, y, `${item.name} x${invItem.quantity}`, {
+      
+      const itemLabel = this.add.text(width / 2 + 40, y, `${item.name} x${invItem.quantity}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.xsmall,
         color: itemColor,
       });
-      uiElements.push(itemLabel);
+      inventoryContainer.add(itemLabel);
 
-      const storeBtn = this.add.text(width / 2 + 350, y, '[Store]', {
+      const storeBtn = this.add.text(width / 2 + 380, y, '[Store]', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.xsmall,
         color: '#ffaa44',
       }).setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => {
+        .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+          if (pointer.worldY < scrollAreaTop || pointer.worldY > scrollAreaBottom) return;
           this.storeItem(invItem.itemId);
           destroyAll();
-          this.openFootlocker(clampedFootlockerScroll, clampedInventoryScroll);
+          this.openFootlocker();
         });
-      uiElements.push(storeBtn);
-    }
+      inventoryContainer.add(storeBtn);
+    });
 
     if (inventoryItems.length === 0) {
-      const emptyText = this.add.text(width / 2 + 100, itemsStartY, 'Inventory is empty', {
+      const emptyText = this.add.text(width / 2 + 220, scrollAreaTop + 20, 'Inventory is empty', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.xsmall,
         color: '#666666',
-      });
-      uiElements.push(emptyText);
-    } else {
-      if (clampedInventoryScroll > 0) {
-        const upBtn = this.add.text(width / 2 + 100, headerY, '▲', {
-          fontFamily: FONTS.primary,
-          fontSize: FONTS.size.xsmall,
-          color: '#f0a020',
-        }).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => {
-            destroyAll();
-            this.openFootlocker(clampedFootlockerScroll, clampedInventoryScroll - 1);
-          });
-        uiElements.push(upBtn);
-      }
-      if (inventoryEnd < inventoryItems.length) {
-        const downBtn = this.add.text(width / 2 + 100, height / 2 + 200, '▼', {
-          fontFamily: FONTS.primary,
-          fontSize: FONTS.size.xsmall,
-          color: '#f0a020',
-        }).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => {
-            destroyAll();
-            this.openFootlocker(clampedFootlockerScroll, clampedInventoryScroll + 1);
-          });
-        uiElements.push(downBtn);
-      }
+      }).setOrigin(0.5);
+      inventoryContainer.add(emptyText);
     }
+
+    const footlockerMaskShape = this.make.graphics({});
+    footlockerMaskShape.fillStyle(0xffffff);
+    footlockerMaskShape.fillRect(width / 2 - 440, scrollAreaTop, columnWidth, scrollAreaHeight);
+    const footlockerMask = footlockerMaskShape.createGeometryMask();
+    footlockerContainer.setMask(footlockerMask);
+    uiElements.push(footlockerMaskShape);
+
+    const inventoryMaskShape = this.make.graphics({});
+    inventoryMaskShape.fillStyle(0xffffff);
+    inventoryMaskShape.fillRect(width / 2 + 20, scrollAreaTop, columnWidth, scrollAreaHeight);
+    const inventoryMask = inventoryMaskShape.createGeometryMask();
+    inventoryContainer.setMask(inventoryMask);
+    uiElements.push(inventoryMaskShape);
+
+    const footlockerTotalHeight = footlockerItems.length * itemHeight;
+    const footlockerMaxScroll = Math.max(0, footlockerTotalHeight - scrollAreaHeight);
+    let footlockerScroll = 0;
+
+    const inventoryTotalHeight = inventoryItems.length * itemHeight;
+    const inventoryMaxScroll = Math.max(0, inventoryTotalHeight - scrollAreaHeight);
+    let inventoryScroll = 0;
+
+    let footlockerScrollThumb: Phaser.GameObjects.Rectangle | null = null;
+    if (footlockerMaxScroll > 0) {
+      const scrollbarX = width / 2 - 30;
+      const scrollbarTrackHeight = scrollAreaHeight - 10;
+      
+      const scrollbarTrack = this.add.rectangle(scrollbarX, scrollAreaTop + scrollAreaHeight / 2, 6, scrollbarTrackHeight, 0x333344);
+      uiElements.push(scrollbarTrack);
+      
+      const thumbHeight = Math.max(30, (scrollAreaHeight / footlockerTotalHeight) * scrollbarTrackHeight);
+      footlockerScrollThumb = this.add.rectangle(scrollbarX, scrollAreaTop + thumbHeight / 2 + 5, 6, thumbHeight, 0x88ddff);
+      uiElements.push(footlockerScrollThumb);
+    }
+
+    let inventoryScrollThumb: Phaser.GameObjects.Rectangle | null = null;
+    if (inventoryMaxScroll > 0) {
+      const scrollbarX = width / 2 + 430;
+      const scrollbarTrackHeight = scrollAreaHeight - 10;
+      
+      const scrollbarTrack = this.add.rectangle(scrollbarX, scrollAreaTop + scrollAreaHeight / 2, 6, scrollbarTrackHeight, 0x333344);
+      uiElements.push(scrollbarTrack);
+      
+      const thumbHeight = Math.max(30, (scrollAreaHeight / inventoryTotalHeight) * scrollbarTrackHeight);
+      inventoryScrollThumb = this.add.rectangle(scrollbarX, scrollAreaTop + thumbHeight / 2 + 5, 6, thumbHeight, 0xf0a020);
+      uiElements.push(inventoryScrollThumb);
+    }
+
+    wheelHandler = (pointer: any, _gameObjects: any, _deltaX: number, deltaY: number) => {
+      const isOverFootlocker = pointer.x < width / 2;
+      
+      if (isOverFootlocker && footlockerMaxScroll > 0) {
+        footlockerScroll = Math.max(0, Math.min(footlockerMaxScroll, footlockerScroll + deltaY * 0.5));
+        footlockerContainer.y = -footlockerScroll;
+        
+        if (footlockerScrollThumb) {
+          const scrollbarTrackHeight = scrollAreaHeight - 10;
+          const thumbHeight = footlockerScrollThumb.height;
+          const scrollRatio = footlockerScroll / footlockerMaxScroll;
+          const thumbY = scrollAreaTop + thumbHeight / 2 + 5 + scrollRatio * (scrollbarTrackHeight - thumbHeight);
+          footlockerScrollThumb.y = thumbY;
+        }
+      } else if (!isOverFootlocker && inventoryMaxScroll > 0) {
+        inventoryScroll = Math.max(0, Math.min(inventoryMaxScroll, inventoryScroll + deltaY * 0.5));
+        inventoryContainer.y = -inventoryScroll;
+        
+        if (inventoryScrollThumb) {
+          const scrollbarTrackHeight = scrollAreaHeight - 10;
+          const thumbHeight = inventoryScrollThumb.height;
+          const scrollRatio = inventoryScroll / inventoryMaxScroll;
+          const thumbY = scrollAreaTop + thumbHeight / 2 + 5 + scrollRatio * (scrollbarTrackHeight - thumbHeight);
+          inventoryScrollThumb.y = thumbY;
+        }
+      }
+    };
+    this.input.on('wheel', wheelHandler);
+
+    const divider = this.add.rectangle(width / 2, scrollAreaTop + scrollAreaHeight / 2, 2, scrollAreaHeight, 0x444466);
+    uiElements.push(divider);
 
     const closeBtn = this.createButton(width / 2, height / 2 + 230, 'Close', () => {
       destroyAll();
