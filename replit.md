@@ -32,6 +32,12 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Backend**: Express.js with TypeScript, Database: PostgreSQL (Neon) via Drizzle ORM.
 - **Authentication**: Replit Auth (OpenID Connect) with session-based authentication using `express-session` and PostgreSQL store. Multi-instance detection prevents save conflicts.
 - **State Management**: Server-side PostgreSQL saves with 30-second auto-save, auto-save on all scene transitions (delve↔wilderness, wilderness↔town), and emergency saves on disconnect/tab close via `sendBeacon` API.
+- **Comprehensive Save Points (2025-11-26)**: To prevent state misalignment, saves occur after all key player interactions:
+  - Combat exit (victory or defeat)
+  - Trap disarm success/failure in delves
+  - Shrine offerings (both successful blessings and void consumption)
+  - Treasure collection in wilderness
+  - Trapped chest success/failure
 - **Enemy System**: Metadata-driven enemy database (`EnemyFactory.ts`) supporting 15 enemy types across 5 tiers, with defined currency rewards and category-based loot probabilities.
 - **Core Gameplay Loop**: Main Menu -> Town -> Explore Map -> Delve -> Combat -> Back to Town.
 - **D20 Combat System**: Turn-based tactical combat with d20 rolls, critical hits, armor reduction, 2-action economy, and various status conditions (weakened, empowered, etc.).
