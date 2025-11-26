@@ -1279,15 +1279,18 @@ export class CombatScene extends Phaser.Scene {
         // Call server for each enemy to get loot and rewards
         console.log(`[endCombat] About to request loot for ${state.enemies.length} enemies`);
         for (const enemy of state.enemies) {
-          console.log(`[endCombat] Requesting loot for: ${enemy.name} (tier ${enemy.tier}, boss: ${enemy.isBoss})`);
+          // Ensure enemy has valid tier (default to 1 if missing)
+          const enemyTier = typeof enemy.tier === 'number' ? enemy.tier : 1;
+          console.log(`[endCombat] Requesting loot for: ${enemy.name} (tier ${enemyTier}, boss: ${enemy.isBoss})`);
+          
           const response = await fetch('/api/loot/roll', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({
-              enemyName: enemy.name,
-              tier: enemy.tier,
-              isBoss: enemy.isBoss,
+              enemyName: enemy.name || 'Unknown Enemy',
+              tier: enemyTier,
+              isBoss: enemy.isBoss || false,
               playerLevel: player.level,
             }),
           });
