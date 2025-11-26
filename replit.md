@@ -78,6 +78,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
   - **Security Headers**: Helmet.js configured with CSP for Phaser game (allows inline scripts for game engine), cross-origin policies for Replit iframe embedding
   - **RNG Seed Removal**: RNG seeds no longer returned in API responses (delve/loot endpoints) to prevent predictability exploits
   - **Hosting**: Replit provides WAF protection for deployed applications
+- **Loot Reward Persistence Fix (2025-11-26)**: Critical bug fix - currency (Arcane Ash) and XP rewards are now persisted to the database immediately when loot is rolled via `/api/loot/roll`. Previously, rewards were only returned to client but never saved, causing them to be lost when the security system stripped client-submitted values and re-injected database values (which were 0). XP calculation: 10 × tier for normal enemies, 25 × tier for bosses.
 
 ## External Dependencies
 
