@@ -55,6 +55,11 @@ export class ExploreScene extends Phaser.Scene {
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
   private terrainContainer!: Phaser.GameObjects.Container;
+  
+  // Throttled movement save system - saves every 5 seconds while player is moving
+  private lastMovementSaveTime: number = 0;
+  private readonly MOVEMENT_SAVE_INTERVAL: number = 5000; // 5 seconds
+  private isPlayerMoving: boolean = false;
   private treeSprites: Phaser.GameObjects.Sprite[] = [];
   private decorationSprites: Phaser.GameObjects.Sprite[] = [];
   private fogOfWarGraphics!: Phaser.GameObjects.Graphics;
@@ -242,6 +247,16 @@ export class ExploreScene extends Phaser.Scene {
         this.checkTombstoneProximity();
         this.checkTownPortalProximity();
         this.checkFungalHollowsPortalProximity();
+        
+        // Throttled movement save - prevents exploitation by closing game during exploration
+        this.isPlayerMoving = true;
+        const now = Date.now();
+        if (now - this.lastMovementSaveTime > this.MOVEMENT_SAVE_INTERVAL) {
+          this.lastMovementSaveTime = now;
+          this.gameState.saveToServer();
+        }
+      } else {
+        this.isPlayerMoving = false;
       }
     }
 

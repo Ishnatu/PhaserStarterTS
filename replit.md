@@ -31,7 +31,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Game Engine**: Phaser 3.90.0, Language: TypeScript 5.4, Build Tool: Vite 5.0.
 - **Backend**: Express.js with TypeScript, Database: PostgreSQL (Neon) via Drizzle ORM.
 - **Authentication**: Replit Auth (OpenID Connect) with session-based authentication using `express-session` and PostgreSQL store. Multi-instance detection prevents save conflicts.
-- **State Management**: Server-side PostgreSQL saves with 30-second auto-save, auto-save on all scene transitions (delve↔wilderness, wilderness↔town), and emergency saves on disconnect/tab close via `sendBeacon` API.
+- **State Management**: Server-side PostgreSQL saves with 30-second auto-save, auto-save on all scene transitions (delve↔wilderness, wilderness↔town), and emergency saves on disconnect/tab close via `sendBeacon` API. Throttled movement saves (5-second intervals) in ExploreScene persist position/stamina during active exploration.
 - **Comprehensive Save Points (2025-11-26)**: To prevent state misalignment, saves occur after all key player interactions:
   - Combat exit (victory or defeat)
   - Trap disarm success/failure in delves
