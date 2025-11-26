@@ -7,7 +7,7 @@ import { EnemyFactory } from "../systems/EnemyFactory";
 import { WeaponValidator } from "../systems/WeaponValidator";
 import { SeededRNG } from "../utils/SeededRNG";
 import { storage } from "../storage";
-import { validateSavePayload, enforceServerAuthoritativeValues } from "../security";
+import { validateSavePayload, enforceServerAuthoritativeValues, recalculatePlayerStats } from "../security";
 import type { CombatState, Enemy, PlayerData, WeaponAttack } from "../../shared/types";
 
 /**
@@ -138,6 +138,10 @@ export function registerCombatRoutes(app: Express) {
       }
 
       const player = gameSave.saveData as PlayerData;
+      
+      // [SECURITY FIX] Recalculate stats from equipment before combat
+      // This ensures calculatedEvasion and other stats are correct from armor
+      player.stats = recalculatePlayerStats(player.equipment || {});
 
       // [SERVER RNG] Create deterministic seed from save data (not Math.random!)
       const userHash = userId.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
