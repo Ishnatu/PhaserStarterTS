@@ -1266,6 +1266,15 @@ export class CombatScene extends Phaser.Scene {
       
       let totalCaReward = 0;
       
+      // Define item tracking arrays outside try block for proper scoping
+      interface LootItemInfo {
+        name: string;
+        enhancementLevel: number;
+        isShiny: boolean;
+      }
+      const itemsAdded: LootItemInfo[] = [];
+      const itemsFailed: LootItemInfo[] = [];
+      
       try {
         // Call server for each enemy to get loot and rewards
         console.log(`[endCombat] About to request loot for ${state.enemies.length} enemies`);
@@ -1322,14 +1331,6 @@ export class CombatScene extends Phaser.Scene {
         
         // CRITICAL: Add loot items to inventory BEFORE save to prevent loss on disconnect
         // Items must be persisted before showing victory screen
-        interface LootItemInfo {
-          name: string;
-          enhancementLevel: number;
-          isShiny: boolean;
-        }
-        const itemsAdded: LootItemInfo[] = [];
-        const itemsFailed: LootItemInfo[] = [];
-        
         for (const lootItem of allLoot) {
           const item = ItemDatabase.getItem(lootItem.itemId);
           if (item) {
