@@ -18,6 +18,7 @@ import { AudioManager } from '../managers/AudioManager';
 import { StatsPanel } from '../ui/StatsPanel';
 import { TerrainGenerator } from '../utils/TerrainGenerator';
 import { WELCOME_MESSAGE } from '../config/StarterKit';
+import { ItemTooltip } from '../utils/ItemTooltip';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -25,6 +26,7 @@ export class TownScene extends Phaser.Scene {
   private menuState: 'none' | 'inventory' | 'equipment' | 'shop' | 'forge' | 'inn' | 'footlocker' = 'none';
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
+  private itemTooltip: ItemTooltip | null = null;
 
   constructor() {
     super('TownScene');
@@ -98,6 +100,9 @@ export class TownScene extends Phaser.Scene {
     // Create stats panel
     this.statsPanel = new StatsPanel(this, 20, 40);
     this.statsPanel.update(player);
+    
+    // Initialize item tooltip
+    this.itemTooltip = new ItemTooltip(this);
 
     this.createNPCs();
 
@@ -505,6 +510,9 @@ export class TownScene extends Phaser.Scene {
     uiElements.push(title);
 
     const destroyAll = () => {
+      if (this.itemTooltip) {
+        this.itemTooltip.hide();
+      }
       uiElements.forEach(el => el.destroy());
       this.menuState = 'none';
       this.currentMenuCloseFunction = null;
@@ -542,7 +550,22 @@ export class TownScene extends Phaser.Scene {
         fontSize: FONTS.size.xsmall,
         color: itemColor,
         resolution: 2,
-      });
+      }).setInteractive({ useHandCursor: true })
+        .on('pointerover', (pointer: Phaser.Input.Pointer) => {
+          if (this.itemTooltip) {
+            this.itemTooltip.show(pointer.x, pointer.y, invItem);
+          }
+        })
+        .on('pointermove', (pointer: Phaser.Input.Pointer) => {
+          if (this.itemTooltip) {
+            this.itemTooltip.updatePosition(pointer.x, pointer.y);
+          }
+        })
+        .on('pointerout', () => {
+          if (this.itemTooltip) {
+            this.itemTooltip.hide();
+          }
+        });
       uiElements.push(itemLabel);
       
       // Show durability for weapons and armor
@@ -1151,15 +1174,30 @@ export class TownScene extends Phaser.Scene {
       const slotX = gridStartX + gridSlot.col * gridCellWidth;
       const slotY = gridStartY + gridSlot.row * gridCellHeight;
 
+      const equipped = player.equipment[gridSlot.key];
+      
       const slotHitArea = this.add.rectangle(slotX, slotY, hitAreaSize, hitAreaSize, 0x000000, 0)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
           selectedSlot = { key: gridSlot.key!, x: slotX, y: slotY };
           updateInfoDisplay();
+        })
+        .on('pointerover', (pointer: Phaser.Input.Pointer) => {
+          if (this.itemTooltip && equipped) {
+            this.itemTooltip.show(pointer.x, pointer.y, equipped);
+          }
+        })
+        .on('pointermove', (pointer: Phaser.Input.Pointer) => {
+          if (this.itemTooltip && equipped) {
+            this.itemTooltip.updatePosition(pointer.x, pointer.y);
+          }
+        })
+        .on('pointerout', () => {
+          if (this.itemTooltip) {
+            this.itemTooltip.hide();
+          }
         });
       uiElements.push(slotHitArea);
-
-      const equipped = player.equipment[gridSlot.key];
       
       if (equipped) {
         const spriteKey = ItemSprites.getSpriteKey(equipped.itemId);
@@ -1279,7 +1317,22 @@ export class TownScene extends Phaser.Scene {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: itemColor,
-      });
+      }).setInteractive({ useHandCursor: true })
+        .on('pointerover', (pointer: Phaser.Input.Pointer) => {
+          if (this.itemTooltip) {
+            this.itemTooltip.show(pointer.x, pointer.y, invItem);
+          }
+        })
+        .on('pointermove', (pointer: Phaser.Input.Pointer) => {
+          if (this.itemTooltip) {
+            this.itemTooltip.updatePosition(pointer.x, pointer.y);
+          }
+        })
+        .on('pointerout', () => {
+          if (this.itemTooltip) {
+            this.itemTooltip.hide();
+          }
+        });
       uiElements.push(itemText);
 
       const durability = invItem.durability ?? 100;
@@ -1830,18 +1883,18 @@ export class TownScene extends Phaser.Scene {
     });
 
     if (selectedItem) {
-      const detailY = height / 2 + 80;
+      const detailY = height / 2 + 95;
       const currentLevel = selectedItem.item.enhancementLevel || 0;
       const targetLevel = currentLevel + 1;
       const cost = ForgingSystem.getForgingCost(targetLevel);
 
       if (cost) {
-        const detailPanel = this.add.rectangle(width / 2, detailY, 700, 100, 0x1a1a2e).setOrigin(0.5);
+        const detailPanel = this.add.rectangle(width / 2, detailY, 800, 170, 0x1a1a2e).setOrigin(0.5);
         uiElements.push(detailPanel);
 
-        const detailTitle = this.add.text(width / 2, detailY - 40, `Enhance to +${targetLevel}`, {
+        const detailTitle = this.add.text(width / 2, detailY - 70, `Enhance to +${targetLevel}`, {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.xsmall,
+          fontSize: FONTS.size.small,
           color: '#f0a020',
           resolution: 2,
         }).setOrigin(0.5);
@@ -1859,8 +1912,8 @@ export class TownScene extends Phaser.Scene {
           { success: '10%', fail: 'Downgrade', destroy: '50%' },
         ][targetLevel - 1];
 
-        const detailsText = this.add.text(width / 2, detailY - 10, 
-          `Success: ${tierData.success}  |  Fail: ${tierData.fail}  |  Destroy: ${tierData.destroy}\nCost: ${cost.aa} AA + ${cost.ca} CA`, {
+        const detailsText = this.add.text(width / 2, detailY - 40, 
+          `Success: ${tierData.success}  |  Fail: ${tierData.fail}  |  Destroy: ${tierData.destroy}`, {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.xsmall,
           color: '#ffffff',
@@ -1868,8 +1921,31 @@ export class TownScene extends Phaser.Scene {
           resolution: 2,
         }).setOrigin(0.5);
         uiElements.push(detailsText);
+        
+        const costText = this.add.text(width / 2, detailY - 18, 
+          `Cost: ${cost.aa} AA + ${cost.ca} CA`, {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.xsmall,
+          color: '#aaaaaa',
+          align: 'center',
+          resolution: 2,
+        }).setOrigin(0.5);
+        uiElements.push(costText);
+        
+        const benefitText = this.itemTooltip?.getEnhancementBenefitText(selectedItem.item) || '';
+        if (benefitText) {
+          const benefitLabel = this.add.text(width / 2, detailY + 8, 
+            `On Success: ${benefitText}`, {
+            fontFamily: FONTS.primary,
+            fontSize: FONTS.size.xsmall,
+            color: '#88ff88',
+            align: 'center',
+            resolution: 2,
+          }).setOrigin(0.5);
+          uiElements.push(benefitLabel);
+        }
 
-        const forgeBtn = this.createButton(width / 2, detailY + 35, 'Forge Item', () => {
+        const forgeBtn = this.createButton(width / 2, detailY + 55, 'Forge Item', () => {
           this.attemptForging(selectedItem!);
           onSelect(null);
         });
