@@ -1274,31 +1274,36 @@ export class CombatScene extends Phaser.Scene {
             }),
           });
 
-          if (response.ok) {
-            const result = await response.json();
-            
-            // Accumulate rewards
-            totalAaReward += result.loot?.arcaneAsh || 0;
-            totalCaReward += result.loot?.crystallineAnimus || 0;
-            totalXpReward += result.xpReward || 0;
-            
-            // Collect loot items
-            if (result.loot?.items) {
-              allLoot.push(...result.loot.items);
-            }
-            
-            // Update server-authoritative values
-            if (result.newArcaneAsh !== undefined) {
-              player.arcaneAsh = result.newArcaneAsh;
-            }
-            if (result.newCrystallineAnimus !== undefined) {
-              player.crystallineAnimus = result.newCrystallineAnimus;
-            }
-            if (result.leveledUp) {
-              serverNewLevel = result.newLevel;
-            }
-            serverNewExperience = result.newExperience;
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Loot API error for ${enemy.name}: ${response.status} - ${errorText}`);
+            throw new Error(`Loot API failed: ${response.status}`);
           }
+          
+          const result = await response.json();
+          console.log('Loot API response:', result);
+          
+          // Accumulate rewards
+          totalAaReward += result.loot?.arcaneAsh || 0;
+          totalCaReward += result.loot?.crystallineAnimus || 0;
+          totalXpReward += result.xpReward || 0;
+          
+          // Collect loot items
+          if (result.loot?.items) {
+            allLoot.push(...result.loot.items);
+          }
+          
+          // Update server-authoritative values
+          if (result.newArcaneAsh !== undefined) {
+            player.arcaneAsh = result.newArcaneAsh;
+          }
+          if (result.newCrystallineAnimus !== undefined) {
+            player.crystallineAnimus = result.newCrystallineAnimus;
+          }
+          if (result.leveledUp) {
+            serverNewLevel = result.newLevel;
+          }
+          serverNewExperience = result.newExperience;
         }
         
         // Update player with server-authoritative level/XP

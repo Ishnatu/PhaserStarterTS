@@ -15,9 +15,11 @@ export function registerLootRoutes(app: Express) {
    * CRITICAL: Currency and XP rewards are persisted to database immediately
    */
   app.post("/api/loot/roll", isAuthenticated, async (req: any, res) => {
+    console.log('[Loot API] Received request:', JSON.stringify(req.body));
     try {
       const userId = req.user.claims.sub;
       const { enemyName, tier, isBoss, playerLevel } = req.body;
+      console.log(`[Loot API] User: ${userId}, Enemy: ${enemyName}, Tier: ${tier}, Boss: ${isBoss}`);
 
       // Validate input
       if (!enemyName || typeof tier !== 'number') {
@@ -43,6 +45,8 @@ export function registerLootRoutes(app: Express) {
       // Calculate CA reward: 0.3 × tier per enemy
       const crystallineAnimus = 0.3 * tier;
       
+      console.log(`[Loot Roll] Enemy: ${enemyName}, Tier: ${tier}, Boss: ${isBoss}, AA: ${arcaneAsh}, CA: ${crystallineAnimus}`);
+      
       // Calculate XP reward using LootEngine (T1 mob = 5 XP, T1 boss = 15 XP, scales with tier)
       const xpReward = lootEngine.rollExperienceReward(tier, isBoss || false);
 
@@ -56,7 +60,7 @@ export function registerLootRoutes(app: Express) {
       // CRITICAL: Persist XP reward to database immediately
       const xpResult = await storage.grantExperience(userId, xpReward);
 
-      res.json({
+      const responseData = {
         success: true,
         loot: {
           items,
@@ -69,7 +73,9 @@ export function registerLootRoutes(app: Express) {
         newExperience: xpResult.newExperience,
         newArcaneAsh: updatedCurrency.arcaneAsh,
         newCrystallineAnimus: updatedCurrency.crystallineAnimus,
-      });
+      };
+      console.log('[Loot API] Sending response:', JSON.stringify(responseData));
+      res.json(responseData);
     } catch (error) {
       console.error("Error rolling loot:", error);
       res.status(500).json({ message: "Failed to roll loot" });
