@@ -333,7 +333,8 @@ export class CombatSystem {
     const hit = attackResult.total >= targetEvasion;
 
     if (!hit) {
-      const missMessage = `[${weaponLabel}] You swing and miss! (-${attack.staminaCost} stamina)`;
+      const attackBonus = newState.player.stats.attackBonus;
+      const missMessage = `You swing and miss! (Rolled ${attackResult.d20}+${attackBonus}=${attackResult.total} vs Evasion ${targetEvasion}) (-${attack.staminaCost} stamina)`;
       newState.combatLog.push(missMessage);
       this.deductActions(newState, attack.actionCost);
       this.checkAndEndPlayerTurn(newState);
@@ -355,7 +356,8 @@ export class CombatSystem {
     target.health = Math.max(0, target.health - damage);
     this.trackDamageToEnemy(newState, target, damage);
     
-    let logMessage = `[${weaponLabel}] You hit ${target.name} with ${attack.name}! ${damageRollInfo} -> ${damage} damage (-${attack.staminaCost} stamina)`;
+    const attackBonus = newState.player.stats.attackBonus;
+    let logMessage = `You hit ${target.name} with ${attack.name}! (Rolled ${attackResult.d20}+${attackBonus}=${attackResult.total} vs Evasion ${targetEvasion}) ${damageRollInfo} -> ${damage} damage (-${attack.staminaCost} stamina)`;
     newState.combatLog.push(logMessage);
 
     // [SERVER RNG] Condition application
@@ -418,7 +420,8 @@ export class CombatSystem {
     const hit = attackResult.total >= targetEvasion;
 
     if (!hit) {
-      const missMessage = `You swing and miss! (-${attack.staminaCost} stamina)`;
+      const attackBonus = newState.player.stats.attackBonus;
+      const missMessage = `You swing and miss! (Rolled ${attackResult.d20}+${attackBonus}=${attackResult.total} vs Evasion ${targetEvasion}) (-${attack.staminaCost} stamina)`;
       newState.combatLog.push(missMessage);
       this.deductActions(newState, attack.actionCost);
       this.checkAndEndPlayerTurn(newState);
@@ -440,7 +443,8 @@ export class CombatSystem {
     target.health = Math.max(0, target.health - damage);
     this.trackDamageToEnemy(newState, target, damage);
     
-    let logMessage = `You hit ${target.name} with ${attack.name}! ${damageRollInfo} -> ${damage} damage (-${attack.staminaCost} stamina)`;
+    const attackBonus = newState.player.stats.attackBonus;
+    let logMessage = `You hit ${target.name} with ${attack.name}! (Rolled ${attackResult.d20}+${attackBonus}=${attackResult.total} vs Evasion ${targetEvasion}) ${damageRollInfo} -> ${damage} damage (-${attack.staminaCost} stamina)`;
     newState.combatLog.push(logMessage);
 
     // [SERVER RNG] Condition application

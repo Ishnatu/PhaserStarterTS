@@ -24,6 +24,11 @@ export class CombatScene extends Phaser.Scene {
   private currentDelve!: Delve;
   private currentRoom!: DelveRoom;
   private logText!: Phaser.GameObjects.Text;
+  private logContainer!: Phaser.GameObjects.Container;
+  private logMask!: Phaser.GameObjects.Graphics;
+  private logScrollY: number = 0;
+  private logHeight: number = 140;
+  private logY: number = 20;
   private playerHealthBar!: PixelArtBar;
   private playerStaminaBar!: PixelArtBar;
   private playerHealthText!: Phaser.GameObjects.Text;
@@ -369,20 +374,67 @@ export class CombatScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     // Green area - Combat log (top center/right, wide)
     const logX = 360;
-    const logY = 20;
+    this.logY = 20;
     const logWidth = width - 380 - 250;  // Leave space for player panel and sidebar
-    const logHeight = 140;
+    this.logHeight = 140;
 
-    this.add.rectangle(logX, logY, logWidth, logHeight, 0x1a1a2e, 0.8).setOrigin(0);
+    // Background panel
+    const logBg = this.add.rectangle(logX, this.logY, logWidth, this.logHeight, 0x1a1a2e, 0.8).setOrigin(0);
     
-    this.logText = this.add.text(logX + 10, logY + 10, 'Combat begins!', {
+    // Create container for scrollable log text
+    this.logContainer = this.add.container(logX, this.logY);
+    
+    // Create log text inside container
+    this.logText = this.add.text(10, 10, 'Combat begins!', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xsmall,
       color: '#ffffff',
       align: 'left',
-      wordWrap: { width: logWidth - 20 },
+      wordWrap: { width: logWidth - 30 },
       resolution: 2,
     });
+    this.logContainer.add(this.logText);
+    
+    // Create mask for scrolling
+    this.logMask = this.make.graphics({ x: 0, y: 0 });
+    this.logMask.fillStyle(0xffffff);
+    this.logMask.fillRect(logX, this.logY, logWidth, this.logHeight);
+    this.logContainer.setMask(new Phaser.Display.Masks.GeometryMask(this, this.logMask));
+    
+    // Add scroll indicator text
+    const scrollHint = this.add.text(logX + logWidth - 10, this.logY + this.logHeight - 12, '[scroll]', {
+      fontFamily: FONTS.primary,
+      fontSize: '8px',
+      color: '#666666',
+    }).setOrigin(1, 1);
+    
+    // Mouse wheel scrolling for log area
+    this.input.on('wheel', (pointer: Phaser.Input.Pointer, gameObjects: any[], deltaX: number, deltaY: number) => {
+      // Check if pointer is over log area
+      if (pointer.x >= logX && pointer.x <= logX + logWidth &&
+          pointer.y >= this.logY && pointer.y <= this.logY + this.logHeight) {
+        this.scrollLog(deltaY);
+      }
+    });
+    
+    this.logScrollY = 0;
+  }
+  
+  private scrollLog(deltaY: number): void {
+    const textHeight = this.logText.height;
+    const visibleHeight = this.logHeight - 20;  // Account for padding
+    const maxScroll = Math.max(0, textHeight - visibleHeight);
+    
+    // Scroll speed factor
+    const scrollSpeed = 0.5;
+    this.logScrollY = Phaser.Math.Clamp(
+      this.logScrollY + deltaY * scrollSpeed,
+      0,
+      maxScroll
+    );
+    
+    // Update text position within container
+    this.logText.y = 10 - this.logScrollY;
   }
 
   private renderActionButtons(): void {
@@ -1118,8 +1170,16 @@ export class CombatScene extends Phaser.Scene {
       }
     });
 
-    const recentLogs = state.combatLog.slice(-6).join('\n');
-    this.logText.setText(recentLogs);
+    // Show all combat logs and auto-scroll to bottom
+    const allLogs = state.combatLog.join('\n');
+    this.logText.setText(allLogs);
+    
+    // Auto-scroll to bottom when new logs appear
+    const textHeight = this.logText.height;
+    const visibleHeight = this.logHeight - 20;
+    const maxScroll = Math.max(0, textHeight - visibleHeight);
+    this.logScrollY = maxScroll;
+    this.logText.y = 10 - this.logScrollY;
     
     this.updateStatusIndicators();
   }
