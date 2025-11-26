@@ -1210,27 +1210,45 @@ export class ExploreScene extends Phaser.Scene {
     const uiElements: Phaser.GameObjects.GameObject[] = [];
     const { width, height } = this.cameras.main;
 
-    const overlay = this.add.rectangle(width / 2, height / 2, 700, 400, 0x1a1a2a, 0.95)
+    // Full-screen dark overlay (matching Blacksmith style)
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
+      .setOrigin(0).setScrollFactor(0).setDepth(1000);
+    
+    // Main panel (matching Blacksmith dimensions)
+    const panel = this.add.rectangle(width / 2, height / 2, 800, 450, 0x2a2a3e)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    const titleText = this.add.text(width / 2, height / 2 - 180, 'Wandering Merchant', {
+
+    uiElements.push(overlay, panel);
+
+    // Header layout with proper vertical spacing
+    const headerBaseY = height / 2 - 180;
+    const verticalGap = 45;
+
+    // Row 1: Title
+    const titleText = this.add.text(width / 2, headerBaseY, 'Wandering Merchant', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#ffaa44',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const descText = this.add.text(width / 2, height / 2 - 140, encounterType.description, {
+
+    // Row 2: Description
+    const descText = this.add.text(width / 2, headerBaseY + verticalGap, 
+      '"Care to peruse my wares, traveler?"', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
-      color: '#ffffff',
+      color: '#aaaaaa',
       align: 'center',
-      wordWrap: { width: 650 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const subtitle = this.add.text(width / 2, height / 2 - 95, 'Enhanced Items for Sale:', {
+
+    // Row 3: Section subtitle
+    const subtitle = this.add.text(width / 2, headerBaseY + verticalGap * 2, 
+      'Enhanced Items for Sale:', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffcc88',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-    uiElements.push(overlay, titleText, descText, subtitle);
+    uiElements.push(titleText, descText, subtitle);
     
     const destroyAll = () => {
       uiElements.forEach(el => el.destroy());
@@ -1252,8 +1270,15 @@ export class ExploreScene extends Phaser.Scene {
       selectedItems.push({ ...randomItem, enhancement });
     }
 
-    let yPos = height / 2 - 60;
-    selectedItems.forEach((shopItem) => {
+    // Column layout for items (matching Blacksmith forge style)
+    const itemStartY = headerBaseY + verticalGap * 3 + 10;
+    const rowHeight = 50;
+    const leftColumnX = width / 2 - 320;  // Item name column
+    const priceColumnX = width / 2 + 80;   // Price column  
+    const buttonColumnX = width / 2 + 280; // Buy button column
+
+    selectedItems.forEach((shopItem, index) => {
+      const yPos = itemStartY + (index * rowHeight);
       const itemData = ItemDatabase.getItem(shopItem.itemId);
       const basePrice = shopItem.price;
       
@@ -1278,20 +1303,25 @@ export class ExploreScene extends Phaser.Scene {
       );
       const nameColor = ExploreScene.getEnhancementColor(shopItem.enhancement, false);
       
-      const itemText = this.add.text(width / 2 - 280, yPos, enhancedName, {
+      // Item name (left-aligned)
+      const itemText = this.add.text(leftColumnX, yPos, enhancedName, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: nameColor,
-      }).setScrollFactor(0).setDepth(1001);
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1001);
       
-      const priceText = this.add.text(width / 2 - 30, yPos, 
-        `${totalAA} AA${totalCA > 0 ? ` + ${totalCA} CA` : ''}`, {
+      // Price (left-aligned in price column)
+      const priceString = totalCA > 0 
+        ? `${totalAA} AA + ${totalCA} CA` 
+        : `${totalAA} AA`;
+      const priceText = this.add.text(priceColumnX, yPos, priceString, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: '#ffffff',
-      }).setScrollFactor(0).setDepth(1001);
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1001);
       
-      const buyBtn = this.createButton(width / 2 + 220, yPos, 'Buy', () => {
+      // Buy button (right column)
+      const buyBtn = this.createButton(buttonColumnX, yPos, 'Buy', () => {
         const player = this.gameState.getPlayer();
         const canAfford = player.arcaneAsh >= totalAA && player.crystallineAnimus >= totalCA;
 
@@ -1321,10 +1351,10 @@ export class ExploreScene extends Phaser.Scene {
       }).setScrollFactor(0).setDepth(1002);
 
       uiElements.push(itemText, priceText, buyBtn);
-      yPos += 55;
     });
 
-    const closeBtn = this.createButton(width / 2, height / 2 + 160, 'Leave', () => {
+    // Leave button at bottom
+    const closeBtn = this.createButton(width / 2, height / 2 + 170, 'Leave', () => {
       destroyAll();
     }).setScrollFactor(0).setDepth(1002);
     uiElements.push(closeBtn);
