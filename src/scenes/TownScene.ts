@@ -2340,16 +2340,16 @@ export class TownScene extends Phaser.Scene {
     this.currentMenuCloseFunction = destroyAll;
     this.menuState = 'soulbinding' as any;
 
-    // Define equipment slots
+    // Define equipment slots (must match PlayerEquipment interface)
     const slots = [
       { key: 'mainHand' as keyof PlayerEquipment, label: 'Main Hand' },
       { key: 'offHand' as keyof PlayerEquipment, label: 'Off Hand' },
-      { key: 'head' as keyof PlayerEquipment, label: 'Head' },
+      { key: 'helmet' as keyof PlayerEquipment, label: 'Helmet' },
       { key: 'chest' as keyof PlayerEquipment, label: 'Chest' },
       { key: 'legs' as keyof PlayerEquipment, label: 'Legs' },
-      { key: 'feet' as keyof PlayerEquipment, label: 'Feet' },
-      { key: 'hands' as keyof PlayerEquipment, label: 'Hands' },
-      { key: 'accessory' as keyof PlayerEquipment, label: 'Accessory' },
+      { key: 'boots' as keyof PlayerEquipment, label: 'Boots' },
+      { key: 'shoulders' as keyof PlayerEquipment, label: 'Shoulders' },
+      { key: 'cape' as keyof PlayerEquipment, label: 'Cloak' },
     ];
 
     // Content area starts 40px below header
