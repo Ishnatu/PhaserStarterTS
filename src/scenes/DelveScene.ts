@@ -237,6 +237,7 @@ export class DelveScene extends Phaser.Scene {
   private async exitDelve(): Promise<void> {
     const player = this.gameState.getPlayer();
     player.wildernessRestsRemaining = GameConfig.STAMINA.MAX_WILDERNESS_RESTS;
+    player.lastRestTimestamp = 0;  // Reset cooldown after completing delve
     
     // Award XP for delve completion
     const xpReward = getXpReward(this.currentDelve.tier, 'delveCompletion');

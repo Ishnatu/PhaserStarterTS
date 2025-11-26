@@ -56,6 +56,7 @@ export class TownScene extends Phaser.Scene {
     let player = this.gameState.getPlayer();
     BuffManager.clearTownBuffs(player);
     player.wildernessRestsRemaining = GameConfig.STAMINA.MAX_WILDERNESS_RESTS;
+    player.lastRestTimestamp = 0;  // Reset cooldown when entering town
     this.gameState.updatePlayer(player);
     
     // Check if this is a fresh expedition (death/respawn) or just returning to town
