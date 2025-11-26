@@ -474,8 +474,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Slots must be an array" });
       }
 
-      // Validate slots (max 3, valid slot names)
-      const validSlots = ['mainHand', 'offHand', 'head', 'chest', 'legs', 'feet', 'hands', 'accessory'];
+      // Validate slots (max 3, valid slot names matching PlayerEquipment interface)
+      const validSlots = ['mainHand', 'offHand', 'helmet', 'chest', 'legs', 'boots', 'shoulders', 'cape'];
       if (slots.length > 3 || !slots.every(slot => validSlots.includes(slot))) {
         return res.status(400).json({ message: "Invalid slot configuration" });
       }
