@@ -1226,6 +1226,13 @@ export class CombatScene extends Phaser.Scene {
     const state = this.combatSystem.getCombatState();
     if (!state) return;
 
+    // DEBUG: Log combat state for rewards debugging
+    console.log('[endCombat] Combat state:', {
+      playerVictory: state.playerVictory,
+      enemyCount: state.enemies.length,
+      enemies: state.enemies.map(e => ({ name: e.name, tier: e.tier, isBoss: e.isBoss, health: e.health }))
+    });
+
     this.gameState.updatePlayer({
       health: state.player.health,
       stamina: state.player.stamina,
@@ -1261,7 +1268,9 @@ export class CombatScene extends Phaser.Scene {
       
       try {
         // Call server for each enemy to get loot and rewards
+        console.log(`[endCombat] About to request loot for ${state.enemies.length} enemies`);
         for (const enemy of state.enemies) {
+          console.log(`[endCombat] Requesting loot for: ${enemy.name} (tier ${enemy.tier}, boss: ${enemy.isBoss})`);
           const response = await fetch('/api/loot/roll', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1311,6 +1320,9 @@ export class CombatScene extends Phaser.Scene {
         player.experience = serverNewExperience;
         this.gameState.updatePlayer(player);
         
+        // Save state after combat victory (persists HP/SP, durability, inventory changes)
+        await this.gameState.saveToServer();
+        
       } catch (error) {
         console.error('Error rolling loot from server:', error);
         // Show error and return to wilderness without rewards (server-authoritative - no fallback)
@@ -1320,6 +1332,8 @@ export class CombatScene extends Phaser.Scene {
       
       this.showVictoryScreen(totalAaReward, totalCaReward, totalXpReward, serverNewLevel, allLoot, durabilityMessages);
     } else {
+      // Save state after combat defeat (persists HP/SP state)
+      await this.gameState.saveToServer();
       this.showDefeatScreen();
     }
   }

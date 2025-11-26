@@ -432,6 +432,9 @@ export class DelveScene extends Phaser.Scene {
         this.gameState.updatePlayer({ experience: newXp });
       }
       
+      // Save state after trap interaction
+      this.gameState.saveToServer();
+      
       const successMsg = this.add.text(width / 2, height / 2 - 30, 
         `Success! You carefully disable the trap mechanism.\n+${xpReward} XP${newLevel ? `\n\nLEVEL UP! You are now Level ${newLevel}!` : ''}`, {
         fontFamily: FONTS.primary,
@@ -506,6 +509,9 @@ export class DelveScene extends Phaser.Scene {
       player.health = Math.max(0, player.health - damage);
       this.gameState.updatePlayer(player);
       this.updateStatsPanel();
+      
+      // Save state after taking trap damage
+      this.gameState.saveToServer();
 
       const trapName = trapType === 'spike' ? 'floor spikes' : 'poison darts';
       const resultText = this.add.text(width / 2, height / 2 - 80, 

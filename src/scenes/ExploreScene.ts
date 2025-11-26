@@ -864,6 +864,9 @@ export class ExploreScene extends Phaser.Scene {
     const loot = encounterType.loot;
     this.gameState.addArcaneAsh(loot.aa);
     this.gameState.addCrystallineAnimus(loot.ca);
+    
+    // Save state after collecting treasure
+    this.gameState.saveToServer();
 
     const lootText = this.add.text(width / 2, height / 2 + 40, `+${loot.aa} AA, +${loot.ca.toFixed(1)} CA`, {
       fontFamily: FONTS.primary,
@@ -947,6 +950,9 @@ export class ExploreScene extends Phaser.Scene {
 
       const roll = Math.random();
       if (roll < 0.70) {
+        // Save state after offering is consumed (even with no reward)
+        this.gameState.saveToServer();
+        
         choiceText.setText('The void accepts your offering...\nbut grants nothing in return.').setColor('#888888');
         this.time.delayedCall(3000, () => {
           uiElements.forEach(el => el.destroy());
@@ -977,6 +983,9 @@ export class ExploreScene extends Phaser.Scene {
           const weaponData = ItemDatabase.getWeapon(randomWeapon.itemId);
           outcomeMessage = `The void bestows a gift!\nReceived: ${weaponData?.name || 'weapon'}`;
         }
+        
+        // Save state after shrine blessing/gift
+        this.gameState.saveToServer();
 
         choiceText.setText(outcomeMessage).setColor('#44ff44');
         this.time.delayedCall(3500, () => {
@@ -1174,6 +1183,9 @@ export class ExploreScene extends Phaser.Scene {
         
         this.gameState.addArcaneAsh(aa);
         this.gameState.addCrystallineAnimus(ca);
+        
+        // Save state after collecting trapped chest loot
+        this.gameState.saveToServer();
 
         const resultText = this.add.text(width / 2, height / 2 + 20, 
           `Success! Disarmed the trap!\n+${aa} AA, +${ca.toFixed(1)} CA`, {
@@ -1187,6 +1199,9 @@ export class ExploreScene extends Phaser.Scene {
         const damage = Math.floor(Math.random() * 11) + 15;
         player.health = Math.max(0, player.health - damage);
         this.gameState.updatePlayer(player);
+        
+        // Save state after taking trap damage
+        this.gameState.saveToServer();
 
         const resultText = this.add.text(width / 2, height / 2 + 20, 
           `Failed! The trap triggers!\nTook ${damage} damage!`, {
