@@ -42,8 +42,35 @@ export function registerLootRoutes(app: Express) {
       const items = lootEngine.rollLoot(tier, isBoss || false);
       const arcaneAsh = lootEngine.rollCurrencyReward(tier, isBoss || false);
       
-      // Calculate CA reward: 0.3 × tier per enemy
-      const crystallineAnimus = 0.3 * tier;
+      // Calculate CA reward using probability to maintain integer database storage
+      // Average CA per enemy = 0.3 × tier, achieved through probability:
+      // - T1: 30% chance of 1 CA (avg 0.3)
+      // - T2: 60% chance of 1 CA (avg 0.6)
+      // - T3: 90% chance of 1 CA (avg 0.9)
+      // - T4: 100% chance of 1 CA + 20% chance of bonus (avg 1.2)
+      // - T5: 100% chance of 1 CA + 50% chance of bonus (avg 1.5)
+      // Bosses get 3× CA
+      let crystallineAnimus = 0;
+      const caChance = 0.3 * tier; // Base chance: 0.3, 0.6, 0.9, 1.2, 1.5
+      
+      if (caChance >= 1) {
+        // Guaranteed 1 CA plus chance for bonus
+        crystallineAnimus = 1;
+        const bonusChance = caChance - 1; // 0.2 for T4, 0.5 for T5
+        if (rng.next('CA_bonus_roll') < bonusChance) {
+          crystallineAnimus += 1;
+        }
+      } else {
+        // Probability-based single CA
+        if (rng.next('CA_roll') < caChance) {
+          crystallineAnimus = 1;
+        }
+      }
+      
+      // Bosses give 3× CA
+      if (isBoss) {
+        crystallineAnimus *= 3;
+      }
       
       console.log(`[Loot Roll] Enemy: ${enemyName}, Tier: ${tier}, Boss: ${isBoss}, AA: ${arcaneAsh}, CA: ${crystallineAnimus}`);
       

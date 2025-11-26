@@ -1,7 +1,7 @@
 # Gemforge Chronicles
 
 ## Overview
-Gemforge Chronicles is an ambitious web3 RPG inspired by classic turn-based games, integrating tabletop RPG mechanics, a rich economy, and blockchain (Ronin network) for NFT support. Built on Phaser 3 with TypeScript, it features town interaction, wilderness exploration, procedurally generated delves, and D20-style turn-based combat. The project aims to deliver a deep, engaging RPG experience with strategic combat, economic simulation, and a dark fantasy aesthetic.
+Gemforge Chronicles is a web3 RPG, built with Phaser 3 and TypeScript, integrating classic turn-based and tabletop RPG mechanics with blockchain support for NFTs on the Ronin network. It features town interaction, wilderness exploration, procedurally generated delves, and D20-style turn-based combat. The project aims to deliver a deep, engaging RPG experience with strategic combat, economic simulation, and a dark fantasy aesthetic, targeting a rich and immersive gameplay experience.
 
 ## User Preferences
 This is a long-term solo project built collaboratively with an AI assistant. The approach:
@@ -14,96 +14,62 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 ## System Architecture
 
 ### UI/UX Decisions
-- **Visuals**: Pixel art for environments, items, player, and enemy sprites. NPCs use colored rectangles or custom circular shop button sprites. Consistent UI spacing and layout for menus.
-- **Combat UI**: Four-area design with streamlined attack selection, HP/SP bars, detailed combat log, fixed 2x2 attack button grid with pagination, and a sidebar for Inventory/Run/End Turn.
-- **Combat Backgrounds**: Two distinct pixel art backgrounds (delve, wilderness) that adapt to encounter type, with specific player and enemy positioning.
-- **Combat Animations**: Player lunge animation for attacks and red hit flash for damage.
-- **Typography**: Press Start 2P pixel font for all UI text, with varying sizes and `resolution: 2` for crisp rendering.
+- **Visuals**: Pixel art for environments, items, player, and enemy sprites, with consistent UI spacing. NPCs use simplified graphics.
+- **Combat UI**: Four-area design with streamlined attack selection, HP/SP bars, combat log, fixed 2x2 attack button grid, and a sidebar for Inventory/Run/End Turn.
+- **Combat Backgrounds**: Two distinct pixel art backgrounds (delve, wilderness) that adapt to encounter type.
+- **Combat Animations**: Player lunge animation and red hit flash for damage.
+- **Typography**: Press Start 2P pixel font for all UI text.
 - **Currency Icons**: Pixel art sprites for Arcane Ash and Crystalline Animus.
 - **Equipment Panel**: Custom pixel art 3x4 grid for interactive item slots.
 - **Item Enhancement Visuals**: Color-coded item names based on enhancement level.
-- **Enemy Sprites**: Tier 1-2 enemies have pixel art sprites; bosses are scaled larger. Fallback to colored rectangles for missing sprites.
-- **Stats Panel**: Unified `StatsPanel` component displays player vitals (HP/SP, currency, evasion, DR, level) with consistent icon-based positioning and dynamic spacing.
-- **Town Menu Design System**: Unified design for all town menus (Blacksmith, Merchant, Innkeeper, Vault Keeper, Garthek) with consistent header layout, typography, spacing, and specific tab/column layouts for each.
-- **Target Style**: Full pixel art assets, tabletop RPG aesthetic (dice rolling, grid-based), dark fantasy atmosphere with a Void corruption theme, inspired by Heroes of Might and Magic and Final Fantasy.
+- **Enemy Sprites**: Tier 1-2 enemies have pixel art; bosses are scaled larger. Fallback to colored rectangles for missing sprites.
+- **Stats Panel**: Unified component displays player vitals with consistent icon-based positioning.
+- **Town Menu Design System**: Unified design across all town menus (Blacksmith, Merchant, Innkeeper, Vault Keeper, Garthek) with consistent headers, typography, and specific layouts.
+- **Target Style**: Full pixel art assets, tabletop RPG aesthetic (dice rolling, grid-based), dark fantasy atmosphere with a Void corruption theme.
 
 ### Technical Implementations
 - **Game Engine**: Phaser 3.90.0, Language: TypeScript 5.4, Build Tool: Vite 5.0.
 - **Backend**: Express.js with TypeScript, Database: PostgreSQL (Neon) via Drizzle ORM.
-- **Authentication**: Replit Auth (OpenID Connect) with session-based authentication using `express-session` and PostgreSQL store. Multi-instance detection prevents save conflicts.
-- **State Management**: Server-side PostgreSQL saves with 30-second auto-save, auto-save on all scene transitions (delve↔wilderness, wilderness↔town), and emergency saves on disconnect/tab close via `sendBeacon` API. Throttled movement saves (5-second intervals) in ExploreScene persist position/stamina during active exploration.
-- **Comprehensive Save Points (2025-11-26)**: To prevent state misalignment, saves occur after all key player interactions:
-  - Combat exit (victory or defeat) - CRITICAL: Items are added to inventory BEFORE save to prevent loss on disconnect
-  - Trap disarm success/failure in delves
-  - Shrine offerings (both successful blessings and void consumption)
-  - Treasure collection in wilderness
-  - Trapped chest success/failure
-  - Merchant shop purchases
-  - Blacksmith forging attempts
-  - Blacksmith item repairs (single and bulk)
-  - Garthek soulbinding changes
-- **Enemy System**: Metadata-driven enemy database (`EnemyFactory.ts`) supporting 15 enemy types across 5 tiers, with defined currency rewards and category-based loot probabilities.
+- **Authentication**: Replit Auth (OpenID Connect) with session-based authentication using `express-session` and PostgreSQL. Multi-instance detection prevents save conflicts.
+- **State Management**: Server-side PostgreSQL saves every 30 seconds, on all scene transitions, and on disconnect/tab close. Throttled movement saves persist position/stamina during exploration. Critical saves occur after all key player interactions (e.g., combat exit, trap success/failure, treasure collection, purchases, forging).
+- **Enemy System**: Metadata-driven enemy database supporting 15 enemy types across 5 tiers with defined currency rewards and loot probabilities.
 - **Core Gameplay Loop**: Main Menu -> Town -> Explore Map -> Delve -> Combat -> Back to Town.
-- **D20 Combat System**: Turn-based tactical combat with d20 rolls, critical hits, armor reduction, 2-action economy, and various status conditions (weakened, empowered, etc.).
-- **Server-Authoritative Combat**: All combat calculations occur server-side with deterministic RNG to prevent exploitation. This includes server-side `EnemyFactory`, `WeaponValidator`, and secure API endpoints (`/api/combat/initiate`, `/api/combat/action`) that reload player data from storage for validation.
-- **Enemy Special Attacks**: Tier 1 enemies have unique special abilities with specific probabilities (e.g., Splooge, Poison Barb, Agonizing Bite, Shrill Touch, Shiny Shiny, Chronostep, Mighty Roar, Crushing Slam).
+- **D20 Combat System**: Turn-based tactical combat with d20 rolls, critical hits, armor reduction, 2-action economy, and status conditions.
+- **Server-Authoritative Combat**: All combat calculations, including deterministic RNG, occur server-side to prevent exploitation. Secure API endpoints validate player data.
+- **Enemy Special Attacks**: Tier 1 enemies have unique special abilities with specific probabilities.
 - **Stamina Management**: Stamina drains per tile moved and per attack; short rests restore.
 - **Delve Generation**: Procedurally generated 3-5 room dungeons with tier-based difficulty, hidden rooms, and interactive traps.
 - **Economy**: Arcane Ash (common) and Crystalline Animus (rare) currencies.
-- **Inventory & Equipment**: 8-slot equipment, 15-slot active inventory, 80-slot footlocker. Supports dual-wielding, item durability, and soulbinding (3 slots).
+- **Inventory & Equipment**: 8-slot equipment, 15-slot active inventory, 80-slot footlocker. Supports dual-wielding, item durability, and 3 soulbinding slots.
 - **Loot System**: Tier-based item drops with enhancement metadata. Tombstone encounters allow looting from other players.
-- **Random Encounters**: Varied types (Combat, Treasure, Shrine, Corrupted Void Portal, Trapped Chest, Tombstone, Wandering Merchant), with a chance for Aetherbear boss in combat.
+- **Random Encounters**: Varied types (Combat, Treasure, Shrine, Corrupted Void Portal, Trapped Chest, Tombstone, Wandering Merchant), with a chance for Aetherbear boss.
 - **Buff System**: Time-based temporary effects managed by `BuffManager`.
-- **Tier 2 Zone - Fungal Hollows**: Unlocks after completing 5 T1 delves. Portal spawns on random map edge tile. Swampy/fungal theme with 50% harder enemies (placeholder scene currently).
-- **Scene Transition System**: `freshExpedition` flag pattern controls when exploration state resets. Death transitions and new games pass `{ freshExpedition: true }` to clear delves/fog-of-war. Normal town returns preserve state allowing quick town hopping without losing progress.
+- **Tier 2 Zone - Fungal Hollows**: Unlocks after completing 5 T1 delves, featuring harder enemies.
+- **Scene Transition System**: `freshExpedition` flag controls exploration state resets for death or new games, while preserving state for normal town returns.
 - **Wilderness Exploration**: 6000x6000 world with camera-follow, procedural terrain, Y-sorted rendering, fog of war, and limited rests.
 - **UI System**: Viewport-locked, interactive, blocking overlays with hierarchical ESC key navigation.
 - **Menu System**: Dual-menu architecture (ESC for system, M for character functions) with tabbed interface settings.
-- **Audio System**: 5-track music system with smart transitions, combat memory, volume control, and graceful handling of missing files.
+- **Audio System**: 5-track music system with smart transitions, combat memory, and volume control.
 - **Modular Architecture**: Separated concerns using TypeScript and singleton patterns.
 - **Services**: Innkeeper, Vault Keeper, Blacksmith for specific town functions.
-- **Forging & Enhancement System (Server-Authoritative, 2025-11-26)**: +1 to +9 enhancements with success rates, costs, failure penalties, and a "Shiny System" for rare, indestructible items. All forging operations now occur server-side via `/api/forge/attempt` endpoint. Currency is deducted atomically from database before roll. Enhanced items are persisted directly to save file, bypassing security's `enforceItemValues` validation. Shared config in `shared/forgingConfig.ts` ensures client/server consistency.
+- **Forging & Enhancement System**: Server-authoritative +1 to +9 enhancements with success rates, costs, failure penalties, and a "Shiny System." All operations occur server-side with atomic currency deduction.
 - **Karma System**: Rewards players for returning looted tombstone items.
-- **Currency Security**: Production-ready server-authoritative currency system with dedicated `playerCurrencies` table. Currencies stored separately from game save blob to prevent client tampering. Save endpoint strips currency fields and re-injects server values. Load endpoint injects server-authoritative values. Atomic `deductCrystallineAnimus` prevents TOCTOU exploits. Migration script backfills legacy saves with clamped values. INSERT-ONLY `ensurePlayerCurrency` method prevents existing balance overwrites. Soulbinding costs 1 CA per newly bound item, deducted atomically server-side.
-- **Stats/Level/XP Security**: Comprehensive server-authoritative system prevents client manipulation. `shared/itemData.ts` provides `recalculatePlayerStats()` for computing stats from equipment. `server/security.ts` sanitizes save payloads (strips stats, level, experience, maxHealth, maxStamina, currencies) and logs tampering attempts. Load endpoint injects server-authoritative level/XP from database and recalculates stats from equipment. Save endpoint sanitizes forbidden fields, re-injects server values, and recalculates stats. HP/SP clamped to calculated maximums. Stats always computed from equipment, never trusted from client.
-- **Web3 Withdrawal Security (Ronin Blockchain)**: Production-ready EIP-712 signature service for converting in-game currency to on-chain ERC-20 tokens. Withdrawal flow: (1) Request escrowed (funds immediately deducted), (2) Server generates EIP-712 permit signature (15min expiry), (3) Player submits to Ronin smart contract. Security features: fund escrow prevents double-spend, signed withdrawals cannot be cancelled (signature validity locked), strict state machine (pending→signed→claimed), transaction locks prevent race conditions, contract address validation blocks spoofing exploits, monotonic nonces with UNIQUE constraint, daily limits (3/day), amount caps (AA: 10k, CA: 1k), critical audit logging. Requires WITHDRAWAL_SIGNER_KEY and WITHDRAWAL_CONTRACT_ADDRESS environment variables. **Production deployment requires AWS KMS or HashiCorp Vault for signing key management** (Replit Secrets insufficient for production mainnet).
-- **Item Security System**: Comprehensive multi-layer protection prevents all forms of client-side item manipulation:
-  - **XSS Prevention**: Strict regex validation rejects malicious payloads in itemId/name fields (alphanumeric + underscore only)
-  - **Canonical Reconstruction**: Server rebuilds item base stats from `shared/itemData.ts` - client cannot manipulate damage/armor/value
-  - **Slot Compatibility Validation**: Items can only be equipped in valid slots (e.g., weapons in mainHand/offHand, armor in chest)
-  - **Item Minting Prevention**: Server compares incoming saves against previous state to detect unauthorized new items
-  - **Sorted Multiset Matching**: Handles duplicate items by sorting both client submissions and server slots by (enhancement DESC, durability DESC), then matching positionally - prevents value swapping/ratcheting exploits
-  - **Enhancement/Durability Enforcement**: Enhancement levels are immutable via save (must use forging API), durability can only decrease
-  - **Security Logging**: Multi-level events (LOW/MEDIUM/HIGH/CRITICAL) track all tampering attempts
-- **Starter Kit System (2025-11-25)**: New players receive comprehensive equipment kit in their vault (footlocker):
-  - **Contents**: 19 base weapons (daggers, swords, axes, maces, etc.), 13 armor pieces (leather/heavy sets), 6 potions
-  - **Welcome Tooltip**: 10-second modal message directs new players to Vault Keeper
-  - **Security**: Server-authoritative starter kit whitelisting prevents item minting false positives. Cross-container item count aggregation prevents duplication exploits. First-save exception allows client flag for new players; subsequent saves use server-authoritative previous save value.
-  - **Shared Config**: `shared/starterKit.ts` defines item IDs and quantities used by both client and server
-- **Security Hardening (2025-11-25)**:
-  - **Web3 Withdrawals Disabled**: Feature flag `ENABLE_WEB3_WITHDRAWALS` must be explicitly set to `true` - prevents exploitation until smart contract is deployed
-  - **Authentication Required**: No anonymous play supported. All game endpoints require Replit Auth. Anonymous session code removed from client.
-  - **SESSION_SECRET Validation**: Server fails fast if SESSION_SECRET is missing or < 32 characters
-  - **Rate Limiting**: General API limiter (100 req/min), auth endpoint limiter (10 attempts/15min) via express-rate-limit
-  - **Security Headers**: Helmet.js configured with CSP for Phaser game (allows inline scripts for game engine), cross-origin policies for Replit iframe embedding
-  - **RNG Seed Removal**: RNG seeds no longer returned in API responses (delve/loot endpoints) to prevent predictability exploits
-  - **Hosting**: Replit provides WAF protection for deployed applications
-- **Server-Authoritative Economy System (2025-11-26)**: Comprehensive overhaul ensuring all currency transactions are atomic and server-controlled:
-  - **Combat Rewards**: CombatScene calls `/api/loot/roll` for each defeated enemy. Server persists AA, CA (0.3×tier), and XP immediately to database. No client-side fallback (shows error on connection failure to prevent exploitation).
-  - **Shop Purchases**: `/api/shop/purchase` endpoint validates item availability, deducts currency atomically, adds item to inventory, and saves to database. TownScene uses server response for authoritative balances.
-  - **Item Repairs**: `/api/repair/attempt` (single) and `/api/repair/bulk` (multiple) endpoints handle durability restoration. Currency is deducted server-side before durability is updated.
-  - **Forging**: `/api/forge/attempt` handles enhancement with atomic currency deduction and item updates.
-  - **Soulbinding**: `/api/soulbound/slots` deducts CA per newly bound item.
-  - **All client currency modifications have been removed** - player balances come exclusively from server responses.
-- **XP Rewards**: 5 × tier for normal enemies, 15 × tier for bosses. Delve completion grants 25 × tier XP via `/api/delve/complete` endpoint.
+- **Currency Security**: Production-ready server-authoritative system with dedicated `playerCurrencies` table. Currencies stored separately from game save blob, with atomic deductions and server-side validation.
+- **Stats/Level/XP Security**: Comprehensive server-authoritative system prevents client manipulation. Player stats are recalculated from equipment server-side, and forbidden fields are sanitized from client payloads.
+- **Web3 Withdrawal Security (Ronin Blockchain)**: Production-ready EIP-712 signature service for converting in-game currency to on-chain ERC-20 tokens. Features include fund escrow, signed withdrawals, strict state machine, transaction locks, and robust logging. Requires `WITHDRAWAL_SIGNER_KEY` and `WITHDRAWAL_CONTRACT_ADDRESS` environment variables.
+- **Item Security System**: Multi-layer protection prevents client-side item manipulation via XSS prevention, canonical reconstruction of item stats, slot compatibility validation, detection of unauthorized new items, sorted multiset matching for duplicates, and enforcement of enhancement/durability rules.
+- **Starter Kit System**: New players receive a comprehensive equipment kit in their vault (footlocker) including weapons, armor, and potions. Security measures include server-authoritative whitelisting and cross-container item count aggregation.
+- **Security Hardening**: Web3 withdrawals are disabled by default. Authentication is required for all game endpoints. Server validates `SESSION_SECRET`. Rate limiting is applied to APIs. Helmet.js provides security headers, and Replit provides WAF protection. RNG seeds are removed from API responses to prevent predictability exploits.
+- **Server-Authoritative Economy System**: All currency transactions (combat rewards, shop purchases, item repairs, forging, soulbinding) are atomic and server-controlled. Client currency modifications are removed, with player balances exclusively sourced from server responses.
+- **XP Rewards**: XP is awarded for defeating enemies and completing delves, calculated server-side.
 
 ## External Dependencies
 
 - **Game Engine**: Phaser 3.90.0
 - **Language**: TypeScript 5.4
 - **Build Tool**: Vite 5.0
-- **Backend Framework**: Express.js 5.1
-- **Database**: PostgreSQL via @neondatabase/serverless
-- **ORM**: Drizzle ORM 0.44.7
-- **Authentication**: openid-client 6.8.1 (Replit Auth)
-- **Session Store**: connect-pg-simple 10.0.0
+- **Backend Framework**: Express.js
+- **Database**: PostgreSQL (via @neondatabase/serverless)
+- **ORM**: Drizzle ORM
+- **Authentication**: openid-client (Replit Auth)
+- **Session Store**: connect-pg-simple
