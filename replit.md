@@ -38,6 +38,10 @@ This is a long-term solo project built collaboratively with an AI assistant. The
   - Shrine offerings (both successful blessings and void consumption)
   - Treasure collection in wilderness
   - Trapped chest success/failure
+  - Merchant shop purchases
+  - Blacksmith forging attempts
+  - Blacksmith item repairs (single and bulk)
+  - Garthek soulbinding changes
 - **Enemy System**: Metadata-driven enemy database (`EnemyFactory.ts`) supporting 15 enemy types across 5 tiers, with defined currency rewards and category-based loot probabilities.
 - **Core Gameplay Loop**: Main Menu -> Town -> Explore Map -> Delve -> Combat -> Back to Town.
 - **D20 Combat System**: Turn-based tactical combat with d20 rolls, critical hits, armor reduction, 2-action economy, and various status conditions (weakened, empowered, etc.).

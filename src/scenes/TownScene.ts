@@ -1661,6 +1661,9 @@ export class TownScene extends Phaser.Scene {
 
       this.gameState.updatePlayer(player);
       
+      // Save state after purchase to ensure consistency
+      this.gameState.saveToServer();
+      
       const item = ItemDatabase.getItem(itemId);
       this.showMessage(`Purchased ${item?.name || 'item'} for ${price} ${currency}!`);
       this.updatePlayerDisplay();
@@ -2178,6 +2181,9 @@ export class TownScene extends Phaser.Scene {
       
       this.gameState.updatePlayer(player);
       
+      // Save state after repair to ensure consistency
+      this.gameState.saveToServer();
+      
       this.showMessage(result.message);
       this.updatePlayerDisplay();
     } catch (error) {
@@ -2314,6 +2320,9 @@ export class TownScene extends Phaser.Scene {
 
       this.gameState.updatePlayer(player);
       
+      // Save state after bulk repair to ensure consistency
+      this.gameState.saveToServer();
+      
       this.showMessage(result.message);
       this.updatePlayerDisplay();
       
@@ -2413,6 +2422,10 @@ export class TownScene extends Phaser.Scene {
       }
 
       this.gameState.updatePlayer(player);
+      
+      // Save state after forging to ensure consistency
+      this.gameState.saveToServer();
+      
       this.showMessage(result.message);
       this.updatePlayerDisplay();
 
@@ -2654,6 +2667,10 @@ export class TownScene extends Phaser.Scene {
         } else {
           this.showMessage('Soul bindings saved successfully');
         }
+        
+        // Save state after soulbinding to ensure consistency
+        this.gameState.saveToServer();
+        
         destroyAll();
       } else {
         this.showMessage(result.message || 'Failed to save bindings');
