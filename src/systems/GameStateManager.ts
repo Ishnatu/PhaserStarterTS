@@ -224,7 +224,14 @@ export class GameStateManager {
     this.disableAutoSave();
   }
 
-  addItemToInventory(itemId: string, quantity: number = 1, enhancementLevel?: number): boolean {
+  addItemToInventory(
+    itemId: string, 
+    quantity: number = 1, 
+    enhancementLevel?: number,
+    durability?: number,
+    maxDurability?: number,
+    isShiny?: boolean
+  ): boolean {
     const totalItems = this.gameState.player.inventory.reduce((sum, item) => sum + item.quantity, 0);
     if (totalItems + quantity > this.gameState.player.inventorySlots) {
       return false;
@@ -244,14 +251,16 @@ export class GameStateManager {
 
     // For weapons/armor, each item gets its own durability
     const finalEnhancementLevel = enhancementLevel || 0;
-    const maxDurability = 100 + (finalEnhancementLevel * 10);
+    const finalMaxDurability = maxDurability ?? (100 + (finalEnhancementLevel * 10));
+    const finalDurability = durability ?? finalMaxDurability;
     
     this.gameState.player.inventory.push({ 
       itemId, 
       quantity, 
       enhancementLevel: finalEnhancementLevel,
-      durability: maxDurability,
-      maxDurability: maxDurability
+      durability: finalDurability,
+      maxDurability: finalMaxDurability,
+      isShiny: isShiny
     });
     return true;
   }
@@ -302,6 +311,27 @@ export class GameStateManager {
     existing.quantity -= quantity;
     if (existing.quantity === 0) {
       this.gameState.player.footlocker = this.gameState.player.footlocker.filter(item => item.itemId !== itemId);
+    }
+    return true;
+  }
+
+  moveFromFootlockerByIndex(index: number): boolean {
+    if (index < 0 || index >= this.gameState.player.footlocker.length) {
+      return false;
+    }
+    
+    const item = this.gameState.player.footlocker[index];
+    if (!item) {
+      return false;
+    }
+
+    if (!this.addItemToInventory(item.itemId, 1, item.enhancementLevel, item.durability, item.maxDurability, item.isShiny)) {
+      return false;
+    }
+
+    item.quantity -= 1;
+    if (item.quantity <= 0) {
+      this.gameState.player.footlocker.splice(index, 1);
     }
     return true;
   }

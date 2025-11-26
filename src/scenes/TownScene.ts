@@ -827,6 +827,7 @@ export class TownScene extends Phaser.Scene {
       });
       footlockerContainer.add(itemLabel);
 
+      const capturedIndex = index;
       const retrieveBtn = this.add.text(width / 2 - 80, y, '[Retrieve]', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.xsmall,
@@ -834,7 +835,7 @@ export class TownScene extends Phaser.Scene {
       }).setInteractive({ useHandCursor: true })
         .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
           if (pointer.worldY < scrollAreaTop || pointer.worldY > scrollAreaBottom) return;
-          if (this.gameState.moveFromFootlocker(invItem.itemId, 1)) {
+          if (this.gameState.moveFromFootlockerByIndex(capturedIndex)) {
             this.showMessage(`Retrieved ${item.name}`);
             destroyAll();
             this.openFootlocker();
