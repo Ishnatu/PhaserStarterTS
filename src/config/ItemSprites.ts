@@ -1,8 +1,8 @@
 export class ItemSprites {
   private static spriteMap: Map<string, string> = new Map([
-    ['dagger_basic', '/assets/items/weapons/iron_dagger.png'],
+    ['dagger_basic', '/assets/items/weapons/dueling_rapier.png'],
     ['shortsword_basic', '/assets/items/weapons/shortsword.png'],
-    ['rapier_basic', '/assets/items/weapons/dueling_rapier.png'],
+    ['rapier_basic', '/assets/items/weapons/iron_dagger.png'],
     ['longsword_basic', '/assets/items/weapons/longsword.png'],
     ['battleaxe_basic', '/assets/items/weapons/battle_axe.png'],
     ['mace_basic', '/assets/items/weapons/mace.png'],
