@@ -1710,19 +1710,6 @@ export class TownScene extends Phaser.Scene {
     }).setOrigin(0.5);
     uiElements.push(title);
 
-    // Row 2: Currencies (centered, consistent with StatsPanel)
-    const balanceDisplay = CurrencyDisplay.createInlineCurrency(
-      this,
-      width / 2,
-      headerBaseY + verticalGap,
-      player.arcaneAsh,
-      player.crystallineAnimus,
-      'xsmall'  // Changed from 'small' to match StatsPanel
-    );
-    balanceDisplay.setScrollFactor(0);
-    balanceDisplay.x -= balanceDisplay.getBounds().width / 2;
-    uiElements.push(balanceDisplay);
-
     const destroyAll = () => {
       uiElements.forEach(el => el.destroy());
       this.menuState = 'none';
@@ -1733,11 +1720,11 @@ export class TownScene extends Phaser.Scene {
     this.menuState = 'forge';
 
     const renderForge = () => {
-      uiElements.slice(4).forEach(el => el.destroy());
-      uiElements.splice(4);
+      uiElements.slice(3).forEach(el => el.destroy());
+      uiElements.splice(3);
 
-      // Row 3: Tab buttons (centered horizontally with increased spacing)
-      const tabY = headerBaseY + (verticalGap * 2);  // Two gaps down from title
+      // Row 2: Tab buttons (centered horizontally with increased spacing)
+      const tabY = headerBaseY + verticalGap;  // One gap down from title
       const tabSpacing = 220;  // Increased from 150px to prevent overlap
 
       // Check if there are any repairable items to show Repair All button
