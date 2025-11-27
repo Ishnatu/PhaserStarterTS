@@ -95,7 +95,7 @@ export class CombatSystem {
     }
 
     const target = this.combatState.enemies[targetIndex];
-    const isAoeAttack = attack.name === 'Arcing Blade' || attack.name === 'Spinning Flurry';
+    const isAoeAttack = attack.name === 'Spinning Flurry';
     
     if (!isAoeAttack && (!target || target.health <= 0)) {
       return {
@@ -160,10 +160,6 @@ export class CombatSystem {
 
     if (attack.name === 'Vipers Fangs') {
       return this.executeVipersFangs(targetIndex, attack);
-    }
-
-    if (attack.name === 'Arcing Blade') {
-      return this.executeArcingBlade(attack);
     }
 
     if (attack.name === 'Spinning Flurry') {
@@ -502,46 +498,6 @@ export class CombatSystem {
     this.checkCombatEnd();
     this.checkAndEndPlayerTurn();
     return primaryResult;
-  }
-
-  private executeArcingBlade(attack: WeaponAttack): AttackResult {
-    if (!this.combatState) {
-      return this.createFailedAttack('No combat state!');
-    }
-
-    this.combatState.combatLog.push('Arcing Blade strikes all enemies!');
-    
-    let totalDamage = 0;
-    let anyHit = false;
-    let anyCrit = false;
-    let attackRoll = 0;
-
-    for (const enemy of this.combatState.enemies) {
-      if (enemy.health <= 0) continue;
-
-      const result = this.executeSingleStrike(enemy, attack, `Arcing Blade on ${enemy.name}`);
-      anyHit = anyHit || result.hit;
-      anyCrit = anyCrit || result.critical;
-      attackRoll = Math.max(attackRoll, result.attackRoll);
-      totalDamage += result.damage;
-
-      if (enemy.health <= 0) {
-        this.combatState.combatLog.push(`${enemy.name} has been defeated!`);
-      }
-    }
-
-    this.deductActions(attack.actionCost);
-    this.checkCombatEnd();
-    this.checkAndEndPlayerTurn();
-
-    return {
-      hit: anyHit,
-      critical: anyCrit,
-      attackRoll,
-      damage: totalDamage,
-      damageBeforeReduction: totalDamage,
-      message: `Arcing Blade complete! Total: ${totalDamage} damage across all enemies`,
-    };
   }
 
   private executeSpinningFlurry(attack: WeaponAttack): AttackResult {
