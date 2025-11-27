@@ -344,18 +344,36 @@ export class DatabaseStorage implements IStorage {
       throw new Error(`Player ${playerId} not found`);
     }
 
-    let newExperience = current.experience + xpAmount;
-    let newLevel = current.level;
-    let leveledUp = false;
-
-    // Level up logic: 100 XP per level
-    const xpForNextLevel = (level: number) => level * 100;
+    // Use CUMULATIVE XP system matching client (xpSystem.ts)
+    // XP never resets - it keeps growing as total lifetime XP
+    const newExperience = current.experience + xpAmount;
     
-    while (newExperience >= xpForNextLevel(newLevel) && newLevel < 50) {
-      newExperience -= xpForNextLevel(newLevel);
-      newLevel++;
-      leveledUp = true;
+    // Level thresholds (cumulative XP required to reach each level)
+    const LEVEL_THRESHOLDS: Record<number, number> = {
+      1: 0,
+      2: 500,
+      3: 1500,
+      4: 3500,
+      5: 7500,
+      6: 15500,
+      7: 31500,
+      8: 63500,
+      9: 127500,
+      10: 255500,
+    };
+    
+    const MAX_LEVEL = 10;
+    
+    // Calculate new level from cumulative XP
+    let newLevel = 1;
+    for (let level = MAX_LEVEL; level >= 1; level--) {
+      if (newExperience >= LEVEL_THRESHOLDS[level]) {
+        newLevel = level;
+        break;
+      }
     }
+    
+    const leveledUp = newLevel > current.level;
 
     const [updated] = await db
       .update(playerCurrencies)
