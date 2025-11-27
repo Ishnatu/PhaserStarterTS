@@ -2344,7 +2344,7 @@ export class TownScene extends Phaser.Scene {
     }
     
     if (player.arcaneAsh < cost.aa || player.crystallineAnimus < cost.ca) {
-      this.showMessage(`Insufficient funds! Need ${cost.aa} AA and ${cost.ca.toFixed(1)} CA`);
+      this.showMessage(`Insufficient funds! Need ${cost.aa} AA and ${cost.ca} CA`);
       return;
     }
 

@@ -20,15 +20,15 @@ export interface ForgingResult {
 
 export class ForgingSystem {
   private static forgingTiers: Map<number, ForgingTier> = new Map([
-    [1, { successChance: 0.95, failureResult: 'no_change', destructionChance: 0, costAA: 100, costCA: 0.1 }],
-    [2, { successChance: 0.85, failureResult: 'no_change', destructionChance: 0, costAA: 250, costCA: 0.2 }],
-    [3, { successChance: 0.70, failureResult: 'downgrade', destructionChance: 0, costAA: 400, costCA: 0.3 }],
-    [4, { successChance: 0.60, failureResult: 'downgrade', destructionChance: 0, costAA: 600, costCA: 0.5 }],
-    [5, { successChance: 0.45, failureResult: 'downgrade', destructionChance: 0.10, costAA: 900, costCA: 1.0 }],
-    [6, { successChance: 0.35, failureResult: 'downgrade', destructionChance: 0.15, costAA: 1300, costCA: 1.5 }],
-    [7, { successChance: 0.25, failureResult: 'downgrade', destructionChance: 0.25, costAA: 2000, costCA: 2.5 }],
-    [8, { successChance: 0.15, failureResult: 'downgrade', destructionChance: 0.35, costAA: 3000, costCA: 3.5 }],
-    [9, { successChance: 0.10, failureResult: 'downgrade', destructionChance: 0.50, costAA: 5000, costCA: 5.0 }],
+    [1, { successChance: 0.95, failureResult: 'no_change', destructionChance: 0, costAA: 100, costCA: 1 }],
+    [2, { successChance: 0.85, failureResult: 'no_change', destructionChance: 0, costAA: 250, costCA: 1 }],
+    [3, { successChance: 0.70, failureResult: 'downgrade', destructionChance: 0, costAA: 400, costCA: 1 }],
+    [4, { successChance: 0.60, failureResult: 'downgrade', destructionChance: 0, costAA: 600, costCA: 1 }],
+    [5, { successChance: 0.45, failureResult: 'downgrade', destructionChance: 0.10, costAA: 900, costCA: 1 }],
+    [6, { successChance: 0.35, failureResult: 'downgrade', destructionChance: 0.15, costAA: 1300, costCA: 2 }],
+    [7, { successChance: 0.25, failureResult: 'downgrade', destructionChance: 0.25, costAA: 2000, costCA: 3 }],
+    [8, { successChance: 0.15, failureResult: 'downgrade', destructionChance: 0.35, costAA: 3000, costCA: 4 }],
+    [9, { successChance: 0.10, failureResult: 'downgrade', destructionChance: 0.50, costAA: 5000, costCA: 5 }],
   ]);
 
   static canForgeItem(item: InventoryItem): boolean {

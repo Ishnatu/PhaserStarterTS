@@ -52,7 +52,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Audio System**: 5-track music system with smart transitions, combat memory, and volume control.
 - **Modular Architecture**: Separated concerns using TypeScript and singleton patterns.
 - **Services**: Innkeeper, Vault Keeper, Blacksmith for specific town functions.
-- **Forging & Enhancement System**: Server-authoritative +1 to +9 enhancements with success rates, costs, failure penalties, and a "Shiny System." All operations occur server-side with atomic currency deduction.
+- **Forging & Enhancement System**: Server-authoritative +1 to +9 enhancements with success rates, integer-based CA costs (1-5 CA), failure penalties, and a "Shiny System." All operations occur server-side with atomic currency deduction. CA costs use integers to match the database column type.
 - **Karma System**: Rewards players for returning looted tombstone items.
 - **Currency Security**: Production-ready server-authoritative system with dedicated `playerCurrencies` table. Currencies stored separately from game save blob, with atomic deductions and server-side validation.
 - **Stats/Level/XP Security**: Comprehensive server-authoritative system prevents client manipulation. Player stats are recalculated from equipment server-side, and forbidden fields are sanitized from client payloads.

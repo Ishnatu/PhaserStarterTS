@@ -96,7 +96,7 @@ export function registerForgeRoutes(app: Express) {
           destroyed: false,
           downgraded: false,
           newLevel: currentLevel,
-          message: `Insufficient funds! Need ${costAA} AA and ${costCA.toFixed(1)} CA`,
+          message: `Insufficient funds! Need ${costAA} AA and ${costCA} CA`,
           newArcaneAsh: playerCurrency.arcaneAsh,
           newCrystallineAnimus: playerCurrency.crystallineAnimus
         } as ForgingResult);
