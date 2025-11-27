@@ -1172,37 +1172,68 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
 
-    const overlay = this.add.rectangle(width / 2, height / 2, 500, 320, 0x2a1a0a, 0.95)
+    // Full-screen dark overlay (matching town NPC style)
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
+      .setOrigin(0).setScrollFactor(0).setDepth(1000);
+    
+    // Main panel (matching town NPC dimensions)
+    const panel = this.add.rectangle(width / 2, height / 2, 700, 400, 0x2a1a0a)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    const titleText = this.add.text(width / 2, height / 2 - 120, 'Trapped Chest!', {
+
+    uiElements.push(overlay, panel);
+
+    // Header layout with proper vertical spacing (matching town NPC style)
+    const headerBaseY = height / 2 - 140;
+    const verticalGap = 55;
+
+    // Row 1: Title
+    const titleText = this.add.text(width / 2, headerBaseY, 'Trapped Chest', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#ff8844',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const descText = this.add.text(width / 2, height / 2 - 60, encounterType.description + '\n\nDo you want to attempt to pick the lock?', {
+
+    // Row 2: Description (flavor text)
+    const descText = this.add.text(width / 2, headerBaseY + verticalGap, 
+      '"' + encounterType.description + '"', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#aaaaaa',
+      align: 'center',
+      wordWrap: { width: 600 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    // Row 3: Prompt
+    const promptText = this.add.text(width / 2, headerBaseY + verticalGap * 2, 
+      'Do you want to attempt to pick the lock?', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
-      align: 'center',
-      wordWrap: { width: 450 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-    uiElements.push(overlay, titleText, descText);
+    uiElements.push(titleText, descText, promptText);
 
     const closeEncounter = () => {
       uiElements.forEach(el => el.destroy());
       this.encounterCooldown = false;
       this.isOverlayActive = false;
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
     };
 
+    this.currentMenuCloseFunction = closeEncounter;
+    this.menuState = 'encounter';
+
+    // Button row at bottom (matching town NPC style)
+    const buttonY = height / 2 + 130;
+
     // Attempt button
-    const attemptBtn = this.createButton(width / 2 - 100, height / 2 + 20, 'Attempt', () => {
-      // Remove buttons
+    const attemptBtn = this.createButton(width / 2 - 100, buttonY, 'Attempt', () => {
       attemptBtn.destroy();
       leaveBtn.destroy();
       
-      // Update description
-      descText.setText('Attempting to disarm the trap...');
+      promptText.setText('Attempting to disarm the trap...');
+      promptText.setColor('#ffcc00');
       
       this.time.delayedCall(1500, () => {
         const skillCheck = Math.random();
@@ -1215,10 +1246,13 @@ export class ExploreScene extends Phaser.Scene {
           this.gameState.addCrystallineAnimus(ca);
           this.gameState.saveToServer();
 
-          const resultText = this.add.text(width / 2, height / 2 + 40, 
-            `Success! Disarmed the trap!\n+${aa} AA, +${ca} CA`, {
+          promptText.setText('SUCCESS!');
+          promptText.setColor('#44ff44');
+          
+          const resultText = this.add.text(width / 2, headerBaseY + verticalGap * 2 + 50, 
+            `Disarmed the trap and claimed the treasure!\n+${aa} AA, +${ca} CA`, {
             fontFamily: FONTS.primary,
-            fontSize: FONTS.size.medium,
+            fontSize: FONTS.size.small,
             color: '#44ff44',
             align: 'center',
           }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
@@ -1229,10 +1263,13 @@ export class ExploreScene extends Phaser.Scene {
           this.gameState.updatePlayer(player);
           this.gameState.saveToServer();
 
-          const resultText = this.add.text(width / 2, height / 2 + 40, 
-            `Failed! The trap triggers!\nTook ${damage} damage!`, {
+          promptText.setText('FAILED!');
+          promptText.setColor('#ff4444');
+          
+          const resultText = this.add.text(width / 2, headerBaseY + verticalGap * 2 + 50, 
+            `The trap triggers!\nYou took ${damage} damage!`, {
             fontFamily: FONTS.primary,
-            fontSize: FONTS.size.medium,
+            fontSize: FONTS.size.small,
             color: '#ff4444',
             align: 'center',
           }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
@@ -1241,14 +1278,22 @@ export class ExploreScene extends Phaser.Scene {
 
         this.time.delayedCall(2500, closeEncounter);
       });
-    }).setScrollFactor(0).setDepth(1001);
+    }).setScrollFactor(0).setDepth(1002);
     uiElements.push(attemptBtn);
 
     // Leave button
-    const leaveBtn = this.createButton(width / 2 + 100, height / 2 + 20, 'Leave It', () => {
+    const leaveBtn = this.createButton(width / 2 + 100, buttonY, 'Leave It', () => {
       closeEncounter();
-    }).setScrollFactor(0).setDepth(1001);
+    }).setScrollFactor(0).setDepth(1002);
     uiElements.push(leaveBtn);
+
+    // ESC key support
+    const escHandler = () => {
+      if (this.currentMenuCloseFunction) {
+        this.currentMenuCloseFunction();
+      }
+    };
+    this.escKey.once('down', escHandler);
   }
 
   private handleWanderingMerchantEncounter(encounterType: any): void {
