@@ -10,8 +10,32 @@ interface ShopItem {
 }
 
 const SHOP_INVENTORY: ShopItem[] = [
-  { itemId: 'potion_health', price: 50, currency: 'AA' },
-  { itemId: 'potion_stamina', price: 50, currency: 'AA' },
+  { itemId: 'dagger_basic', price: 50, currency: 'AA' },
+  { itemId: 'shortsword_basic', price: 75, currency: 'AA' },
+  { itemId: 'rapier_basic', price: 150, currency: 'AA' },
+  { itemId: 'longsword_basic', price: 100, currency: 'AA' },
+  { itemId: 'battleaxe_basic', price: 100, currency: 'AA' },
+  { itemId: 'mace_basic', price: 75, currency: 'AA' },
+  { itemId: 'warhammer_basic', price: 175, currency: 'AA' },
+  { itemId: 'spear_basic', price: 60, currency: 'AA' },
+  { itemId: 'greatsword_basic', price: 250, currency: 'AA' },
+  { itemId: 'greataxe_basic', price: 275, currency: 'AA' },
+  { itemId: 'staff_basic', price: 150, currency: 'AA' },
+  { itemId: 'shield_wooden', price: 75, currency: 'AA' },
+  { itemId: 'shield_steel', price: 125, currency: 'AA' },
+  { itemId: 'helmet_leather', price: 40, currency: 'AA' },
+  { itemId: 'helmet_heavy', price: 80, currency: 'AA' },
+  { itemId: 'chest_leather', price: 60, currency: 'AA' },
+  { itemId: 'chest_heavy', price: 120, currency: 'AA' },
+  { itemId: 'legs_leather', price: 50, currency: 'AA' },
+  { itemId: 'legs_heavy', price: 90, currency: 'AA' },
+  { itemId: 'boots_leather', price: 35, currency: 'AA' },
+  { itemId: 'boots_heavy', price: 70, currency: 'AA' },
+  { itemId: 'shoulders_leather', price: 40, currency: 'AA' },
+  { itemId: 'shoulders_heavy', price: 85, currency: 'AA' },
+  { itemId: 'cape_basic', price: 30, currency: 'AA' },
+  { itemId: 'potion_health', price: 25, currency: 'AA' },
+  { itemId: 'potion_stamina', price: 25, currency: 'AA' },
 ];
 
 export function registerShopRoutes(app: Express) {
