@@ -74,6 +74,7 @@ export class CombatScene extends Phaser.Scene {
     this.load.image('combat-background', '/assets/combat-background.png');
     this.load.image('wilderness-combat-background', '/assets/wilderness-combat-background.png');
     this.load.image('bleed-icon', '/assets/ui/bleed_icon.png');
+    this.load.image('poison-icon', '/assets/ui/poison_icon.png');
     this.load.audio('combat-music', '/assets/audio/combat-music.mp3');
   }
 
@@ -1916,6 +1917,9 @@ export class CombatScene extends Phaser.Scene {
       
       if (condition.type === 'bleeding') {
         indicator = this.add.sprite(currentX, indicatorY, 'bleed-icon');
+        indicator.setScale(0.5);
+      } else if (condition.type === 'poisoned') {
+        indicator = this.add.sprite(currentX, indicatorY, 'poison-icon');
         indicator.setScale(0.5);
       } else {
         const color = ConditionManager.getConditionColor(condition.type);
