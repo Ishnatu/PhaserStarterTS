@@ -63,22 +63,21 @@ export class TownScene extends Phaser.Scene {
     player.lastRestTimestamp = 0;  // Reset cooldown when entering town
     this.gameState.updatePlayer(player);
     
-    // Check if this is a fresh expedition (death/respawn) or just returning to town
-    // Only reset exploration data on fresh expeditions, not when hopping in and out
+    // Always clear explored tiles when entering town - each expedition starts with fresh fog of war
+    this.gameState.clearExploredTiles();
+    
+    // Check if this is a fresh expedition (death/respawn/new game) for delve regeneration
     const sceneData = this.scene.settings.data as any;
     const isFreshExpedition = sceneData?.freshExpedition === true;
     
     if (isFreshExpedition) {
-      // Clear explored tiles so each NEW wilderness expedition starts with fresh fog of war
-      this.gameState.clearExploredTiles();
-      
       // Clear discovered delves so they regenerate on next wilderness visit
       const state = this.gameState.getState();
       state.discoveredDelves = [];
       TerrainGenerator.clearDelvePositions();
     }
-    // NOTE: When simply returning to town (not fresh expedition), we preserve
-    // the delve state so players can hop in and out without losing progress
+    // NOTE: Delve positions are preserved when simply returning to town,
+    // but fog of war always resets for each new expedition
 
     const { width, height } = this.cameras.main;
 
