@@ -341,7 +341,7 @@ export class DelveScene extends Phaser.Scene {
     }
     room.completed = true;
     this.gameState.addArcaneAsh(50 * this.currentDelve.tier);
-    this.gameState.addCrystallineAnimus(0.5 * this.currentDelve.tier);
+    this.gameState.addCrystallineAnimus(this.currentDelve.tier); // 1 CA per tier (whole numbers only)
     this.showMessage('Treasure collected!');
     this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
   }
