@@ -951,11 +951,23 @@ export class CombatScene extends Phaser.Scene {
     }
   }
 
-  private executeRunAttempt(successChance: number): void {
+  private async executeRunAttempt(successChance: number): Promise<void> {
     const runChance = Math.random();
     
     if (runChance < successChance) {
       this.showMessage('Successfully escaped!');
+      
+      // Save current combat HP/SP state before fleeing
+      const state = this.combatSystem.getCombatState();
+      if (state) {
+        this.gameState.updatePlayer({
+          health: state.player.health,
+          stamina: state.player.stamina,
+          inventory: state.player.inventory,
+        });
+        await this.gameState.saveToServer();
+      }
+      
       this.time.delayedCall(1500, () => {
         if (this.isWildEncounter) {
           SceneManager.getInstance().transitionTo('explore', { returnToLocation: this.returnToLocation });
