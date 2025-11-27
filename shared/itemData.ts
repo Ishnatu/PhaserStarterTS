@@ -97,11 +97,15 @@ export function getAllValidItemIds(): Set<string> {
   return ids;
 }
 
-export function calculatePlayerStats(equipment: PlayerEquipment): PlayerStats {
+export function calculatePlayerStats(equipment: PlayerEquipment, level: number = 1): PlayerStats {
   let baseEvasion = 10;
   let calculatedEvasion = baseEvasion;
   let damageReduction = 0;
-  const attackBonus = 3;
+  
+  // Level-based attack bonus: Level 1 = +3, Level 2 = +4, etc. (formula: 2 + level)
+  const playerLevel = Math.max(1, Math.min(level, 50)); // Clamp between 1-50
+  const attackBonus = 2 + playerLevel;
+  
   let damageBonus = 3;
 
   const mainHandWeapon = equipment.mainHand ? getWeapon(equipment.mainHand.itemId) : undefined;

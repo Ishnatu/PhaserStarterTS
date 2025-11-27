@@ -320,7 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // SECURITY: Recalculate stats from equipment - NEVER trust client stats
       // Always recalculate even with empty equipment to ensure baseline stats
-      saveData.player.stats = recalculatePlayerStats(saveData.player.equipment || {});
+      saveData.player.stats = recalculatePlayerStats(saveData.player.equipment || {}, serverState.level);
       
       res.json({
         saveData,
@@ -402,7 +402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Recalculate stats from equipment (always, even if empty)
-      sanitizedData.player.stats = recalculatePlayerStats(sanitizedData.player.equipment || {});
+      sanitizedData.player.stats = recalculatePlayerStats(sanitizedData.player.equipment || {}, serverState.level);
       
       const result = await storage.saveGame({
         userId,

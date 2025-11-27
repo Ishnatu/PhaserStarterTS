@@ -200,8 +200,12 @@ export function registerForgeRoutes(app: Express) {
         }
       }
 
+      // Get player level for stats calculation
+      const playerCurrencyState = await storage.getPlayerCurrency(userId);
+      const playerLevel = playerCurrencyState?.level || 1;
+      
       // Recalculate player stats from equipment before saving
-      player.stats = recalculatePlayerStats(player.equipment || {});
+      player.stats = recalculatePlayerStats(player.equipment || {}, playerLevel);
 
       await storage.saveGame({
         userId,

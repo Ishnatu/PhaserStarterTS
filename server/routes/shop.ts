@@ -99,7 +99,10 @@ export function registerShopRoutes(app: Express) {
         player.inventory.push({ itemId, quantity: 1 });
       }
 
-      player.stats = recalculatePlayerStats(player.equipment || {});
+      // Get player level for stats calculation
+      const playerCurrencyState = await storage.getPlayerCurrency(userId);
+      const playerLevel = playerCurrencyState?.level || 1;
+      player.stats = recalculatePlayerStats(player.equipment || {}, playerLevel);
 
       await storage.saveGame({
         userId,

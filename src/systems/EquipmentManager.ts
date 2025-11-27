@@ -8,7 +8,10 @@ export class EquipmentManager {
     let baseEvasion = 10;
     let calculatedEvasion = baseEvasion;
     let damageReduction = 0;
-    const attackBonus = 3;
+    
+    // Level-based attack bonus: Level 1 = +3, Level 2 = +4, etc. (formula: 2 + level)
+    const playerLevel = player.level || 1;
+    const attackBonus = 2 + playerLevel;
     
     let damageBonus = 3;
 

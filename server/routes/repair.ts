@@ -111,7 +111,10 @@ export function registerRepairRoutes(app: Express) {
 
       item.durability = item.maxDurability || 100;
 
-      player.stats = recalculatePlayerStats(player.equipment || {});
+      // Get player level for stats calculation
+      const playerCurrencyState = await storage.getPlayerCurrency(userId);
+      const playerLevel = playerCurrencyState?.level || 1;
+      player.stats = recalculatePlayerStats(player.equipment || {}, playerLevel);
 
       await storage.saveGame({
         userId,
@@ -217,7 +220,10 @@ export function registerRepairRoutes(app: Express) {
         item.durability = item.maxDurability || 100;
       }
 
-      player.stats = recalculatePlayerStats(player.equipment || {});
+      // Get player level for stats calculation
+      const playerCurrencyState = await storage.getPlayerCurrency(userId);
+      const playerLevel = playerCurrencyState?.level || 1;
+      player.stats = recalculatePlayerStats(player.equipment || {}, playerLevel);
 
       await storage.saveGame({
         userId,

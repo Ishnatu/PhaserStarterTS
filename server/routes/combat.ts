@@ -139,9 +139,13 @@ export function registerCombatRoutes(app: Express) {
 
       const player = gameSave.saveData as PlayerData;
       
+      // Get player level for stats calculation
+      const playerCurrencyState = await storage.getPlayerCurrency(userId);
+      const playerLevel = playerCurrencyState?.level || 1;
+      
       // [SECURITY FIX] Recalculate stats from equipment before combat
       // This ensures calculatedEvasion and other stats are correct from armor
-      player.stats = recalculatePlayerStats(player.equipment || {});
+      player.stats = recalculatePlayerStats(player.equipment || {}, playerLevel);
 
       // [SERVER RNG] Create deterministic seed from save data (not Math.random!)
       const userHash = userId.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);

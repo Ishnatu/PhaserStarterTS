@@ -52,7 +52,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Audio System**: 5-track music system with smart transitions, combat memory, and volume control.
 - **Modular Architecture**: Separated concerns using TypeScript and singleton patterns.
 - **Services**: Innkeeper, Vault Keeper, Blacksmith for specific town functions.
-- **Forging & Enhancement System**: Server-authoritative +1 to +9 enhancements with success rates, integer-based CA costs (1-5 CA), failure penalties, and a "Shiny System." All operations occur server-side with atomic currency deduction. CA costs use integers to match the database column type.
+- **Forging & Enhancement System**: Server-authoritative +1 to +9 enhancements with success rates, exponential CA costs (1, 2, 4, 8, 16, 32, 64, 128, 256 CA), failure penalties, and a "Shiny System." All operations occur server-side with atomic currency deduction. Total CA to +9: 511 CA.
 - **Karma System**: Rewards players for returning looted tombstone items.
 - **Currency Security**: Production-ready server-authoritative system with dedicated `playerCurrencies` table. Currencies stored separately from game save blob, with atomic deductions and server-side validation.
 - **Stats/Level/XP Security**: Comprehensive server-authoritative system prevents client manipulation. Player stats are recalculated from equipment server-side, and forbidden fields are sanitized from client payloads.
@@ -62,7 +62,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Security Hardening**: Web3 withdrawals are disabled by default. Authentication is required for all game endpoints. Server validates `SESSION_SECRET`. Rate limiting is applied to APIs. Helmet.js provides security headers, and Replit provides WAF protection. RNG seeds are removed from API responses to prevent predictability exploits.
 - **Server-Authoritative Economy System**: All currency transactions (combat rewards, shop purchases, item repairs, forging, soulbinding) are atomic and server-controlled. Client currency modifications are removed, with player balances exclusively sourced from server responses.
 - **XP Rewards**: XP is awarded for defeating enemies and completing delves, calculated server-side.
-- **Leveling System**: Cumulative XP system with levels 1-10. Per-level bonuses: +10 HP, +20 SP. Level 1: 110 HP / 120 SP, Level 10: 200 HP / 300 SP.
+- **Leveling System**: Cumulative XP system with levels 1-10. Per-level bonuses: +10 HP, +20 SP, +1 to-hit bonus. Level 1: 110 HP / 120 SP / +3 to-hit, Level 10: 200 HP / 300 SP / +12 to-hit. Attack bonus formula: 2 + level.
 
 ## Security Architecture
 

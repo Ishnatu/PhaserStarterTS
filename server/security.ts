@@ -643,8 +643,8 @@ function sanitizeSaveData(saveData: any): any {
   return sanitized;
 }
 
-export function recalculatePlayerStats(equipment: PlayerEquipment): PlayerStats {
-  return calculatePlayerStats(equipment);
+export function recalculatePlayerStats(equipment: PlayerEquipment, level: number = 1): PlayerStats {
+  return calculatePlayerStats(equipment, level);
 }
 
 export function calculateMaxHealth(level: number): number {
@@ -687,7 +687,7 @@ export function enforceServerAuthoritativeValues(
     enforced.player.stamina = enforced.player.maxStamina;
   }
   
-  enforced.player.stats = recalculatePlayerStats(enforced.player.equipment || {});
+  enforced.player.stats = recalculatePlayerStats(enforced.player.equipment || {}, serverState.level);
   
   return enforced;
 }
