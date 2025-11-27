@@ -95,7 +95,9 @@ export class CombatSystem {
     }
 
     const target = this.combatState.enemies[targetIndex];
-    if (!target || target.health <= 0) {
+    const isAoeAttack = attack.name === 'Arcing Blade' || attack.name === 'Spinning Flurry';
+    
+    if (!isAoeAttack && (!target || target.health <= 0)) {
       return {
         hit: false,
         critical: false,
@@ -103,6 +105,17 @@ export class CombatSystem {
         damage: 0,
         damageBeforeReduction: 0,
         message: 'Invalid target!',
+      };
+    }
+    
+    if (isAoeAttack && !this.combatState.enemies.some(e => e.health > 0)) {
+      return {
+        hit: false,
+        critical: false,
+        attackRoll: 0,
+        damage: 0,
+        damageBeforeReduction: 0,
+        message: 'No living enemies to attack!',
       };
     }
 

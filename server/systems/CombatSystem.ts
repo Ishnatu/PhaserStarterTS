@@ -205,10 +205,19 @@ export class CombatSystem {
     }
 
     const target = newState.enemies[targetIndex];
-    if (!target || target.health <= 0) {
+    const isAoeAttack = attack.name === 'Arcing Blade' || attack.name === 'Spinning Flurry';
+    
+    if (!isAoeAttack && (!target || target.health <= 0)) {
       return {
         state: newState,
         result: this.createFailedAttack('Invalid target!')
+      };
+    }
+    
+    if (isAoeAttack && !newState.enemies.some(e => e.health > 0)) {
+      return {
+        state: newState,
+        result: this.createFailedAttack('No living enemies to attack!')
       };
     }
 
