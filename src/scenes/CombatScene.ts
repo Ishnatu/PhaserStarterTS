@@ -278,32 +278,47 @@ export class CombatScene extends Phaser.Scene {
   private renderEnemies(enemies: Enemy[]): void {
     const { height } = this.cameras.main;
     
-    // Fixed positioning - centered around fixed platform coordinates regardless of enemy type
+    // Fixed positioning based on user's visual markers - uniform for all enemy types
+    // Delve: Left X at 650, Right X at 830, Center at 740, Y at 240
+    // Wilderness: Same X positions, Y adjusted for ground level
+    const DELVE_LEFT_X = 650;
+    const DELVE_RIGHT_X = 830;
+    const DELVE_CENTER_X = 740;  // Midpoint between left and right
+    const DELVE_Y = 240;
+    const SPACING = 180;  // Distance between two enemies
+    
     let platformCenterX: number;
     let platformY: number;
-    const spacing = 180; // Increased spacing to prevent enemies from being too close
     
     if (this.isWildEncounter) {
-      // Wilderness: fixed position centered on dirt path (measured from background asset)
-      platformCenterX = 780; // Moved 200px to the right
+      // Wilderness: same horizontal positions, adjusted vertical for ground
+      platformCenterX = DELVE_CENTER_X;
       platformY = height - 420;
     } else {
-      // Delve: fixed position on center-right area (based on user's visual marker)
-      platformCenterX = 980; // Moved 200px to the right
-      platformY = 240;
+      // Delve: use the exact coordinates from user's markers
+      platformCenterX = DELVE_CENTER_X;
+      platformY = DELVE_Y;
     }
     
-    // Position enemies centered around the fixed platform point
+    // Position enemies using fixed coordinates - uniform for all monster types
     let enemyPositions: { x: number, y: number }[];
     if (enemies.length === 1) {
-      // Single enemy: exactly on center point
+      // Single enemy: exactly at center point
       enemyPositions = [{ x: platformCenterX, y: platformY }];
+    } else if (enemies.length === 2) {
+      // Two enemies: use exact left and right marker positions
+      const leftX = this.isWildEncounter ? DELVE_LEFT_X : DELVE_LEFT_X;
+      const rightX = this.isWildEncounter ? DELVE_RIGHT_X : DELVE_RIGHT_X;
+      enemyPositions = [
+        { x: leftX, y: platformY },
+        { x: rightX, y: platformY }
+      ];
     } else {
-      // Multiple enemies: distribute evenly around center point with minimal spacing
-      const totalWidth = (enemies.length - 1) * spacing;
+      // 3+ enemies: distribute evenly around center point
+      const totalWidth = (enemies.length - 1) * SPACING;
       const startX = platformCenterX - totalWidth / 2;
       enemyPositions = enemies.map((_, index) => ({
-        x: startX + (index * spacing),
+        x: startX + (index * SPACING),
         y: platformY
       }));
     }
