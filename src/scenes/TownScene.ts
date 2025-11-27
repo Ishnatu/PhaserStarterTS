@@ -27,6 +27,7 @@ export class TownScene extends Phaser.Scene {
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
   private itemTooltip: ItemTooltip | null = null;
+  private footlockerScrollPosition: { footlocker: number; inventory: number } = { footlocker: 0, inventory: 0 };
 
   constructor() {
     super('TownScene');
@@ -408,6 +409,7 @@ export class TownScene extends Phaser.Scene {
     }
 
     if (name === 'Vault Keeper') {
+      this.footlockerScrollPosition = { footlocker: 0, inventory: 0 };
       this.openFootlocker();
       return;
     }
@@ -838,6 +840,15 @@ export class TownScene extends Phaser.Scene {
     const footlockerItems = player.footlocker;
     const inventoryItems = player.inventory;
 
+    // Scroll state - declared early so click handlers can access them
+    const footlockerTotalHeight = footlockerItems.length * itemHeight;
+    const footlockerMaxScroll = Math.max(0, footlockerTotalHeight - scrollAreaHeight);
+    let footlockerScroll = Math.min(this.footlockerScrollPosition.footlocker, footlockerMaxScroll);
+
+    const inventoryTotalHeight = inventoryItems.length * itemHeight;
+    const inventoryMaxScroll = Math.max(0, inventoryTotalHeight - scrollAreaHeight);
+    let inventoryScroll = Math.min(this.footlockerScrollPosition.inventory, inventoryMaxScroll);
+
     footlockerItems.forEach((invItem, index) => {
       const item = ItemDatabase.getItem(invItem.itemId);
       if (!item) return;
@@ -862,6 +873,7 @@ export class TownScene extends Phaser.Scene {
           if (pointer.worldY < scrollAreaTop || pointer.worldY > scrollAreaBottom) return;
           if (this.gameState.moveFromFootlockerByIndex(capturedIndex)) {
             this.showMessage(`Retrieved ${item.name}`);
+            this.footlockerScrollPosition = { footlocker: footlockerScroll, inventory: inventoryScroll };
             destroyAll();
             this.openFootlocker();
           } else {
@@ -902,6 +914,7 @@ export class TownScene extends Phaser.Scene {
         .on('pointerdown', (pointer: Phaser.Input.Pointer) => {
           if (pointer.worldY < scrollAreaTop || pointer.worldY > scrollAreaBottom) return;
           this.storeItem(invItem.itemId);
+          this.footlockerScrollPosition = { footlocker: footlockerScroll, inventory: inventoryScroll };
           destroyAll();
           this.openFootlocker();
         });
@@ -931,13 +944,9 @@ export class TownScene extends Phaser.Scene {
     inventoryContainer.setMask(inventoryMask);
     uiElements.push(inventoryMaskShape);
 
-    const footlockerTotalHeight = footlockerItems.length * itemHeight;
-    const footlockerMaxScroll = Math.max(0, footlockerTotalHeight - scrollAreaHeight);
-    let footlockerScroll = 0;
-
-    const inventoryTotalHeight = inventoryItems.length * itemHeight;
-    const inventoryMaxScroll = Math.max(0, inventoryTotalHeight - scrollAreaHeight);
-    let inventoryScroll = 0;
+    // Apply initial scroll positions
+    footlockerContainer.y = -footlockerScroll;
+    inventoryContainer.y = -inventoryScroll;
 
     let footlockerScrollThumb: Phaser.GameObjects.Rectangle | null = null;
     if (footlockerMaxScroll > 0) {
@@ -948,7 +957,9 @@ export class TownScene extends Phaser.Scene {
       uiElements.push(scrollbarTrack);
       
       const thumbHeight = Math.max(30, (scrollAreaHeight / footlockerTotalHeight) * scrollbarTrackHeight);
-      footlockerScrollThumb = this.add.rectangle(scrollbarX, scrollAreaTop + thumbHeight / 2 + 5, 6, thumbHeight, 0x88ddff);
+      const scrollRatio = footlockerMaxScroll > 0 ? footlockerScroll / footlockerMaxScroll : 0;
+      const thumbY = scrollAreaTop + thumbHeight / 2 + 5 + scrollRatio * (scrollbarTrackHeight - thumbHeight);
+      footlockerScrollThumb = this.add.rectangle(scrollbarX, thumbY, 6, thumbHeight, 0x88ddff);
       uiElements.push(footlockerScrollThumb);
     }
 
@@ -961,7 +972,9 @@ export class TownScene extends Phaser.Scene {
       uiElements.push(scrollbarTrack);
       
       const thumbHeight = Math.max(30, (scrollAreaHeight / inventoryTotalHeight) * scrollbarTrackHeight);
-      inventoryScrollThumb = this.add.rectangle(scrollbarX, scrollAreaTop + thumbHeight / 2 + 5, 6, thumbHeight, 0xf0a020);
+      const scrollRatio = inventoryMaxScroll > 0 ? inventoryScroll / inventoryMaxScroll : 0;
+      const thumbY = scrollAreaTop + thumbHeight / 2 + 5 + scrollRatio * (scrollbarTrackHeight - thumbHeight);
+      inventoryScrollThumb = this.add.rectangle(scrollbarX, thumbY, 6, thumbHeight, 0xf0a020);
       uiElements.push(inventoryScrollThumb);
     }
 
