@@ -2265,16 +2265,6 @@ export class ExploreScene extends Phaser.Scene {
       return;
     }
 
-    const now = Date.now();
-    const timeSinceLastRest = now - player.lastRestTimestamp;
-    const cooldownRemaining = GameConfig.STAMINA.REST_COOLDOWN_MS - timeSinceLastRest;
-
-    if (cooldownRemaining > 0) {
-      const minutesRemaining = Math.ceil(cooldownRemaining / 60000);
-      this.showMessage(`Rest on cooldown! ${minutesRemaining} minute${minutesRemaining > 1 ? 's' : ''} remaining.`);
-      return;
-    }
-
     const recoveryPercent = GameConfig.STAMINA.REST_RECOVERY_PERCENT;
     const healthRecovered = Math.floor(player.maxHealth * recoveryPercent);
     const staminaRecovered = Math.floor(player.maxStamina * recoveryPercent);
@@ -2282,7 +2272,6 @@ export class ExploreScene extends Phaser.Scene {
     player.health = Math.min(player.maxHealth, player.health + healthRecovered);
     player.stamina = Math.min(player.maxStamina, player.stamina + staminaRecovered);
     player.wildernessRestsRemaining--;
-    player.lastRestTimestamp = now;
     
     this.gameState.updatePlayer(player);
     
