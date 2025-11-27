@@ -253,6 +253,18 @@ export class DelveScene extends Phaser.Scene {
         // Update local player state with server-authoritative values (always sync both)
         player.experience = result.newExperience;
         player.level = result.newLevel;
+        
+        // Update max stats when leveling up (server-authoritative)
+        if (result.leveledUp) {
+          if (result.newMaxHealth !== undefined && result.newMaxHealth !== null) {
+            player.maxHealth = result.newMaxHealth;
+            player.health = result.newMaxHealth; // Full heal on level up
+          }
+          if (result.newMaxStamina !== undefined && result.newMaxStamina !== null) {
+            player.maxStamina = result.newMaxStamina;
+            player.stamina = result.newMaxStamina; // Full restore on level up
+          }
+        }
       } else {
         console.error('Failed to grant delve completion XP:', await response.text());
       }
@@ -418,41 +430,109 @@ export class DelveScene extends Phaser.Scene {
     uiElements.push(resultText);
 
     if (success) {
-      // Award XP for trap disarm
-      const player = this.gameState.getPlayer();
-      const xpReward = getXpReward(this.currentDelve.tier, 'trap');
-      const oldXp = player.experience;
-      const newXp = oldXp + xpReward;
-      const newLevel = getNewLevel(oldXp, newXp);
+      // Award XP for trap disarm via server-authoritative API
+      this.grantTrapXP(this.currentDelve.tier, room, uiElements);
+    } else {
+      this.handleTrapFailure(room, uiElements);
+    }
+  }
+
+  private async grantTrapXP(tier: number, room: DelveRoom, uiElements: Phaser.GameObjects.GameObject[]): Promise<void> {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    
+    try {
+      const response = await fetch('/api/delve/trap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ tier }),
+      });
       
-      // Update player XP and level
-      if (newLevel !== null) {
-        this.gameState.updatePlayer({ experience: newXp, level: newLevel });
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Update local player state with server-authoritative values
+        player.experience = result.newExperience;
+        player.level = result.newLevel;
+        
+        // Update max stats when leveling up
+        if (result.leveledUp) {
+          if (result.newMaxHealth !== undefined && result.newMaxHealth !== null) {
+            player.maxHealth = result.newMaxHealth;
+            player.health = result.newMaxHealth;
+          }
+          if (result.newMaxStamina !== undefined && result.newMaxStamina !== null) {
+            player.maxStamina = result.newMaxStamina;
+            player.stamina = result.newMaxStamina;
+          }
+        }
+        
+        this.gameState.updatePlayer(player);
+        this.updateStatsPanel();
+        
+        // Save state after trap interaction
+        await this.gameState.saveToServer();
+        
+        const xpReward = result.xpReward;
+        const leveledUp = result.leveledUp;
+        const newLevel = result.newLevel;
+        
+        const successMsg = this.add.text(width / 2, height / 2 - 30, 
+          `Success! You carefully disable the trap mechanism.\n+${xpReward} XP${leveledUp ? `\n\nLEVEL UP! You are now Level ${newLevel}!` : ''}`, {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.small,
+          color: leveledUp ? '#FFD700' : '#44ff44',
+          align: 'center',
+          wordWrap: { width: 550 },
+        }).setOrigin(0.5).setDepth(1001);
+        uiElements.push(successMsg);
+
+        const continueBtn = this.createButton(width / 2, height / 2 + 80, 'Continue', () => {
+          room.completed = true;
+          this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
+        });
+        continueBtn.setDepth(1002);
+        uiElements.push(continueBtn);
       } else {
-        this.gameState.updatePlayer({ experience: newXp });
+        console.error('Failed to grant trap XP:', await response.text());
+        // Show error message
+        const errorMsg = this.add.text(width / 2, height / 2 - 30, 
+          'Success! You disabled the trap.\n(XP reward failed to save)', {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.small,
+          color: '#ff8844',
+          align: 'center',
+          wordWrap: { width: 550 },
+        }).setOrigin(0.5).setDepth(1001);
+        uiElements.push(errorMsg);
+        
+        const continueBtn = this.createButton(width / 2, height / 2 + 80, 'Continue', () => {
+          room.completed = true;
+          this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
+        });
+        continueBtn.setDepth(1002);
+        uiElements.push(continueBtn);
       }
-      
-      // Save state after trap interaction
-      this.gameState.saveToServer();
-      
-      const successMsg = this.add.text(width / 2, height / 2 - 30, 
-        `Success! You carefully disable the trap mechanism.\n+${xpReward} XP${newLevel ? `\n\nLEVEL UP! You are now Level ${newLevel}!` : ''}`, {
+    } catch (error) {
+      console.error('Error granting trap XP:', error);
+      // Show error but allow continuing
+      const errorMsg = this.add.text(width / 2, height / 2 - 30, 
+        'Success! You disabled the trap.\n(Network error - XP may not be saved)', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
-        color: newLevel ? '#FFD700' : '#44ff44',
+        color: '#ff8844',
         align: 'center',
         wordWrap: { width: 550 },
       }).setOrigin(0.5).setDepth(1001);
-      uiElements.push(successMsg);
-
+      uiElements.push(errorMsg);
+      
       const continueBtn = this.createButton(width / 2, height / 2 + 80, 'Continue', () => {
         room.completed = true;
         this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
       });
       continueBtn.setDepth(1002);
       uiElements.push(continueBtn);
-    } else {
-      this.handleTrapFailure(room, uiElements);
     }
   }
 

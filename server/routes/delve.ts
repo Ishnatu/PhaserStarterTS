@@ -4,6 +4,7 @@ import { isAuthenticated } from "../replitAuth";
 import { DelveGenerator } from "../systems/DelveGenerator";
 import { SeededRNG } from "../utils/SeededRNG";
 import { storage } from "../storage";
+import { calculateMaxHealth, calculateMaxStamina } from "../security";
 import type { DelveRoom } from "../../shared/types";
 
 // Delve completion XP rewards per tier (matches client-side xpSystem.ts)
@@ -13,6 +14,15 @@ const DELVE_COMPLETION_XP: Record<number, number> = {
   3: 57,
   4: 83,
   5: 125,
+};
+
+// Trap disarm XP rewards per tier (matches client-side xpSystem.ts)
+const TRAP_DISARM_XP: Record<number, number> = {
+  1: 5,
+  2: 8,
+  3: 11,
+  4: 17,
+  5: 25,
 };
 
 export function registerDelveRoutes(app: Express) {
@@ -87,16 +97,68 @@ export function registerDelveRoutes(app: Express) {
       // Grant XP server-side (persisted to database)
       const xpResult = await storage.grantExperience(userId, xpReward);
 
+      // Calculate new max stats if leveled up
+      const newMaxHealth = xpResult.leveledUp ? calculateMaxHealth(xpResult.newLevel) : null;
+      const newMaxStamina = xpResult.leveledUp ? calculateMaxStamina(xpResult.newLevel) : null;
+
       res.json({
         success: true,
         xpReward,
         leveledUp: xpResult.leveledUp,
         newLevel: xpResult.newLevel,
         newExperience: xpResult.newExperience,
+        newMaxHealth,
+        newMaxStamina,
       });
     } catch (error) {
       console.error("Error completing delve:", error);
       res.status(500).json({ message: "Failed to complete delve" });
+    }
+  });
+
+  /**
+   * POST /api/delve/trap
+   * Grants XP reward for successfully disarming a trap
+   * SERVER-AUTHORITATIVE: XP is persisted to database immediately
+   */
+  app.post("/api/delve/trap", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { tier } = req.body;
+
+      // Validate input
+      if (typeof tier !== 'number' || tier < 1 || tier > 5) {
+        return res.status(400).json({ message: "Invalid tier: must be between 1 and 5" });
+      }
+
+      // Get XP reward for this tier
+      const xpReward = TRAP_DISARM_XP[tier];
+      if (!xpReward) {
+        return res.status(400).json({ message: "Invalid tier" });
+      }
+
+      // Ensure player currency record exists
+      await storage.ensurePlayerCurrency(userId, 0, 0);
+
+      // Grant XP server-side (persisted to database)
+      const xpResult = await storage.grantExperience(userId, xpReward);
+
+      // Calculate new max stats if leveled up
+      const newMaxHealth = xpResult.leveledUp ? calculateMaxHealth(xpResult.newLevel) : null;
+      const newMaxStamina = xpResult.leveledUp ? calculateMaxStamina(xpResult.newLevel) : null;
+
+      res.json({
+        success: true,
+        xpReward,
+        leveledUp: xpResult.leveledUp,
+        newLevel: xpResult.newLevel,
+        newExperience: xpResult.newExperience,
+        newMaxHealth,
+        newMaxStamina,
+      });
+    } catch (error) {
+      console.error("Error granting trap XP:", error);
+      res.status(500).json({ message: "Failed to grant trap XP" });
     }
   });
 }

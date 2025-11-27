@@ -4,6 +4,7 @@ import { isAuthenticated } from "../replitAuth";
 import { LootEngine } from "../systems/LootEngine";
 import { SeededRNG } from "../utils/SeededRNG";
 import { storage } from "../storage";
+import { calculateMaxHealth, calculateMaxStamina } from "../security";
 import type { InventoryItem } from "../../shared/types";
 
 export function registerLootRoutes(app: Express) {
@@ -87,6 +88,10 @@ export function registerLootRoutes(app: Express) {
       // CRITICAL: Persist XP reward to database immediately
       const xpResult = await storage.grantExperience(userId, xpReward);
 
+      // Calculate new max stats based on new level (for level-up updates)
+      const newMaxHealth = xpResult.leveledUp ? calculateMaxHealth(xpResult.newLevel) : null;
+      const newMaxStamina = xpResult.leveledUp ? calculateMaxStamina(xpResult.newLevel) : null;
+
       const responseData = {
         success: true,
         loot: {
@@ -98,6 +103,8 @@ export function registerLootRoutes(app: Express) {
         leveledUp: xpResult.leveledUp,
         newLevel: xpResult.newLevel,
         newExperience: xpResult.newExperience,
+        newMaxHealth,
+        newMaxStamina,
         newArcaneAsh: updatedCurrency.arcaneAsh,
         newCrystallineAnimus: updatedCurrency.crystallineAnimus,
       };

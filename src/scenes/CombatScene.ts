@@ -1340,6 +1340,17 @@ export class CombatScene extends Phaser.Scene {
           }
           if (result.leveledUp) {
             serverNewLevel = result.newLevel;
+            // Update max stats when leveling up (server-authoritative)
+            if (result.newMaxHealth !== undefined && result.newMaxHealth !== null) {
+              player.maxHealth = result.newMaxHealth;
+              // Also heal to new max on level up (standard RPG mechanic)
+              player.health = result.newMaxHealth;
+            }
+            if (result.newMaxStamina !== undefined && result.newMaxStamina !== null) {
+              player.maxStamina = result.newMaxStamina;
+              // Also restore stamina on level up
+              player.stamina = result.newMaxStamina;
+            }
           }
           serverNewExperience = result.newExperience;
         }
