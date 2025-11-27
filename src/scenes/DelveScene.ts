@@ -236,8 +236,7 @@ export class DelveScene extends Phaser.Scene {
 
   private async exitDelve(): Promise<void> {
     const player = this.gameState.getPlayer();
-    player.wildernessRestsRemaining = GameConfig.STAMINA.MAX_WILDERNESS_RESTS;
-    player.lastRestTimestamp = 0;  // Reset cooldown after completing delve
+    // NOTE: Do NOT reset wildernessRestsRemaining here - that only happens when returning to Roboka (TownScene)
     
     // Award XP for delve completion via server (server-authoritative, persisted to database)
     try {
