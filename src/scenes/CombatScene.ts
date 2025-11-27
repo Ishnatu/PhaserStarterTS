@@ -73,6 +73,7 @@ export class CombatScene extends Phaser.Scene {
     this.load.image('wailing-wisp', '/assets/enemies/wisp.png');
     this.load.image('combat-background', '/assets/combat-background.png');
     this.load.image('wilderness-combat-background', '/assets/wilderness-combat-background.png');
+    this.load.image('bleed-icon', '/assets/ui/bleed_icon.png');
     this.load.audio('combat-music', '/assets/audio/combat-music.mp3');
   }
 
@@ -1905,26 +1906,35 @@ export class CombatScene extends Phaser.Scene {
     }
     
     const indicators: Phaser.GameObjects.Container[] = [];
-    const squareSize = 20;
+    const iconSize = 24;
     const spacing = 5;
-    let currentX = enemyX - (enemy.statusConditions.length * (squareSize + spacing)) / 2;
+    let currentX = enemyX - (enemy.statusConditions.length * (iconSize + spacing)) / 2;
     const indicatorY = enemyY - 110;
     
     enemy.statusConditions.forEach((condition) => {
-      const color = ConditionManager.getConditionColor(condition.type);
-      const square = this.add.rectangle(currentX, indicatorY, squareSize, squareSize, color);
+      let indicator: Phaser.GameObjects.Sprite | Phaser.GameObjects.Rectangle;
       
-      const stackText = this.add.text(currentX, indicatorY, condition.stacks > 1 ? `${condition.stacks}` : '', {
+      if (condition.type === 'bleeding') {
+        indicator = this.add.sprite(currentX, indicatorY, 'bleed-icon');
+        indicator.setScale(0.5);
+      } else {
+        const color = ConditionManager.getConditionColor(condition.type);
+        indicator = this.add.rectangle(currentX, indicatorY, iconSize, iconSize, color);
+      }
+      
+      const stackText = this.add.text(currentX, indicatorY, `${condition.stacks}`, {
         fontFamily: FONTS.primary,
         fontSize: '12px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0.5);
+        stroke: '#000000',
+        strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(1);
       
-      const container = this.add.container(0, 0, [square, stackText]);
+      const container = this.add.container(0, 0, [indicator, stackText]);
       indicators.push(container);
       
-      currentX += squareSize + spacing;
+      currentX += iconSize + spacing;
     });
     
     this.statusIndicators.set(enemyIndex, indicators);
