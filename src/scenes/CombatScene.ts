@@ -986,6 +986,8 @@ export class CombatScene extends Phaser.Scene {
         this.showMessage('Failed to escape! You still have actions remaining.');
       } else {
         this.showMessage('Failed to escape!');
+        // End the player turn properly so enemy turn can proceed
+        this.combatSystem.endPlayerTurn();
         this.time.delayedCall(1500, () => {
           this.enemyTurn();
         });
