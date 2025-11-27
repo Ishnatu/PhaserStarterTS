@@ -62,6 +62,89 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Security Hardening**: Web3 withdrawals are disabled by default. Authentication is required for all game endpoints. Server validates `SESSION_SECRET`. Rate limiting is applied to APIs. Helmet.js provides security headers, and Replit provides WAF protection. RNG seeds are removed from API responses to prevent predictability exploits.
 - **Server-Authoritative Economy System**: All currency transactions (combat rewards, shop purchases, item repairs, forging, soulbinding) are atomic and server-controlled. Client currency modifications are removed, with player balances exclusively sourced from server responses.
 - **XP Rewards**: XP is awarded for defeating enemies and completing delves, calculated server-side.
+- **Leveling System**: Cumulative XP system with levels 1-10. Per-level bonuses: +10 HP, +20 SP. Level 1: 110 HP / 120 SP, Level 10: 200 HP / 300 SP.
+
+## Security Architecture
+
+### Implemented Security Measures
+
+#### Server-Authoritative Design
+- All critical game logic runs server-side (combat, loot, XP, currency, forging)
+- Save validation with rigorous payload checking
+- Canonical item reconstruction - stats recalculated from database, never trusted from client
+- Equipment/durability enforcement prevents client tampering
+- Seeded RNG for deterministic, reproducible outcomes
+- Atomic database updates for all currency transactions
+
+#### Authentication & Session Security
+- Replit Auth (OAuth2/OIDC) with secure HttpOnly cookies
+- Session-based authentication on all protected endpoints
+- Multi-instance detection prevents save conflicts
+- Strict session TTLs with automatic cleanup
+
+#### Rate Limiting & Request Validation
+- General API: 100 requests/minute per IP
+- Auth endpoints: 10 attempts/15 minutes
+- Security middleware validates request fingerprints
+- Bot detection for automation attempts
+
+#### Security Monitoring System (`server/securityMonitor.ts`)
+- Comprehensive event logging with severity levels (LOW, MEDIUM, HIGH, CRITICAL)
+- Player behavior tracking and anomaly detection
+- IP/User-Agent change monitoring
+- Request rate monitoring
+- Nonce-based replay attack prevention
+- Admin endpoints for security stats review
+
+#### Input Validation & Sanitization
+- All save payloads sanitized, forbidden fields stripped
+- Item ID format validation (regex-based XSS prevention)
+- Equipment slot compatibility validation
+- Currency amount validation (prevents negative values)
+- Enhancement level bounds checking
+
+#### Anti-Cheat Measures
+- Client currency/stat modifications rejected
+- Stats recalculated from equipment server-side
+- Enhancement levels verified against previous save state
+- Item duplication detection via multiset matching
+- Combat timing validation
+- Currency gain rate monitoring
+
+#### Security Headers (Helmet.js)
+- Content Security Policy (CSP)
+- Cross-Origin protections
+- XSS protection headers
+
+#### Privacy & Compliance
+- Privacy Policy endpoint (`/api/privacy-policy`)
+- Terms of Service endpoint (`/api/terms-of-service`)
+- Minimal data collection (user ID, game progress only)
+- No third-party tracking or analytics
+- Data retention and deletion rights documented
+
+### Security Checklist for Development
+
+Before deploying new features:
+1. [ ] All user input validated server-side
+2. [ ] No client-trusted values for game logic
+3. [ ] Currency/XP changes use atomic database operations
+4. [ ] Rate limiting configured for new endpoints
+5. [ ] Security events logged for sensitive operations
+6. [ ] No secrets or API keys in client code
+7. [ ] Test for edge cases and exploit attempts
+
+### Environment Variables Required
+- `SESSION_SECRET` - 32+ character secure random string (REQUIRED)
+- `ADMIN_KEY` - Admin access key for security monitoring endpoints
+- `DATABASE_URL` - PostgreSQL connection string
+- `CLIENT_URL` - Production client URL for CORS
+
+### Known Limitations (Infrastructure-Level)
+- MFA: Relies on Replit Auth (no custom MFA implementation)
+- DDoS Protection: Relies on Replit's infrastructure
+- Encryption at Rest: Uses Replit's managed PostgreSQL
+- Backup/DR: Uses Replit's checkpoint system
 
 ## External Dependencies
 

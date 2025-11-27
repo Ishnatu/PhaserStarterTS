@@ -16,6 +16,13 @@ import {
   calculateMaxStamina,
   logSecurityEvent 
 } from "./security";
+import { 
+  getSecurityStats, 
+  getRecentSecurityEvents,
+  logSecurityEvent as monitorLogEvent,
+  validateAdminAccess,
+  securityMiddleware
+} from "./securityMonitor";
 
 // Session tracking for multi-instance detection
 interface SessionInfo {
@@ -212,6 +219,9 @@ setInterval(() => {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication middleware
   await setupAuth(app);
+  
+  // Security monitoring middleware - runs AFTER auth so req.user is available
+  app.use('/api/', securityMiddleware);
 
   // Register combat routes (server-authoritative combat system)
   registerCombatRoutes(app);
@@ -718,6 +728,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching karma leaderboard:", error);
       res.status(500).json({ message: "Failed to fetch leaderboard" });
     }
+  });
+
+  // Security monitoring endpoints (admin only - requires ADMIN_KEY header)
+  // These endpoints require a properly configured ADMIN_KEY (32+ chars)
+  app.get("/api/admin/security/stats", (req: any, res) => {
+    const validation = validateAdminAccess(req);
+    if (!validation.valid) {
+      return res.status(403).json({ message: validation.reason || "Unauthorized" });
+    }
+    
+    const stats = getSecurityStats();
+    res.json(stats);
+  });
+
+  app.get("/api/admin/security/events", (req: any, res) => {
+    const validation = validateAdminAccess(req);
+    if (!validation.valid) {
+      return res.status(403).json({ message: validation.reason || "Unauthorized" });
+    }
+    
+    const count = Math.min(parseInt(req.query.count as string) || 100, 500); // Cap at 500
+    const severity = req.query.severity as string;
+    const playerId = req.query.playerId as string;
+    
+    const events = getRecentSecurityEvents(count, severity as any, playerId);
+    res.json({ events });
+  });
+
+  // Privacy Policy endpoint
+  app.get("/api/privacy-policy", (req, res) => {
+    res.json({
+      title: "Gemforge Chronicles Privacy Policy",
+      lastUpdated: "2024-01-01",
+      sections: [
+        {
+          heading: "Data We Collect",
+          content: "We collect only the minimum data necessary to provide the game service: your Replit user ID (for authentication), game progress, and in-game currency balances. We do not collect personal information such as email addresses, real names, or payment information."
+        },
+        {
+          heading: "How We Use Your Data",
+          content: "Your data is used solely to save and restore your game progress, authenticate your identity, and prevent cheating. We do not sell, share, or use your data for advertising purposes."
+        },
+        {
+          heading: "Data Storage and Security",
+          content: "Your game data is stored securely in our PostgreSQL database hosted on Replit's infrastructure. All communications are encrypted using HTTPS/TLS. We implement server-authoritative validation to protect game integrity."
+        },
+        {
+          heading: "Data Retention",
+          content: "We retain your game data as long as your account is active. If you wish to delete your data, please contact us through Replit."
+        },
+        {
+          heading: "Your Rights",
+          content: "You have the right to: access your personal data, request correction of inaccurate data, request deletion of your data, and withdraw consent at any time."
+        },
+        {
+          heading: "Third-Party Services",
+          content: "We use Replit for authentication and hosting. Replit's privacy policy applies to the authentication process. We do not integrate any other third-party tracking or analytics services."
+        },
+        {
+          heading: "Contact",
+          content: "For privacy-related inquiries, please contact us through Replit's messaging system."
+        }
+      ]
+    });
+  });
+
+  // Terms of Service endpoint
+  app.get("/api/terms-of-service", (req, res) => {
+    res.json({
+      title: "Gemforge Chronicles Terms of Service",
+      lastUpdated: "2024-01-01",
+      sections: [
+        {
+          heading: "Acceptance of Terms",
+          content: "By playing Gemforge Chronicles, you agree to these Terms of Service. If you do not agree, please do not use the game."
+        },
+        {
+          heading: "Account Security",
+          content: "You are responsible for maintaining the security of your Replit account. Do not share your login credentials with others. Report any unauthorized access immediately."
+        },
+        {
+          heading: "Fair Play",
+          content: "You agree to play fairly and not use cheats, exploits, or third-party tools to gain unfair advantages. Violations may result in account suspension or permanent ban."
+        },
+        {
+          heading: "In-Game Economy",
+          content: "In-game currencies (Arcane Ash, Crystalline Animus) have no real-world value. Trading or selling in-game items for real money is prohibited."
+        },
+        {
+          heading: "Intellectual Property",
+          content: "All game content, including but not limited to graphics, code, game mechanics, and story elements, is the intellectual property of the game developers. Unauthorized copying, modification, or distribution is prohibited."
+        },
+        {
+          heading: "Service Availability",
+          content: "We strive to provide uninterrupted service but do not guarantee 100% uptime. We may modify, suspend, or discontinue the game at any time without notice."
+        },
+        {
+          heading: "Limitation of Liability",
+          content: "The game is provided 'as is' without warranties. We are not liable for any damages arising from your use of the game, including loss of data or progress."
+        },
+        {
+          heading: "Changes to Terms",
+          content: "We may update these terms at any time. Continued use of the game after changes constitutes acceptance of the new terms."
+        }
+      ]
+    });
   });
 
   const httpServer = createServer(app);

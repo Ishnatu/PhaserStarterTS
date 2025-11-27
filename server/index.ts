@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import { registerRoutes } from "./routes";
+import { logSecurityEvent, getSecurityStats } from "./securityMonitor";
 
 dotenv.config();
 
@@ -80,10 +81,20 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Rate limiter for admin endpoints (very restrictive)
+const adminLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // 10 requests per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many admin requests',
+});
+
 // Apply rate limiters
 app.use('/api/', generalLimiter);
 app.use('/api/login', authLimiter);
 app.use('/api/callback', authLimiter);
+app.use('/api/admin/', adminLimiter);
 
 // CORS configuration
 app.use(cors({
@@ -92,6 +103,11 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Note: securityMiddleware is applied in registerRoutes AFTER auth setup
+
+// Log server startup
+logSecurityEvent('SERVER_START', 'LOW', { port: PORT }, null, 'server', 'system');
 
 // Register routes (API routes)
 async function startServer() {
