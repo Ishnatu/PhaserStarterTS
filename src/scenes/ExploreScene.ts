@@ -1319,7 +1319,7 @@ export class ExploreScene extends Phaser.Scene {
     const itemStartY = headerBaseY + verticalGap * 3 + 10;
     const rowHeight = 50;
     const leftColumnX = width / 2 - 320;  // Item name column
-    const priceColumnX = width / 2 + 80;   // Price column  
+    const priceColumnX = width / 2 + 160;  // Price column (right-aligned before button)
     const buttonColumnX = width / 2 + 280; // Buy button column
 
     selectedItems.forEach((shopItem, index) => {
@@ -1337,9 +1337,9 @@ export class ExploreScene extends Phaser.Scene {
         }
       }
       
-      // Total price = base + forge cost + 50% markup
+      // Total price = base + forge cost + 50% markup (CA must be integer)
       const totalAA = Math.floor((basePrice + forgeCost.aa) * 1.5);
-      const totalCA = parseFloat((forgeCost.ca * 1.5).toFixed(1));
+      const totalCA = Math.ceil(forgeCost.ca * 1.5);
       
       const enhancedName = ExploreScene.getEnhancedItemName(
         itemData?.name || shopItem.itemId, 
@@ -1355,15 +1355,15 @@ export class ExploreScene extends Phaser.Scene {
         color: nameColor,
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1001);
       
-      // Price (left-aligned in price column)
+      // Price (right-aligned before button) - compact format
       const priceString = totalCA > 0 
-        ? `${totalAA} AA + ${totalCA} CA` 
+        ? `${totalAA} AA, ${totalCA} CA` 
         : `${totalAA} AA`;
       const priceText = this.add.text(priceColumnX, yPos, priceString, {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: '#ffffff',
-      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1001);
+      }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(1001);
       
       // Buy button (right column)
       const buyBtn = this.createButton(buttonColumnX, yPos, 'Buy', () => {
@@ -1391,7 +1391,7 @@ export class ExploreScene extends Phaser.Scene {
         this.gameState.updatePlayer(player);
         
         itemText.setColor('#44ff44');
-        priceText.setText('PURCHASED').setColor('#44ff44');
+        priceText.setText('SOLD').setColor('#44ff44');
         buyBtn.setVisible(false);
       }).setScrollFactor(0).setDepth(1002);
 
