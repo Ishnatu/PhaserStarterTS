@@ -17,7 +17,7 @@ export class CurrencyDisplay {
     icon.setScale(0.06);  // Increased from 0.044 for better readability
     icon.setOrigin(0, 0.5);
     
-    const displayAmount = currencyType === 'CA' ? amount.toFixed(1) : amount.toString();
+    const displayAmount = amount.toString();
     const text = scene.add.text(40, 0, displayAmount, {  // Increased gap from 28 to 40
       fontSize: FONTS.size[fontSize],
       color: '#ffffff',
@@ -59,7 +59,7 @@ export class CurrencyDisplay {
     caIcon.setScale(0.06);  // Increased from 0.044 for better readability
     caIcon.setOrigin(0, 0.5);
     
-    const caText = scene.add.text(caXOffset + 57, 0, `${caAmount.toFixed(1)}`, {  // Increased gap from 42 to 57 (added 15px)
+    const caText = scene.add.text(caXOffset + 57, 0, `${caAmount}`, {  // Increased gap from 42 to 57 (added 15px)
       fontSize: FONTS.size[fontSize],
       color: '#ffffff',
       fontFamily: FONTS.primary,
@@ -100,7 +100,7 @@ export class CurrencyDisplay {
     caIcon.setScale(0.06);
     caIcon.setOrigin(0, 0.5);
     
-    const caText = scene.add.text(42, verticalSpacing, `${caAmount.toFixed(1)}`, {
+    const caText = scene.add.text(42, verticalSpacing, `${caAmount}`, {
       fontSize: FONTS.size[fontSize],
       color: '#ffffff',
       fontFamily: FONTS.primary,

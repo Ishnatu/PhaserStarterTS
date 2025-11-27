@@ -883,7 +883,7 @@ export class ExploreScene extends Phaser.Scene {
     // Save state after collecting treasure
     this.gameState.saveToServer();
 
-    const lootText = this.add.text(width / 2, height / 2 + 40, `+${loot.aa} AA, +${loot.ca.toFixed(1)} CA`, {
+    const lootText = this.add.text(width / 2, height / 2 + 40, `+${loot.aa} AA, +${loot.ca} CA`, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.medium,
       color: '#ffcc00',
@@ -1194,7 +1194,7 @@ export class ExploreScene extends Phaser.Scene {
       
       if (skillCheck < 0.60) {
         const aa = Math.floor(Math.random() * 41) + 40;
-        const ca = (Math.random() * 3) + 3;
+        const ca = Math.floor(Math.random() * 4) + 3; // 3-6 CA (whole numbers)
         
         this.gameState.addArcaneAsh(aa);
         this.gameState.addCrystallineAnimus(ca);
@@ -1203,7 +1203,7 @@ export class ExploreScene extends Phaser.Scene {
         this.gameState.saveToServer();
 
         const resultText = this.add.text(width / 2, height / 2 + 20, 
-          `Success! Disarmed the trap!\n+${aa} AA, +${ca.toFixed(1)} CA`, {
+          `Success! Disarmed the trap!\n+${aa} AA, +${ca} CA`, {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.medium,
           color: '#44ff44',
@@ -1722,12 +1722,12 @@ export class ExploreScene extends Phaser.Scene {
       };
     } else if (roll < 0.58) {
       const aa = Math.floor(Math.random() * 41) + 40;
-      const ca = (Math.random() * 3) + 3;
+      const ca = Math.floor(Math.random() * 4) + 3; // 3-6 CA (whole numbers)
       
       return {
         type: 'treasure',
         description: 'You stumble upon a hidden cache of resources!',
-        loot: { aa, ca: parseFloat(ca.toFixed(1)) },
+        loot: { aa, ca },
       };
     } else if (roll < 0.73) {
       return {
