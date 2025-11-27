@@ -219,14 +219,15 @@ export class ForgingSystem {
       return { aa: 0, ca: 0 };
     }
 
-    // New affordable repair costs:
+    // Repair costs (whole numbers only):
     // AA: 1 + (enhancement × 2) per durability point
-    // CA: (0.02 + enhancement × 0.01) per durability point
+    // CA: Base 1 + scaled by durability and enhancement
     const aaCostPerPoint = 1 + (enhancementLevel * 2);
-    const caCostPerPoint = 0.02 + (enhancementLevel * 0.01);
-    
     const totalAA = Math.ceil(missingDurability * aaCostPerPoint);
-    const totalCA = Number((missingDurability * caCostPerPoint).toFixed(2));
+    
+    // CA formula: 1 base + (durability × enhancement multiplier) / 50
+    // +0 item, 50 missing = 2 CA | +9 item, 50 missing = 11 CA
+    const totalCA = 1 + Math.floor((missingDurability * (1 + enhancementLevel)) / 50);
 
     return { 
       aa: totalAA, 

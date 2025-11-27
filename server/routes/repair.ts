@@ -18,11 +18,15 @@ function calculateRepairCost(item: any): RepairCost {
     return { aa: 0, ca: 0 };
   }
 
+  // Repair costs (whole numbers only):
+  // AA: 1 + (enhancement × 2) per durability point
+  // CA: Base 1 + scaled by durability and enhancement
   const aaCostPerPoint = 1 + (enhancementLevel * 2);
-  const caCostPerPoint = 0.02 + (enhancementLevel * 0.01);
-  
   const totalAA = Math.ceil(missingDurability * aaCostPerPoint);
-  const totalCA = Number((missingDurability * caCostPerPoint).toFixed(2));
+  
+  // CA formula: 1 base + (durability × enhancement multiplier) / 50
+  // +0 item, 50 missing = 2 CA | +9 item, 50 missing = 11 CA
+  const totalCA = 1 + Math.floor((missingDurability * (1 + enhancementLevel)) / 50);
 
   return { aa: totalAA, ca: totalCA };
 }
@@ -93,7 +97,7 @@ export function registerRepairRoutes(app: Express) {
       if (!hasEnough) {
         const currencyName = currency === 'AA' ? 'Arcane Ash' : 'Crystalline Animus';
         return res.status(400).json({ 
-          message: `Insufficient funds! Need ${currency === 'AA' ? cost.aa : cost.ca.toFixed(2)} ${currencyName}` 
+          message: `Insufficient funds! Need ${currency === 'AA' ? cost.aa : cost.ca} ${currencyName}` 
         });
       }
 
@@ -114,7 +118,7 @@ export function registerRepairRoutes(app: Express) {
         saveData
       });
 
-      const costText = currency === 'AA' ? `${cost.aa} AA` : `${cost.ca.toFixed(2)} CA`;
+      const costText = currency === 'AA' ? `${cost.aa} AA` : `${cost.ca} CA`;
       res.json({
         success: true,
         message: `Item repaired for ${costText}!`,
@@ -197,7 +201,7 @@ export function registerRepairRoutes(app: Express) {
       if (!hasEnough) {
         const currencyName = currency === 'AA' ? 'Arcane Ash' : 'Crystalline Animus';
         return res.status(400).json({ 
-          message: `Insufficient funds! Need ${currency === 'AA' ? totalAA : totalCA.toFixed(2)} ${currencyName}` 
+          message: `Insufficient funds! Need ${currency === 'AA' ? totalAA : totalCA} ${currencyName}` 
         });
       }
 
@@ -220,7 +224,7 @@ export function registerRepairRoutes(app: Express) {
         saveData
       });
 
-      const costText = currency === 'AA' ? `${totalAA} AA` : `${totalCA.toFixed(2)} CA`;
+      const costText = currency === 'AA' ? `${totalAA} AA` : `${totalCA} CA`;
       res.json({
         success: true,
         message: `Repaired ${itemsToRepair.length} items for ${costText}!`,

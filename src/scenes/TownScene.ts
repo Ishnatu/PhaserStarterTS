@@ -2083,7 +2083,7 @@ export class TownScene extends Phaser.Scene {
         uiElements.push(detailTitle);
 
         const detailsText = this.add.text(width / 2, detailY - 20, 
-          `Durability: ${Math.floor(selectedItem.item.durability ?? 100)}/${selectedItem.item.maxDurability ?? 100} → ${selectedItem.item.maxDurability ?? 100}/${selectedItem.item.maxDurability ?? 100}\nPay ${cost.aa} AA  OR  ${cost.ca.toFixed(2)} CA`, {
+          `Durability: ${Math.floor(selectedItem.item.durability ?? 100)}/${selectedItem.item.maxDurability ?? 100} → ${selectedItem.item.maxDurability ?? 100}/${selectedItem.item.maxDurability ?? 100}\nPay ${cost.aa} AA  OR  ${cost.ca} CA`, {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.small,
           color: '#ffffff',
@@ -2097,7 +2097,7 @@ export class TownScene extends Phaser.Scene {
         });
         uiElements.push(repairAABtn);
 
-        const repairCABtn = this.createButton(width / 2 + 180, detailY + 40, `Pay ${cost.ca.toFixed(2)} CA`, () => {
+        const repairCABtn = this.createButton(width / 2 + 180, detailY + 40, `Pay ${cost.ca} CA`, () => {
           this.attemptRepair(selectedItem!, 'CA');
           onSelect(null);
         });
@@ -2122,7 +2122,7 @@ export class TownScene extends Phaser.Scene {
       }
     } else {
       if (player.crystallineAnimus < cost.ca) {
-        this.showMessage(`Insufficient funds! Need ${cost.ca.toFixed(2)} CA`);
+        this.showMessage(`Insufficient funds! Need ${cost.ca} CA`);
         return;
       }
     }
