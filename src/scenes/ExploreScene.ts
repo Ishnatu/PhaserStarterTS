@@ -1172,14 +1172,14 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
 
-    const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x2a1a0a, 0.95)
+    const overlay = this.add.rectangle(width / 2, height / 2, 500, 320, 0x2a1a0a, 0.95)
       .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    const titleText = this.add.text(width / 2, height / 2 - 100, 'Trapped Chest!', {
+    const titleText = this.add.text(width / 2, height / 2 - 120, 'Trapped Chest!', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#ff8844',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const descText = this.add.text(width / 2, height / 2 - 50, encounterType.description + '\nAttempting to open...', {
+    const descText = this.add.text(width / 2, height / 2 - 60, encounterType.description + '\n\nDo you want to attempt to pick the lock?', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
@@ -1189,51 +1189,66 @@ export class ExploreScene extends Phaser.Scene {
 
     uiElements.push(overlay, titleText, descText);
 
-    this.time.delayedCall(1500, () => {
-      const skillCheck = Math.random();
+    const closeEncounter = () => {
+      uiElements.forEach(el => el.destroy());
+      this.encounterCooldown = false;
+      this.isOverlayActive = false;
+    };
+
+    // Attempt button
+    const attemptBtn = this.createButton(width / 2 - 100, height / 2 + 20, 'Attempt', () => {
+      // Remove buttons
+      attemptBtn.destroy();
+      leaveBtn.destroy();
       
-      if (skillCheck < 0.60) {
-        const aa = Math.floor(Math.random() * 41) + 40;
-        const ca = Math.floor(Math.random() * 4) + 3; // 3-6 CA (whole numbers)
+      // Update description
+      descText.setText('Attempting to disarm the trap...');
+      
+      this.time.delayedCall(1500, () => {
+        const skillCheck = Math.random();
         
-        this.gameState.addArcaneAsh(aa);
-        this.gameState.addCrystallineAnimus(ca);
-        
-        // Save state after collecting trapped chest loot
-        this.gameState.saveToServer();
+        if (skillCheck < 0.60) {
+          const aa = Math.floor(Math.random() * 41) + 40;
+          const ca = Math.floor(Math.random() * 4) + 3;
+          
+          this.gameState.addArcaneAsh(aa);
+          this.gameState.addCrystallineAnimus(ca);
+          this.gameState.saveToServer();
 
-        const resultText = this.add.text(width / 2, height / 2 + 20, 
-          `Success! Disarmed the trap!\n+${aa} AA, +${ca} CA`, {
-          fontFamily: FONTS.primary,
-          fontSize: FONTS.size.medium,
-          color: '#44ff44',
-          align: 'center',
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-        uiElements.push(resultText);
-      } else {
-        const damage = Math.floor(Math.random() * 11) + 15;
-        player.health = Math.max(0, player.health - damage);
-        this.gameState.updatePlayer(player);
-        
-        // Save state after taking trap damage
-        this.gameState.saveToServer();
+          const resultText = this.add.text(width / 2, height / 2 + 40, 
+            `Success! Disarmed the trap!\n+${aa} AA, +${ca} CA`, {
+            fontFamily: FONTS.primary,
+            fontSize: FONTS.size.medium,
+            color: '#44ff44',
+            align: 'center',
+          }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+          uiElements.push(resultText);
+        } else {
+          const damage = Math.floor(Math.random() * 11) + 15;
+          player.health = Math.max(0, player.health - damage);
+          this.gameState.updatePlayer(player);
+          this.gameState.saveToServer();
 
-        const resultText = this.add.text(width / 2, height / 2 + 20, 
-          `Failed! The trap triggers!\nTook ${damage} damage!`, {
-          fontFamily: FONTS.primary,
-          fontSize: FONTS.size.medium,
-          color: '#ff4444',
-          align: 'center',
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-        uiElements.push(resultText);
-      }
+          const resultText = this.add.text(width / 2, height / 2 + 40, 
+            `Failed! The trap triggers!\nTook ${damage} damage!`, {
+            fontFamily: FONTS.primary,
+            fontSize: FONTS.size.medium,
+            color: '#ff4444',
+            align: 'center',
+          }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+          uiElements.push(resultText);
+        }
 
-      this.time.delayedCall(3000, () => {
-        uiElements.forEach(el => el.destroy());
-        this.encounterCooldown = false;
-        this.isOverlayActive = false;
+        this.time.delayedCall(2500, closeEncounter);
       });
-    });
+    }).setScrollFactor(0).setDepth(1001);
+    uiElements.push(attemptBtn);
+
+    // Leave button
+    const leaveBtn = this.createButton(width / 2 + 100, height / 2 + 20, 'Leave It', () => {
+      closeEncounter();
+    }).setScrollFactor(0).setDepth(1001);
+    uiElements.push(leaveBtn);
   }
 
   private handleWanderingMerchantEncounter(encounterType: any): void {
