@@ -1300,22 +1300,54 @@ export class CombatScene extends Phaser.Scene {
           const enemyTier = typeof enemy.tier === 'number' ? enemy.tier : 1;
           console.log(`[endCombat] Requesting loot for: ${enemy.name} (tier ${enemyTier}, boss: ${enemy.isBoss})`);
           
-          const response = await fetch('/api/loot/roll', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              enemyName: enemy.name || 'Unknown Enemy',
-              tier: enemyTier,
-              isBoss: enemy.isBoss || false,
-              playerLevel: player.level,
-            }),
-          });
+          // Retry logic for transient network errors
+          let response: Response | null = null;
+          let lastError: Error | null = null;
+          const maxRetries = 3;
+          
+          for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+              response = await fetch('/api/loot/roll', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                  enemyName: enemy.name || 'Unknown Enemy',
+                  tier: enemyTier,
+                  isBoss: enemy.isBoss || false,
+                  playerLevel: player.level,
+                }),
+              });
+              
+              if (response.ok) {
+                break; // Success, exit retry loop
+              }
+              
+              // Non-retriable error (4xx)
+              if (response.status >= 400 && response.status < 500) {
+                const errorText = await response.text();
+                console.error(`Loot API error for ${enemy.name}: ${response.status} - ${errorText}`);
+                throw new Error(`Loot API failed: ${response.status}`);
+              }
+              
+              // Server error (5xx) - retry
+              console.warn(`Loot API attempt ${attempt}/${maxRetries} failed with ${response.status}, retrying...`);
+              lastError = new Error(`Loot API failed: ${response.status}`);
+            } catch (fetchError) {
+              // Network error - retry
+              console.warn(`Loot API attempt ${attempt}/${maxRetries} network error:`, fetchError);
+              lastError = fetchError as Error;
+            }
+            
+            // Wait before retry (exponential backoff: 500ms, 1000ms, 2000ms)
+            if (attempt < maxRetries) {
+              await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, attempt - 1)));
+            }
+          }
 
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Loot API error for ${enemy.name}: ${response.status} - ${errorText}`);
-            throw new Error(`Loot API failed: ${response.status}`);
+          if (!response || !response.ok) {
+            console.error(`Loot API failed after ${maxRetries} attempts:`, lastError);
+            throw lastError || new Error('Loot API failed after retries');
           }
           
           const result = await response.json();
