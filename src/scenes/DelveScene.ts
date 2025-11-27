@@ -365,41 +365,79 @@ export class DelveScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
+    // Determine lock complexity (weighted random)
+    const complexityRoll = Math.random();
+    let lockComplexity: 'simple' | 'finely_made' | 'complex';
+    if (complexityRoll < 0.50) {
+      lockComplexity = 'simple';
+    } else if (complexityRoll < 0.85) {
+      lockComplexity = 'finely_made';
+    } else {
+      lockComplexity = 'complex';
+    }
+
+    const lockDescriptions = {
+      simple: { text: 'It looks like a simple lock.', dc: 8, color: '#88ff88' },
+      finely_made: { text: 'It looks like a finely made lock.', dc: 12, color: '#ffaa44' },
+      complex: { text: 'It looks like a very complex lock.', dc: 18, color: '#ff4444' },
+    };
+    const lockInfo = lockDescriptions[lockComplexity];
+
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setDepth(999);
-    const panel = this.add.rectangle(width / 2, height / 2, 600, 400, 0x2a2a3e).setOrigin(0.5).setDepth(1000);
+    const panel = this.add.rectangle(width / 2, height / 2, 650, 450, 0x2a2a3e).setOrigin(0.5).setDepth(1000);
     uiElements.push(overlay, panel);
 
-    const title = this.add.text(width / 2, height / 2 - 160, 'Trapped Room!', {
+    // Header layout matching town NPC style
+    const headerBaseY = height / 2 - 180;
+    const verticalGap = 50;
+
+    const title = this.add.text(width / 2, headerBaseY, 'Trapped Room!', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#ff8844',
     }).setOrigin(0.5).setDepth(1001);
     uiElements.push(title);
 
-    const desc = this.add.text(width / 2, height / 2 - 100, 
-      'You notice a suspicious mechanism near the door.\nAttempt to disarm it?', {
+    const mechanismDesc = this.add.text(width / 2, headerBaseY + verticalGap, 
+      'You notice a suspicious mechanism near the door.', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
-      color: '#ffffff',
+      fontSize: FONTS.size.xsmall,
+      color: '#cccccc',
       align: 'center',
     }).setOrigin(0.5).setDepth(1001);
-    uiElements.push(desc);
+    uiElements.push(mechanismDesc);
 
-    const disarmBtn = this.createButton(width / 2, height / 2, 'Attempt to Disarm', () => {
+    const lockDesc = this.add.text(width / 2, headerBaseY + verticalGap * 2, 
+      lockInfo.text, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: lockInfo.color,
+    }).setOrigin(0.5).setDepth(1001);
+    uiElements.push(lockDesc);
+
+    const dcDesc = this.add.text(width / 2, headerBaseY + verticalGap * 3, 
+      `Roll to disarm: DC ${lockInfo.dc}`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.xsmall,
+      color: '#aaaaaa',
+    }).setOrigin(0.5).setDepth(1001);
+    uiElements.push(dcDesc);
+
+    const disarmBtn = this.createButton(width / 2, height / 2 + 100, 'Attempt to Disarm', () => {
       uiElements.forEach(el => el.destroy());
-      this.attemptTrapDisarm(room);
+      this.attemptTrapDisarm(room, lockComplexity);
     });
     disarmBtn.setDepth(1002);
     uiElements.push(disarmBtn);
 
-    const cancelBtn = this.createButton(width / 2, height / 2 + 60, 'Leave Room', () => {
+    const cancelBtn = this.createButton(width / 2, height / 2 + 160, 'Leave Room', () => {
       uiElements.forEach(el => el.destroy());
     });
     cancelBtn.setDepth(1002);
     uiElements.push(cancelBtn);
   }
 
-  private attemptTrapDisarm(room: DelveRoom): void {
+  private attemptTrapDisarm(room: DelveRoom, lockComplexity: 'simple' | 'finely_made' | 'complex'): void {
     const { width, height } = this.cameras.main;
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
@@ -407,7 +445,9 @@ export class DelveScene extends Phaser.Scene {
     const panel = this.add.rectangle(width / 2, height / 2, 650, 500, 0x2a2a3e).setOrigin(0.5).setDepth(1000);
     uiElements.push(overlay, panel);
 
-    const dc = 8 + (this.currentDelve.tier - 1) * 2;
+    // DC based on lock complexity
+    const dcByComplexity = { simple: 8, finely_made: 12, complex: 18 };
+    const dc = dcByComplexity[lockComplexity];
     const roll = DiceRoller.rollD20();
     const success = roll >= dc;
 
@@ -441,15 +481,31 @@ export class DelveScene extends Phaser.Scene {
     uiElements.push(resultText);
 
     if (success) {
-      this.grantTrapXP(this.currentDelve.tier, room, uiElements);
+      this.grantTrapXP(this.currentDelve.tier, room, uiElements, lockComplexity);
     } else {
       this.handleTrapFailure(room, uiElements);
     }
   }
 
-  private async grantTrapXP(tier: number, room: DelveRoom, uiElements: Phaser.GameObjects.GameObject[]): Promise<void> {
+  private async grantTrapXP(tier: number, room: DelveRoom, uiElements: Phaser.GameObjects.GameObject[], lockComplexity: 'simple' | 'finely_made' | 'complex'): Promise<void> {
     const { width, height } = this.cameras.main;
     const player = this.gameState.getPlayer();
+    
+    // Currency rewards based on lock complexity
+    // Base: 40-80 AA, 3-6 CA
+    // Finely made: 1.5x = 60-120 AA, 5-9 CA
+    // Complex: 3.5x = 140-280 AA, 11-21 CA
+    const rewardMultipliers = { simple: 1, finely_made: 1.5, complex: 3.5 };
+    const multiplier = rewardMultipliers[lockComplexity];
+    
+    const baseAA = Math.floor(Math.random() * 41) + 40; // 40-80
+    const baseCA = Math.floor(Math.random() * 4) + 3;   // 3-6
+    const aaReward = Math.floor(baseAA * multiplier);
+    const caReward = Math.floor(baseCA * multiplier);
+    
+    // Award currencies
+    this.gameState.addArcaneAsh(aaReward);
+    this.gameState.addCrystallineAnimus(caReward);
     
     try {
       const response = await fetch('/api/delve/trap', {
@@ -490,7 +546,7 @@ export class DelveScene extends Phaser.Scene {
         
         // Continue clean layout from Row 4
         const headerBaseY = height / 2 - 200;
-        const verticalGap = 55;
+        const verticalGap = 45;
         const contentY = headerBaseY + verticalGap * 3;
         
         const successMsg = this.add.text(width / 2, contentY, 
@@ -502,13 +558,13 @@ export class DelveScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(1001);
         uiElements.push(successMsg);
 
-        const xpText = this.add.text(width / 2, contentY + verticalGap, 
-          `+${xpReward} XP`, {
+        const rewardsText = this.add.text(width / 2, contentY + verticalGap, 
+          `+${aaReward} AA  |  +${caReward} CA  |  +${xpReward} XP`, {
           fontFamily: FONTS.primary,
-          fontSize: FONTS.size.medium,
+          fontSize: FONTS.size.small,
           color: '#88ff88',
         }).setOrigin(0.5).setDepth(1001);
-        uiElements.push(xpText);
+        uiElements.push(rewardsText);
 
         if (leveledUp) {
           const levelUpText = this.add.text(width / 2, contentY + verticalGap * 2, 
@@ -529,11 +585,11 @@ export class DelveScene extends Phaser.Scene {
       } else {
         console.error('Failed to grant trap XP:', await response.text());
         const headerBaseY = height / 2 - 200;
-        const verticalGap = 55;
+        const verticalGap = 45;
         const contentY = headerBaseY + verticalGap * 3;
         
         const errorMsg = this.add.text(width / 2, contentY, 
-          'You disabled the trap!\n(XP reward failed to save)', {
+          `You disabled the trap!\n+${aaReward} AA  |  +${caReward} CA`, {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.small,
           color: '#ff8844',
@@ -551,11 +607,11 @@ export class DelveScene extends Phaser.Scene {
     } catch (error) {
       console.error('Error granting trap XP:', error);
       const headerBaseY = height / 2 - 200;
-      const verticalGap = 55;
+      const verticalGap = 45;
       const contentY = headerBaseY + verticalGap * 3;
       
       const errorMsg = this.add.text(width / 2, contentY, 
-        'You disabled the trap!\n(Network error - XP may not be saved)', {
+        `You disabled the trap!\n+${aaReward} AA  |  +${caReward} CA`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: '#ff8844',
