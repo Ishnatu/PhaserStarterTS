@@ -404,33 +404,43 @@ export class DelveScene extends Phaser.Scene {
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setDepth(999);
-    const panel = this.add.rectangle(width / 2, height / 2, 600, 450, 0x2a2a3e).setOrigin(0.5).setDepth(1000);
+    const panel = this.add.rectangle(width / 2, height / 2, 650, 500, 0x2a2a3e).setOrigin(0.5).setDepth(1000);
     uiElements.push(overlay, panel);
 
     const dc = 8 + (this.currentDelve.tier - 1) * 2;
     const roll = DiceRoller.rollD20();
     const success = roll >= dc;
 
-    const rollText = this.add.text(width / 2, height / 2 - 150, 
-      `Rolling D20 to disarm... (DC ${dc})`, {
-      fontFamily: FONTS.primary,
-      fontSize: FONTS.size.medium,
-      color: '#ffaa44',
-      align: 'center',
-    }).setOrigin(0.5).setDepth(1001);
-    uiElements.push(rollText);
+    // Header layout matching town NPC style
+    const headerBaseY = height / 2 - 200;
+    const verticalGap = 55;
 
-    const resultText = this.add.text(width / 2, height / 2 - 100, 
+    // Row 1: Title
+    const titleText = this.add.text(width / 2, headerBaseY, 'Disarming Trap...', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#ff8844',
+    }).setOrigin(0.5).setDepth(1001);
+    uiElements.push(titleText);
+
+    // Row 2: DC info
+    const dcText = this.add.text(width / 2, headerBaseY + verticalGap, `Difficulty: DC ${dc}`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#cccccc',
+    }).setOrigin(0.5).setDepth(1001);
+    uiElements.push(dcText);
+
+    // Row 3: Roll result (prominent)
+    const resultText = this.add.text(width / 2, headerBaseY + verticalGap * 2, 
       `Rolled: ${roll}${roll === 20 ? ' (CRITICAL!)' : ''}`, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: success ? '#44ff44' : '#ff4444',
-      align: 'center',
     }).setOrigin(0.5).setDepth(1001);
     uiElements.push(resultText);
 
     if (success) {
-      // Award XP for trap disarm via server-authoritative API
       this.grantTrapXP(this.currentDelve.tier, room, uiElements);
     } else {
       this.handleTrapFailure(room, uiElements);
@@ -478,17 +488,39 @@ export class DelveScene extends Phaser.Scene {
         const leveledUp = result.leveledUp;
         const newLevel = result.newLevel;
         
-        const successMsg = this.add.text(width / 2, height / 2 - 30, 
-          `Success! You carefully disable the trap mechanism.\n+${xpReward} XP${leveledUp ? `\n\nLEVEL UP! You are now Level ${newLevel}!` : ''}`, {
+        // Continue clean layout from Row 4
+        const headerBaseY = height / 2 - 200;
+        const verticalGap = 55;
+        const contentY = headerBaseY + verticalGap * 3;
+        
+        const successMsg = this.add.text(width / 2, contentY, 
+          'You carefully disable the trap mechanism!', {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.small,
-          color: leveledUp ? '#FFD700' : '#44ff44',
+          color: '#44ff44',
           align: 'center',
-          wordWrap: { width: 550 },
         }).setOrigin(0.5).setDepth(1001);
         uiElements.push(successMsg);
 
-        const continueBtn = this.createButton(width / 2, height / 2 + 80, 'Continue', () => {
+        const xpText = this.add.text(width / 2, contentY + verticalGap, 
+          `+${xpReward} XP`, {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.medium,
+          color: '#88ff88',
+        }).setOrigin(0.5).setDepth(1001);
+        uiElements.push(xpText);
+
+        if (leveledUp) {
+          const levelUpText = this.add.text(width / 2, contentY + verticalGap * 2, 
+            `LEVEL UP! You are now Level ${newLevel}!`, {
+            fontFamily: FONTS.primary,
+            fontSize: FONTS.size.medium,
+            color: '#FFD700',
+          }).setOrigin(0.5).setDepth(1001);
+          uiElements.push(levelUpText);
+        }
+
+        const continueBtn = this.createButton(width / 2, height / 2 + 160, 'Continue', () => {
           room.completed = true;
           this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
         });
@@ -496,18 +528,20 @@ export class DelveScene extends Phaser.Scene {
         uiElements.push(continueBtn);
       } else {
         console.error('Failed to grant trap XP:', await response.text());
-        // Show error message
-        const errorMsg = this.add.text(width / 2, height / 2 - 30, 
-          'Success! You disabled the trap.\n(XP reward failed to save)', {
+        const headerBaseY = height / 2 - 200;
+        const verticalGap = 55;
+        const contentY = headerBaseY + verticalGap * 3;
+        
+        const errorMsg = this.add.text(width / 2, contentY, 
+          'You disabled the trap!\n(XP reward failed to save)', {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.small,
           color: '#ff8844',
           align: 'center',
-          wordWrap: { width: 550 },
         }).setOrigin(0.5).setDepth(1001);
         uiElements.push(errorMsg);
         
-        const continueBtn = this.createButton(width / 2, height / 2 + 80, 'Continue', () => {
+        const continueBtn = this.createButton(width / 2, height / 2 + 160, 'Continue', () => {
           room.completed = true;
           this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
         });
@@ -516,18 +550,20 @@ export class DelveScene extends Phaser.Scene {
       }
     } catch (error) {
       console.error('Error granting trap XP:', error);
-      // Show error but allow continuing
-      const errorMsg = this.add.text(width / 2, height / 2 - 30, 
-        'Success! You disabled the trap.\n(Network error - XP may not be saved)', {
+      const headerBaseY = height / 2 - 200;
+      const verticalGap = 55;
+      const contentY = headerBaseY + verticalGap * 3;
+      
+      const errorMsg = this.add.text(width / 2, contentY, 
+        'You disabled the trap!\n(Network error - XP may not be saved)', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: '#ff8844',
         align: 'center',
-        wordWrap: { width: 550 },
       }).setOrigin(0.5).setDepth(1001);
       uiElements.push(errorMsg);
       
-      const continueBtn = this.createButton(width / 2, height / 2 + 80, 'Continue', () => {
+      const continueBtn = this.createButton(width / 2, height / 2 + 160, 'Continue', () => {
         room.completed = true;
         this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
       });
@@ -539,34 +575,41 @@ export class DelveScene extends Phaser.Scene {
   private handleTrapFailure(room: DelveRoom, uiElements: Phaser.GameObjects.GameObject[]): void {
     const { width, height } = this.cameras.main;
 
-    const failureText = this.add.text(width / 2, height / 2 - 30, 
-      'You gently pull at a thin string, it breaks just before\nyou can release the lock, you hear a faint click\nbehind the wall.', {
+    // Continue from Row 4: Failure narrative (below the roll result)
+    const headerBaseY = height / 2 - 200;
+    const verticalGap = 55;
+    const contentY = headerBaseY + verticalGap * 3;
+
+    const failureText = this.add.text(width / 2, contentY, 
+      'The mechanism clicks ominously...\nYou hear something trigger behind the wall!', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.small,
+      fontSize: FONTS.size.xsmall,
       color: '#ff8844',
       align: 'center',
       wordWrap: { width: 550 },
     }).setOrigin(0.5).setDepth(1001);
     uiElements.push(failureText);
 
-    const choiceText = this.add.text(width / 2, height / 2 + 50, 
-      'Do you duck and hide or try and leap to safety?', {
+    // Row 5: Choice prompt
+    const choiceText = this.add.text(width / 2, contentY + verticalGap, 
+      'Quick! What do you do?', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffcc88',
-      align: 'center',
     }).setOrigin(0.5).setDepth(1001);
     uiElements.push(choiceText);
 
     const trapType = Math.random() < 0.5 ? 'spike' : 'dart';
 
-    const duckBtn = this.createButton(width / 2 - 100, height / 2 + 120, 'Duck and Hide', () => {
+    // Buttons at bottom with proper spacing
+    const buttonY = height / 2 + 160;
+    const duckBtn = this.createButton(width / 2 - 120, buttonY, 'Duck and Hide', () => {
       this.resolveTrapChoice('duck', trapType, room, uiElements);
     });
     duckBtn.setDepth(1002);
     uiElements.push(duckBtn);
 
-    const leapBtn = this.createButton(width / 2 + 100, height / 2 + 120, 'Leap to Safety', () => {
+    const leapBtn = this.createButton(width / 2 + 120, buttonY, 'Leap to Safety', () => {
       this.resolveTrapChoice('leap', trapType, room, uiElements);
     });
     leapBtn.setDepth(1002);
