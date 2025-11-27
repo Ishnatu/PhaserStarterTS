@@ -27,29 +27,10 @@ export class EquipmentManager {
           calculatedEvasion += armor.evasionModifier;
           damageReduction += armor.damageReduction;
           
-          // Apply enhancement bonuses for armor
-          // +5, +7, +9: light armor gets +2 evasion, heavy armor gets +10% DR
+          // Apply enhancement bonuses: +1% DR per enhancement level for all armor
           const enhancementLevel = equipped.enhancementLevel || 0;
-          if (enhancementLevel >= 5) {
-            if (armor.armorType === 'light') {
-              calculatedEvasion += 2;
-            } else if (armor.armorType === 'heavy') {
-              damageReduction += 0.10;
-            }
-          }
-          if (enhancementLevel >= 7) {
-            if (armor.armorType === 'light') {
-              calculatedEvasion += 2;
-            } else if (armor.armorType === 'heavy') {
-              damageReduction += 0.10;
-            }
-          }
-          if (enhancementLevel >= 9) {
-            if (armor.armorType === 'light') {
-              calculatedEvasion += 2;
-            } else if (armor.armorType === 'heavy') {
-              damageReduction += 0.10;
-            }
+          if (enhancementLevel > 0) {
+            damageReduction += enhancementLevel * 0.01;
           }
         }
       }
@@ -58,7 +39,7 @@ export class EquipmentManager {
     return {
       baseEvasion,
       calculatedEvasion,
-      damageReduction: Math.min(0.50, damageReduction), // Cap at 50%
+      damageReduction: Math.min(0.75, damageReduction), // Cap at 75%
       attackBonus,
       damageBonus,
     };
