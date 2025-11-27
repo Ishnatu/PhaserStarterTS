@@ -559,18 +559,10 @@ export function validateSavePayload(
     return { valid: false, errors: ['Missing player data'] };
   }
 
-  for (const field of FORBIDDEN_SAVE_FIELDS) {
-    if (saveData[field] !== undefined) {
-      warnings.push(`Stripped forbidden field from root: ${field}`);
-    }
-    if (saveData.player[field] !== undefined) {
-      warnings.push(`Stripped forbidden field from player: ${field}`);
-    }
-  }
-
-  if (warnings.length > 0) {
-    logSecurityEvent(playerId, 'FORBIDDEN_FIELDS_STRIPPED', 'LOW', { fields: warnings });
-  }
+  // Silently strip forbidden fields - this is expected behavior, not a security concern.
+  // The client naturally includes these fields (stats, level, etc.) in its save payload,
+  // and the server correctly ignores them since they're calculated server-side.
+  // No need to log this as it happens on every save and creates unnecessary noise.
 
   const sanitized = sanitizeSaveData(saveData);
 
