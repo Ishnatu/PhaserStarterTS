@@ -642,12 +642,16 @@ export class CombatSystem {
     const hit = attackResult.total >= targetEvasion;
 
     if (!hit) {
-      const missMessage = `Crimson Mist misses! (-${attack.staminaCost} stamina)`;
+      const attackBonus = this.combatState.player.stats.attackBonus;
+      const missMessage = `You swing with Crimson Mist rolling ${attackResult.d20}+${attackBonus}=${attackResult.total} vs ${targetEvasion} - miss! (-${attack.staminaCost} stamina)`;
       this.combatState.combatLog.push(missMessage);
       this.deductActions(attack.actionCost);
       this.checkAndEndPlayerTurn();
       return this.createFailedAttack(missMessage, attackResult.d20);
     }
+
+    // Check if target is under 30% health BEFORE damage is applied (for Decapitate)
+    const targetUnder30Percent = target.health < target.maxHealth * 0.30;
 
     const { damage, damageBeforeReduction, damageRollInfo } = this.calculateDamage(
       multipliedDamage,
@@ -659,17 +663,23 @@ export class CombatSystem {
     target.health = Math.max(0, target.health - damage);
     this.trackDamageToEnemy(target, damage);
     
-    let logMessage = `Crimson Mist strikes ${target.name}! ${damageRollInfo} -> ${damage} damage`;
-    this.combatState.combatLog.push(logMessage);
+    const attackBonus = this.combatState.player.stats.attackBonus;
+    const critText = attackResult.critical ? ' CRITICAL!' : '';
+    const hitMessage = `You swing with Crimson Mist rolling ${attackResult.d20}+${attackBonus}=${attackResult.total} vs ${targetEvasion} - hit!${critText} (-${attack.staminaCost} stamina)`;
+    const damageMessage = `You deal ${damage} damage to ${target.name}`;
+    this.combatState.combatLog.push(hitMessage);
+    this.combatState.combatLog.push(damageMessage);
+    let logMessage = `${hitMessage}\n${damageMessage}`;
 
-    if (attackResult.critical && target.health < target.maxHealth * 0.30 && target.health > 0) {
-      if (Math.random() < 0.35) {
+    // Decapitate: Only on critical hit, only if target was ALREADY under 30% health, 20% chance to instant kill
+    if (attackResult.critical && targetUnder30Percent && target.health > 0) {
+      if (Math.random() < 0.20) {
         target.health = 0;
         this.combatState.combatLog.push(`DECAPITATION! ${target.name} is instantly killed!`);
       }
     }
 
-    this.applyConditionFromAttack(target, attack);
+    // Note: Do NOT apply decapitate as a condition - it's a special instant kill mechanic
 
     if (target.health <= 0) {
       this.combatState.combatLog.push(`${target.name} has been defeated!`);
