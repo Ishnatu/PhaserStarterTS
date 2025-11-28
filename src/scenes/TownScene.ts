@@ -372,27 +372,16 @@ export class TownScene extends Phaser.Scene {
       // Check if sprite is defined AND texture actually exists in Phaser's cache
       const hasValidSprite = npc.sprite && this.textures.exists(npc.sprite);
       
-      // Debug: Log texture status for all NPCs with sprites
-      if (npc.sprite) {
-        const exists = this.textures.exists(npc.sprite);
-        const texture = exists ? this.textures.get(npc.sprite) : null;
-        const frame = texture ? texture.get() : null;
-        console.log(`[TownScene] NPC ${npc.name}: texture=${npc.sprite}, exists=${exists}, size=${frame ? `${frame.width}x${frame.height}` : 'N/A'}`);
-      }
-      
       if (hasValidSprite) {
         const npcSprite = this.add.image(x, y, npc.sprite!)
-          .setDisplaySize(120, 120)  // Increased for better readability
+          .setDisplaySize(120, 120)
           .setInteractive({ useHandCursor: true })
           .on('pointerover', () => npcSprite.setTint(0xdddddd))
           .on('pointerout', () => npcSprite.clearTint())
           .on('pointerdown', () => this.interactWithNPC(npc.name, npc.description));
         npcVisual = npcSprite;
       } else {
-        if (npc.sprite) {
-          console.warn(`[TownScene] Texture not loaded for ${npc.name}: ${npc.sprite}`);
-        }
-        const npcBox = this.add.rectangle(x, y, 120, 120, npc.color)  // Increased for better readability
+        const npcBox = this.add.rectangle(x, y, 120, 120, npc.color)
           .setInteractive({ useHandCursor: true })
           .on('pointerover', () => npcBox.setFillStyle(npc.color, 0.7))
           .on('pointerout', () => npcBox.setFillStyle(npc.color, 1))
