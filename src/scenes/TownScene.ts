@@ -42,6 +42,7 @@ export class TownScene extends Phaser.Scene {
     this.load.image('innkeeper-icon', '/assets/npcs/innkeeper-icon.png');
     this.load.image('gem-expert-icon', '/assets/npcs/gem-expert-icon.png');
     this.load.image('marketplace-icon', '/assets/npcs/marketplace-icon.png');
+    this.load.image('vault-keeper-icon', '/assets/npcs/vault-keeper-icon.png');
     this.load.image('garthek-button', '/assets/ui/shop-buttons/garthek-button.png');
     this.load.image('evasion-icon', '/assets/ui/evasion-icon.png');
     this.load.image('shield-icon', '/assets/ui/shield-icon.png');
@@ -348,7 +349,7 @@ export class TownScene extends Phaser.Scene {
       { name: 'Blacksmith', color: 0xff6633, description: 'Forges and upgrades equipment', sprite: 'blacksmith-button' },
       { name: 'Merchant', color: 0x66cc66, description: 'Buys and sells goods', sprite: 'merchant-icon' },
       { name: 'Innkeeper', color: 0x6699ff, description: 'Provides rest and healing', sprite: 'innkeeper-icon' },
-      { name: 'Vault Keeper', color: 0x88ddff, description: 'Manages your storage footlocker' },
+      { name: 'Vault Keeper', color: 0x88ddff, description: 'Manages your storage footlocker', sprite: 'vault-keeper-icon' },
       { name: 'Garthek', color: 0x9944cc, description: 'The Stitcher - Binds items to your soul', sprite: 'garthek-button' },
       { name: 'Keeper of Virtue', color: 0xffd700, description: 'Reclaim returned items and view karma' },
       { name: 'Quest Giver', color: 0xffcc33, description: 'Offers missions and lore' },
