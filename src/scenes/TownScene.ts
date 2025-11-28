@@ -41,6 +41,7 @@ export class TownScene extends Phaser.Scene {
     this.load.image('merchant-icon', '/assets/npcs/merchant-icon.png');
     this.load.image('innkeeper-icon', '/assets/npcs/innkeeper-icon.png');
     this.load.image('gem-expert-icon', '/assets/npcs/gem-expert-icon.png');
+    this.load.image('marketplace-icon', '/assets/npcs/marketplace-icon.png');
     this.load.image('garthek-button', '/assets/ui/shop-buttons/garthek-button.png');
     this.load.image('evasion-icon', '/assets/ui/evasion-icon.png');
     this.load.image('shield-icon', '/assets/ui/shield-icon.png');
@@ -352,7 +353,7 @@ export class TownScene extends Phaser.Scene {
       { name: 'Keeper of Virtue', color: 0xffd700, description: 'Reclaim returned items and view karma' },
       { name: 'Quest Giver', color: 0xffcc33, description: 'Offers missions and lore' },
       { name: 'Gem Expert', color: 0xcc66ff, description: 'Soulbinds Voidtouched Gems', sprite: 'gem-expert-icon' },
-      { name: 'Marketplace', color: 0xff9966, description: 'Player trading hub' },
+      { name: 'Marketplace', color: 0xff9966, description: 'Player trading hub', sprite: 'marketplace-icon' },
     ];
 
     const columns = 3;
