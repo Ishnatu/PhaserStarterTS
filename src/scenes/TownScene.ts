@@ -369,8 +369,11 @@ export class TownScene extends Phaser.Scene {
 
       let npcVisual: Phaser.GameObjects.GameObject;
 
-      if (npc.sprite) {
-        const npcSprite = this.add.image(x, y, npc.sprite)
+      // Check if sprite is defined AND texture actually exists in Phaser's cache
+      const hasValidSprite = npc.sprite && this.textures.exists(npc.sprite);
+      
+      if (hasValidSprite) {
+        const npcSprite = this.add.image(x, y, npc.sprite!)
           .setDisplaySize(120, 120)  // Increased for better readability
           .setInteractive({ useHandCursor: true })
           .on('pointerover', () => npcSprite.setTint(0xdddddd))
@@ -378,6 +381,9 @@ export class TownScene extends Phaser.Scene {
           .on('pointerdown', () => this.interactWithNPC(npc.name, npc.description));
         npcVisual = npcSprite;
       } else {
+        if (npc.sprite) {
+          console.warn(`[TownScene] Texture not loaded for ${npc.name}: ${npc.sprite}`);
+        }
         const npcBox = this.add.rectangle(x, y, 120, 120, npc.color)  // Increased for better readability
           .setInteractive({ useHandCursor: true })
           .on('pointerover', () => npcBox.setFillStyle(npc.color, 0.7))
