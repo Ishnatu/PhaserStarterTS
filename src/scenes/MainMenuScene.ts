@@ -17,15 +17,16 @@ export class MainMenuScene extends Phaser.Scene {
     this.load.image('start-button', '/assets/ui/start-button.png');
     this.load.audio('intro-music', '/assets/audio/intro-music.mp3');
     
-    // Preload all NPC icons for TownScene
+    // Preload all NPC icons for TownScene (with cache-busting)
+    const cacheBust = `?v=${Date.now()}`;
     this.load.image('blacksmith-button', '/assets/ui/shop-buttons/blacksmith-button.png');
     this.load.image('garthek-button', '/assets/ui/shop-buttons/garthek-button.png');
     this.load.image('merchant-icon', '/assets/npcs/merchant-icon.png');
     this.load.image('innkeeper-icon', '/assets/npcs/innkeeper-icon.png');
     this.load.image('gem-expert-icon', '/assets/npcs/gem-expert-icon.png');
-    this.load.image('marketplace-icon', '/assets/npcs/marketplace-icon.png');
-    this.load.image('vault-keeper-icon', '/assets/npcs/vault-keeper-icon.png');
-    this.load.image('keeper-of-virtue-icon', '/assets/npcs/keeper-of-virtue-icon.png');
+    this.load.image('marketplace-icon', `/assets/npcs/marketplace-icon.png${cacheBust}`);
+    this.load.image('vault-keeper-icon', `/assets/npcs/vault-keeper-icon.png${cacheBust}`);
+    this.load.image('keeper-of-virtue-icon', `/assets/npcs/keeper-of-virtue-icon.png${cacheBust}`);
   }
 
   async create() {
