@@ -413,6 +413,49 @@ export class GameStateManager {
   }
 
   hasUnlockedFungalHollows(): boolean {
+    // Check server-authoritative data first
+    if (this.isZoneRiftVisible('fungal_hollows')) {
+      return true;
+    }
+    // Fall back to client-side count for backward compatibility
     return this.getCompletedDelveCountByTier(1) >= 5;
+  }
+
+  // Zone rift unlock requirements (server-authoritative delve counts)
+  private readonly ZONE_UNLOCK_REQUIREMENTS: Record<string, { previousTier: number; delvesRequired: number }> = {
+    'fungal_hollows': { previousTier: 1, delvesRequired: 5 },
+    'crystal_groves': { previousTier: 2, delvesRequired: 10 },
+    'the_borderlands': { previousTier: 3, delvesRequired: 20 },
+    'shattered_forge': { previousTier: 4, delvesRequired: 50 },
+  };
+
+  isZoneRiftVisible(zoneId: string): boolean {
+    const requirement = this.ZONE_UNLOCK_REQUIREMENTS[zoneId];
+    if (!requirement) return false;
+
+    const delvesCompleted = this.gameState.player.delvesCompletedByTier;
+    if (!delvesCompleted) return false;
+
+    const tierKey = `tier${requirement.previousTier}` as keyof typeof delvesCompleted;
+    const completed = delvesCompleted[tierKey] || 0;
+
+    return completed >= requirement.delvesRequired;
+  }
+
+  isZoneDiscovered(zoneId: string): boolean {
+    const discoveredZones = this.gameState.player.discoveredZones || ['roboka'];
+    return discoveredZones.includes(zoneId);
+  }
+
+  getZoneRiftPosition(zoneId: string): { x: number; y: number } | undefined {
+    const player = this.gameState.player as any;
+    const positionKey = `${zoneId}PortalPosition`;
+    return player[positionKey];
+  }
+
+  setZoneRiftPosition(zoneId: string, position: { x: number; y: number }): void {
+    const player = this.gameState.player as any;
+    const positionKey = `${zoneId}PortalPosition`;
+    player[positionKey] = position;
   }
 }

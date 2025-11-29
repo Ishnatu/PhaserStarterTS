@@ -26,6 +26,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.load.image('marketplace-icon', '/assets/npcs/marketplace-icon.png');
     this.load.image('vault-keeper-icon', '/assets/npcs/vault-keeper-icon.png');
     this.load.image('keeper-of-virtue-icon', '/assets/npcs/keeper-of-virtue-icon.png');
+    this.load.image('mage-tower-icon', '/assets/npcs/mage-tower-icon.png');
   }
 
   async create() {

@@ -45,6 +45,8 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Random Encounters**: Varied types (Combat, Treasure, Shrine, Corrupted Void Portal, Trapped Chest, Tombstone, Wandering Merchant), with a chance for Aetherbear boss.
 - **Buff System**: Time-based temporary effects managed by `BuffManager`.
 - **Tier 2 Zone - Fungal Hollows**: Unlocks after completing 5 T1 delves, featuring harder enemies.
+- **Zone Rift Discovery System**: Server-authoritative zone progression. Rifts spawn at fixed locations when delve requirements are met. First-time rift interaction shows discovery prompt and calls API to mark zone discovered. Discovered zones can be accessed via Mage Tower warping.
+- **Mage Tower Warp Nexus**: Town NPC replaces Quest Giver. Shows zone progress, lock status, and enables warping with tiered fees (500-2500 AA + 0-20 CA).
 - **Scene Transition System**: `freshExpedition` flag controls exploration state resets for death or new games, while preserving state for normal town returns.
 - **Wilderness Exploration**: 6000x6000 world with camera-follow, procedural terrain, Y-sorted rendering, fog of war, and limited rests.
 - **UI System**: Viewport-locked, interactive, blocking overlays with hierarchical ESC key navigation.

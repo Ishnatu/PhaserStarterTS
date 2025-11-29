@@ -264,6 +264,11 @@ export class DelveScene extends Phaser.Scene {
             player.stamina = result.newMaxStamina; // Full restore on level up
           }
         }
+
+        // Sync delve progress from server (server-authoritative for Mage Tower)
+        if (result.delvesCompletedByTier) {
+          player.delvesCompletedByTier = result.delvesCompletedByTier;
+        }
       } else {
         console.error('Failed to grant delve completion XP:', await response.text());
       }

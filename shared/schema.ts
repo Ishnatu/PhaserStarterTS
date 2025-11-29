@@ -110,6 +110,12 @@ export const playerCurrencies = pgTable("player_currencies", {
   crystallineAnimus: integer("crystalline_animus").default(0).notNull(),
   level: integer("level").default(1).notNull(),
   experience: integer("experience").default(0).notNull(),
+  tier1DelvesCompleted: integer("tier1_delves_completed").default(0).notNull(),
+  tier2DelvesCompleted: integer("tier2_delves_completed").default(0).notNull(),
+  tier3DelvesCompleted: integer("tier3_delves_completed").default(0).notNull(),
+  tier4DelvesCompleted: integer("tier4_delves_completed").default(0).notNull(),
+  tier5DelvesCompleted: integer("tier5_delves_completed").default(0).notNull(),
+  discoveredZones: jsonb("discovered_zones").default(sql`'["roboka"]'::jsonb`).notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   index("IDX_player_currencies_player").on(table.playerId),

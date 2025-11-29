@@ -72,8 +72,8 @@ export function registerDelveRoutes(app: Express) {
 
   /**
    * POST /api/delve/complete
-   * Grants XP reward for completing a delve
-   * SERVER-AUTHORITATIVE: XP is persisted to database immediately
+   * Grants XP reward for completing a delve and tracks delve count
+   * SERVER-AUTHORITATIVE: XP and delve count are persisted to database immediately
    */
   app.post("/api/delve/complete", isAuthenticated, async (req: any, res) => {
     try {
@@ -97,6 +97,9 @@ export function registerDelveRoutes(app: Express) {
       // Grant XP server-side (persisted to database)
       const xpResult = await storage.grantExperience(userId, xpReward);
 
+      // Increment delve count for this tier (server-authoritative)
+      const delveProgress = await storage.incrementDelveCount(userId, tier);
+
       // Calculate new max stats if leveled up
       const newMaxHealth = xpResult.leveledUp ? calculateMaxHealth(xpResult.newLevel) : null;
       const newMaxStamina = xpResult.leveledUp ? calculateMaxStamina(xpResult.newLevel) : null;
@@ -109,6 +112,7 @@ export function registerDelveRoutes(app: Express) {
         newExperience: xpResult.newExperience,
         newMaxHealth,
         newMaxStamina,
+        delvesCompletedByTier: delveProgress,
       });
     } catch (error) {
       console.error("Error completing delve:", error);

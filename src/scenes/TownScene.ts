@@ -19,6 +19,7 @@ import { StatsPanel } from '../ui/StatsPanel';
 import { TerrainGenerator } from '../utils/TerrainGenerator';
 import { WELCOME_MESSAGE } from '../config/StarterKit';
 import { ItemTooltip } from '../utils/ItemTooltip';
+import { ZONES, getUnlockableZones, isZoneUnlockable, getDelveProgress, ZoneConfig } from '../../shared/zoneConfig';
 
 export class TownScene extends Phaser.Scene {
   private gameState!: GameStateManager;
@@ -44,6 +45,7 @@ export class TownScene extends Phaser.Scene {
     this.load.image('marketplace-icon', '/assets/npcs/marketplace-icon.png');
     this.load.image('vault-keeper-icon', '/assets/npcs/vault-keeper-icon.png');
     this.load.image('keeper-of-virtue-icon', '/assets/npcs/keeper-of-virtue-icon.png');
+    this.load.image('mage-tower-icon', '/assets/npcs/mage-tower-icon.png');
     this.load.image('garthek-button', '/assets/ui/shop-buttons/garthek-button.png');
     this.load.image('evasion-icon', '/assets/ui/evasion-icon.png');
     this.load.image('shield-icon', '/assets/ui/shield-icon.png');
@@ -353,7 +355,7 @@ export class TownScene extends Phaser.Scene {
       { name: 'Vault Keeper', color: 0x88ddff, description: 'Manages your storage footlocker', sprite: 'vault-keeper-icon' },
       { name: 'Garthek', color: 0x9944cc, description: 'The Stitcher - Binds items to your soul', sprite: 'garthek-button' },
       { name: 'Keeper of Virtue', color: 0xffd700, description: 'Reclaim returned items and view karma', sprite: 'keeper-of-virtue-icon' },
-      { name: 'Quest Giver', color: 0xffcc33, description: 'Offers missions and lore' },
+      { name: 'Mage Tower', color: 0x6644aa, description: 'Warp to discovered zones', sprite: 'mage-tower-icon' },
       { name: 'Gem Expert', color: 0xcc66ff, description: 'Soulbinds Voidtouched Gems', sprite: 'gem-expert-icon' },
       { name: 'Marketplace', color: 0xff9966, description: 'Player trading hub', sprite: 'marketplace-icon' },
     ];
@@ -426,6 +428,11 @@ export class TownScene extends Phaser.Scene {
 
     if (name === 'Keeper of Virtue') {
       this.openHallsOfVirtue();
+      return;
+    }
+
+    if (name === 'Mage Tower') {
+      this.openMageWarpNexus();
       return;
     }
 
@@ -2807,5 +2814,212 @@ export class TownScene extends Phaser.Scene {
       destroyAll();
     };
     this.escKey.once('down', escHandler);
+  }
+
+  private async openMageWarpNexus(): Promise<void> {
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
+    const panel = this.add.rectangle(width / 2, height / 2, 800, 600, 0x1a1a2e).setOrigin(0.5);
+    const panelBorder = this.add.rectangle(width / 2, height / 2, 804, 604, 0x6644aa).setOrigin(0.5);
+    panelBorder.setDepth(999);
+    panel.setDepth(1000);
+    uiElements.push(overlay, panelBorder, panel);
+
+    // Title
+    const title = this.add.text(width / 2, height / 2 - 260, 'Mage Warp Nexus', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#aa88ff',
+      resolution: 2,
+    }).setOrigin(0.5).setDepth(1001);
+    uiElements.push(title);
+
+    // Subtitle
+    const subtitle = this.add.text(width / 2, height / 2 - 220, '"The ancient pathways between realms..."', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.xsmall,
+      color: '#888888',
+      fontStyle: 'italic',
+      resolution: 2,
+    }).setOrigin(0.5).setDepth(1001);
+    uiElements.push(subtitle);
+
+    // Loading text
+    const loadingText = this.add.text(width / 2, height / 2, 'Loading zone progress...', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#888888',
+      resolution: 2,
+    }).setOrigin(0.5).setDepth(1002);
+    uiElements.push(loadingText);
+
+    // Fetch progress from server (server-authoritative)
+    const zoneProgress = await ApiClient.getZoneProgress();
+    loadingText.destroy();
+
+    // Get player progress data from server or use defaults
+    const delvesCompletedByTier = zoneProgress?.delvesCompletedByTier || player.delvesCompletedByTier || {
+      tier1: 0, tier2: 0, tier3: 0, tier4: 0, tier5: 0
+    };
+    const discoveredZones = zoneProgress?.discoveredZones || player.discoveredZones || ['roboka'];
+
+    // Sync to local player state
+    player.delvesCompletedByTier = delvesCompletedByTier;
+    player.discoveredZones = discoveredZones;
+    this.gameState.updatePlayer(player);
+
+    // Zone portal grid - 2x2 layout for T2-T5 zones
+    const unlockableZones = getUnlockableZones(); // T2-T5 zones
+    const gridStartX = width / 2 - 180;
+    const gridStartY = height / 2 - 100;
+    const cellWidth = 360;
+    const cellHeight = 180;
+
+    unlockableZones.forEach((zone, index) => {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      const x = gridStartX + col * cellWidth;
+      const y = gridStartY + row * cellHeight;
+
+      const progress = getDelveProgress(zone, delvesCompletedByTier);
+      const isUnlockable = isZoneUnlockable(zone, delvesCompletedByTier);
+      const isDiscovered = discoveredZones.includes(zone.id);
+
+      // Zone portal frame
+      const portalBg = this.add.rectangle(x, y, 160, 140, 0x2a2a4e).setDepth(1001);
+      const portalFrame = this.add.rectangle(x, y, 164, 144, isDiscovered ? 0x44ff44 : isUnlockable ? 0xffaa00 : 0x444466).setDepth(1000);
+      uiElements.push(portalFrame, portalBg);
+
+      // Zone name and tier
+      const zoneName = this.add.text(x, y - 45, zone.name, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.small,
+        color: isDiscovered ? '#44ff44' : isUnlockable ? '#ffaa00' : '#888888',
+        resolution: 2,
+      }).setOrigin(0.5).setDepth(1002);
+      uiElements.push(zoneName);
+
+      const tierText = this.add.text(x, y - 25, `Tier ${zone.tier}`, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.xsmall,
+        color: '#aaaaaa',
+        resolution: 2,
+      }).setOrigin(0.5).setDepth(1002);
+      uiElements.push(tierText);
+
+      // Status text
+      let statusText: string;
+      let statusColor: string;
+
+      if (isDiscovered) {
+        statusText = 'Discovered';
+        statusColor = '#44ff44';
+      } else if (isUnlockable) {
+        statusText = 'Find the Rift!';
+        statusColor = '#ffaa00';
+      } else {
+        statusText = `${progress.completed}/${progress.required} delves`;
+        statusColor = '#888888';
+      }
+
+      const status = this.add.text(x, y + 10, statusText, {
+        fontFamily: FONTS.primary,
+        fontSize: FONTS.size.xsmall,
+        color: statusColor,
+        resolution: 2,
+      }).setOrigin(0.5).setDepth(1002);
+      uiElements.push(status);
+
+      // Portal fee display for discovered zones
+      if (isDiscovered) {
+        const feeAA = zone.portalFee.arcaneAsh;
+        const feeCA = zone.portalFee.crystallineAnimus;
+        const feeText = feeCA > 0 ? `${feeAA} AA + ${feeCA} CA` : `${feeAA} AA`;
+        
+        const fee = this.add.text(x, y + 35, feeText, {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.xsmall,
+          color: '#ffcc00',
+          resolution: 2,
+        }).setOrigin(0.5).setDepth(1002);
+        uiElements.push(fee);
+
+        // Warp button
+        const canAfford = player.arcaneAsh >= feeAA && player.crystallineAnimus >= feeCA;
+        const warpBtn = this.add.rectangle(x, y + 55, 80, 24, canAfford ? 0x44aa44 : 0x666666)
+          .setDepth(1002);
+        
+        if (canAfford) {
+          warpBtn.setInteractive({ useHandCursor: true })
+            .on('pointerover', () => warpBtn.setFillStyle(0x55bb55))
+            .on('pointerout', () => warpBtn.setFillStyle(0x44aa44))
+            .on('pointerdown', () => this.handleZoneWarp(zone, destroyAll));
+        }
+        
+        const warpLabel = this.add.text(x, y + 55, 'Warp', {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.xsmall,
+          color: canAfford ? '#ffffff' : '#888888',
+          resolution: 2,
+        }).setOrigin(0.5).setDepth(1003);
+        
+        uiElements.push(warpBtn, warpLabel);
+      }
+    });
+
+    // Current location indicator
+    const currentZone = this.add.text(width / 2, height / 2 + 220, 'Current Location: Roboka (Tier 1)', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#88ff88',
+      resolution: 2,
+    }).setOrigin(0.5).setDepth(1001);
+    uiElements.push(currentZone);
+
+    // Close button
+    const closeBtn = this.createButton(width / 2, height / 2 + 260, 'Close', () => {
+      destroyAll();
+    });
+    closeBtn.setDepth(1002);
+    uiElements.push(closeBtn);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    this.menuState = 'none';
+    this.currentMenuCloseFunction = destroyAll;
+
+    // ESC key support
+    const escHandler = () => {
+      destroyAll();
+    };
+    this.escKey.once('down', escHandler);
+  }
+
+  private async handleZoneWarp(zone: ZoneConfig, closeMenu: () => void): Promise<void> {
+    const player = this.gameState.getPlayer();
+    const feeAA = zone.portalFee.arcaneAsh;
+    const feeCA = zone.portalFee.crystallineAnimus;
+
+    // Double-check can afford
+    if (player.arcaneAsh < feeAA || player.crystallineAnimus < feeCA) {
+      this.showMessage('Not enough currency for warp!');
+      return;
+    }
+
+    // For now, just show a message since other zones aren't built yet
+    this.showMessage(`Zone ${zone.name} coming soon!`);
+    
+    // In the future, this will:
+    // 1. Call server API to deduct currency
+    // 2. Transition to the appropriate zone scene
+    // closeMenu();
+    // this.scene.start('ZoneScene', { zoneId: zone.id });
   }
 }

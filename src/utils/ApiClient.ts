@@ -233,4 +233,53 @@ export class ApiClient {
       return [];
     }
   }
+
+  // Zone/Mage Tower API methods
+  static async getZoneProgress(): Promise<{
+    delvesCompletedByTier: { tier1: number; tier2: number; tier3: number; tier4: number; tier5: number };
+    discoveredZones: string[];
+  } | null> {
+    try {
+      const response = await this.get('/api/zones/progress');
+      return {
+        delvesCompletedByTier: response.delvesCompletedByTier,
+        discoveredZones: response.discoveredZones,
+      };
+    } catch (error) {
+      console.error('Failed to get zone progress:', error);
+      return null;
+    }
+  }
+
+  static async discoverZone(zoneId: string): Promise<{ success: boolean; discoveredZones?: string[]; message?: string }> {
+    try {
+      const response = await this.post('/api/zones/discover', { zoneId });
+      return {
+        success: true,
+        discoveredZones: response.discoveredZones,
+        message: response.message,
+      };
+    } catch (error) {
+      console.error('Failed to discover zone:', error);
+      return { success: false, message: 'Failed to discover zone' };
+    }
+  }
+
+  static async warpToZone(zoneId: string): Promise<{
+    success: boolean;
+    newCurrency?: { arcaneAsh: number; crystallineAnimus: number };
+    message?: string;
+  }> {
+    try {
+      const response = await this.post('/api/zones/warp', { zoneId });
+      return {
+        success: true,
+        newCurrency: response.newCurrency,
+        message: response.message,
+      };
+    } catch (error) {
+      console.error('Failed to warp to zone:', error);
+      return { success: false, message: 'Failed to warp to zone' };
+    }
+  }
 }

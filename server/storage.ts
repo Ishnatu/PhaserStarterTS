@@ -441,6 +441,79 @@ export class DatabaseStorage implements IStorage {
     
     return updated || null;
   }
+
+  async incrementDelveCount(playerId: string, tier: number): Promise<{ tier1: number; tier2: number; tier3: number; tier4: number; tier5: number }> {
+    // Determine which column to increment based on tier
+    const tierColumn = {
+      1: playerCurrencies.tier1DelvesCompleted,
+      2: playerCurrencies.tier2DelvesCompleted,
+      3: playerCurrencies.tier3DelvesCompleted,
+      4: playerCurrencies.tier4DelvesCompleted,
+      5: playerCurrencies.tier5DelvesCompleted,
+    }[tier];
+
+    if (!tierColumn) {
+      throw new Error(`Invalid tier: ${tier}`);
+    }
+
+    const [updated] = await db
+      .update(playerCurrencies)
+      .set({
+        [tierColumn.name]: drizzleSql`${tierColumn} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(playerCurrencies.playerId, playerId))
+      .returning();
+
+    return {
+      tier1: updated.tier1DelvesCompleted,
+      tier2: updated.tier2DelvesCompleted,
+      tier3: updated.tier3DelvesCompleted,
+      tier4: updated.tier4DelvesCompleted,
+      tier5: updated.tier5DelvesCompleted,
+    };
+  }
+
+  async getDelveProgress(playerId: string): Promise<{ tier1: number; tier2: number; tier3: number; tier4: number; tier5: number; discoveredZones: string[] } | null> {
+    const current = await this.getPlayerCurrency(playerId);
+    if (!current) return null;
+
+    return {
+      tier1: current.tier1DelvesCompleted,
+      tier2: current.tier2DelvesCompleted,
+      tier3: current.tier3DelvesCompleted,
+      tier4: current.tier4DelvesCompleted,
+      tier5: current.tier5DelvesCompleted,
+      discoveredZones: (current.discoveredZones as string[]) || ['roboka'],
+    };
+  }
+
+  async discoverZone(playerId: string, zoneId: string): Promise<string[]> {
+    const current = await this.getPlayerCurrency(playerId);
+    if (!current) {
+      throw new Error(`Player ${playerId} not found`);
+    }
+
+    const currentZones = (current.discoveredZones as string[]) || ['roboka'];
+    
+    // Don't add duplicates
+    if (currentZones.includes(zoneId)) {
+      return currentZones;
+    }
+
+    const newZones = [...currentZones, zoneId];
+
+    const [updated] = await db
+      .update(playerCurrencies)
+      .set({
+        discoveredZones: newZones,
+        updatedAt: new Date(),
+      })
+      .where(eq(playerCurrencies.playerId, playerId))
+      .returning();
+
+    return updated.discoveredZones as string[];
+  }
 }
 
 export const storage = new DatabaseStorage();

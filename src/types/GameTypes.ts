@@ -121,6 +121,14 @@ export interface PlayerBuff {
   expiresOnTownReturn?: boolean;
 }
 
+export interface DelveProgress {
+  tier1: number;
+  tier2: number;
+  tier3: number;
+  tier4: number;
+  tier5: number;
+}
+
 export interface PlayerData {
   health: number;
   maxHealth: number;
@@ -146,6 +154,8 @@ export interface PlayerData {
   fungalHollowsPortalPosition?: { x: number; y: number };
   hasReceivedStarterKit?: boolean;
   isNewPlayer?: boolean;
+  delvesCompletedByTier?: DelveProgress;
+  discoveredZones?: string[];
 }
 
 export interface DelveRoom {

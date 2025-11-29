@@ -43,6 +43,7 @@ export class ExploreScene extends Phaser.Scene {
   private tombstoneMarkers: Map<number, Phaser.GameObjects.Container> = new Map();
   private townPortal!: Phaser.GameObjects.Container;
   private fungalHollowsPortal: Phaser.GameObjects.Container | null = null;
+  private zoneRifts: Map<string, Phaser.GameObjects.Container> = new Map();
   private statsPanel!: StatsPanel;
   private movementStepCounter: number = 0;
   private encounterCooldown: boolean = false;
@@ -265,11 +266,28 @@ export class ExploreScene extends Phaser.Scene {
     this.updateInfo();
   }
 
-  private generateInitialWorld(): void {
+  private async generateInitialWorld(): Promise<void> {
     this.generateDelves();
     this.createTownPortal();
     this.loadTombstones();
+    
+    // Fetch server-authoritative zone progress before spawning rifts
+    await this.syncZoneProgress();
     this.checkAndSpawnFungalHollowsPortal();
+  }
+
+  private async syncZoneProgress(): Promise<void> {
+    try {
+      const zoneProgress = await ApiClient.getZoneProgress();
+      if (zoneProgress) {
+        const player = this.gameState.getPlayer();
+        player.delvesCompletedByTier = zoneProgress.delvesCompletedByTier;
+        player.discoveredZones = zoneProgress.discoveredZones;
+        this.gameState.updatePlayer(player);
+      }
+    } catch (error) {
+      console.error('Failed to sync zone progress:', error);
+    }
   }
 
   private generateDelves(): void {
@@ -1951,8 +1969,123 @@ export class ExploreScene extends Phaser.Scene {
     );
 
     if (distance < 60) {
-      SceneManager.getInstance().transitionTo('fungalHollows');
+      // Check if zone is already discovered
+      const isDiscovered = this.gameState.isZoneDiscovered('fungal_hollows');
+      
+      if (isDiscovered) {
+        // Zone already discovered - transition directly
+        SceneManager.getInstance().transitionTo('fungalHollows');
+      } else {
+        // First time finding this rift - show discovery prompt
+        this.showRiftDiscoveryPrompt('fungal_hollows', 'Fungal Hollows', 2);
+      }
     }
+  }
+
+  private async showRiftDiscoveryPrompt(zoneId: string, zoneName: string, tier: number): Promise<void> {
+    if (this.isOverlayActive) return;
+    this.isOverlayActive = true;
+
+    const { width, height } = this.cameras.main;
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
+      .setOrigin(0)
+      .setScrollFactor(0)
+      .setDepth(999);
+    uiElements.push(overlay);
+
+    const panel = this.add.rectangle(width / 2, height / 2, 500, 300, 0x1a1a2e)
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(1000);
+    uiElements.push(panel);
+
+    const panelBorder = this.add.rectangle(width / 2, height / 2, 504, 304, 0x44aa44)
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(999);
+    uiElements.push(panelBorder);
+
+    const title = this.add.text(width / 2, height / 2 - 100, 'Zone Rift Discovered!', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#44ff44',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    uiElements.push(title);
+
+    const zoneNameText = this.add.text(width / 2, height / 2 - 50, zoneName, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#88ff88',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    uiElements.push(zoneNameText);
+
+    const tierText = this.add.text(width / 2, height / 2 - 20, `Tier ${tier} Zone`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#66cc66',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    uiElements.push(tierText);
+
+    const infoText = this.add.text(width / 2, height / 2 + 20, 'Enter this rift to discover the zone.\nYou can warp here from the Mage Tower.', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.xsmall,
+      color: '#aaaaaa',
+      align: 'center',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    uiElements.push(infoText);
+
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.isOverlayActive = false;
+      this.menuState = 'none';
+    };
+
+    // Enter button
+    const enterBtn = this.add.text(width / 2 - 80, height / 2 + 100, '[ Enter Rift ]', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#44ff44',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#88ff88'); })
+      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#44ff44'); })
+      .on('pointerdown', async () => {
+        // Call API to discover zone
+        const result = await ApiClient.discoverZone(zoneId);
+        if (result.success) {
+          // Update local player data
+          const player = this.gameState.getPlayer();
+          player.discoveredZones = result.discoveredZones;
+          this.gameState.updatePlayer(player);
+          
+          destroyAll();
+          // Transition to the zone
+          SceneManager.getInstance().transitionTo('fungalHollows');
+        } else {
+          this.showMessage(result.message || 'Failed to discover zone');
+          destroyAll();
+        }
+      });
+    uiElements.push(enterBtn);
+
+    // Cancel button
+    const cancelBtn = this.add.text(width / 2 + 80, height / 2 + 100, '[ Cancel ]', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#888888',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#aaaaaa'); })
+      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#888888'); })
+      .on('pointerdown', () => {
+        destroyAll();
+      });
+    uiElements.push(cancelBtn);
+
+    this.menuState = 'encounter';
+    this.currentMenuCloseFunction = destroyAll;
   }
 
   private handleEscapeKey(): void {
