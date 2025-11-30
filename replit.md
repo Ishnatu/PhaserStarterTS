@@ -89,3 +89,39 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 
 ### Security TODO
 - **Tombstone Looting**: Still has client-side components, should be migrated to server endpoints
+
+## Web3 Security Checklist (Pre-Mainnet)
+
+### Smart Contract Development
+- [ ] Use OpenZeppelin contracts (ERC-20, ERC-721, AccessControl, Pausable, ReentrancyGuard)
+- [ ] Implement multisig admin (2-of-3 Gnosis Safe) for all privileged functions
+- [ ] Add timelocks for critical operations (signer updates, pause/unpause)
+- [ ] Integer overflow protection (automatic in Solidity 0.8+)
+- [ ] No on-chain randomness for critical outcomes (server-side SeededRNG already used)
+- [ ] External security audit (CertiK, OpenZeppelin, or Quantstamp)
+
+### Key Management
+- [ ] Migrate WITHDRAWAL_SIGNER_KEY from env vars to AWS KMS or HashiCorp Vault
+- [ ] Implement 90-day key rotation with HSM-backed keys
+- [ ] Set up break-glass emergency procedures
+- [ ] Enable audit logging for all signing operations
+- [ ] IAM roles with time-limited sessions and MFA
+
+### Front-End Signing UX
+- [ ] Human-readable signing prompts showing exact amounts and contract address
+- [ ] No blind-sign typed data - always display what's being signed
+- [ ] Contract address verification display before signing
+- [ ] Clear rejection of malformed or unexpected signing requests
+
+### Monitoring & Incident Response
+- [ ] Alert on >10 signatures/minute per player
+- [ ] Alert on >100,000 AA or >10,000 CA withdrawn in 1 hour
+- [ ] SIEM integration for audit log analysis
+- [ ] Reconciliation jobs comparing PostgreSQL vs on-chain events
+- [ ] Circuit breaker testing (emergency pause)
+- [ ] Documented incident response runbooks
+
+### Current Status
+- **Withdrawals**: Disabled via feature flag (ENABLE_WEB3_WITHDRAWALS)
+- **Contracts**: Not yet deployed (by design for development phase)
+- **Signing Key**: Environment variable (development only - NOT production safe)
