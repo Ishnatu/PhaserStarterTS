@@ -284,4 +284,70 @@ export function registerDelveRoutes(app: Express) {
       res.status(500).json({ message: "Failed to grant trap XP" });
     }
   });
+
+  /**
+   * POST /api/delve/treasure
+   * Grants currency reward for collecting treasure from a treasure room
+   * SERVER-AUTHORITATIVE: Currency is persisted atomically to database
+   * Reward: 50 AA per tier + 1 CA per tier
+   */
+  app.post("/api/delve/treasure", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { tier, sessionId, roomId } = req.body;
+
+      // Validate input
+      if (typeof tier !== 'number' || tier < 1 || tier > 5) {
+        logSecurityEvent(userId, 'DELVE_INVALID_TIER', 'MEDIUM', {
+          tier, sessionId, roomId,
+        });
+        return res.status(400).json({ message: "Invalid tier: must be between 1 and 5" });
+      }
+
+      // Validate session if provided (optional - for enhanced security)
+      if (sessionId) {
+        const session = getActiveDelveSession(userId, sessionId);
+        if (!session) {
+          logSecurityEvent(userId, 'DELVE_TREASURE_INVALID_SESSION', 'MEDIUM', {
+            tier, sessionId, roomId,
+          });
+          return res.status(400).json({ message: "Invalid or expired delve session" });
+        }
+        // Clamp claimed tier to session tier to prevent tier inflation
+        if (tier > session.tier) {
+          logSecurityEvent(userId, 'DELVE_TREASURE_TIER_MANIPULATION', 'HIGH', {
+            claimedTier: tier, sessionTier: session.tier, sessionId,
+          });
+        }
+      }
+
+      // Calculate rewards: 50 AA per tier, 1 CA per tier (always integer)
+      const arcaneAshReward = 50 * tier;
+      const crystallineAnimusReward = tier;
+
+      // Ensure player currency record exists
+      await storage.ensurePlayerCurrency(userId, 0, 0);
+
+      // Grant currency atomically using addCurrency
+      const currencies = await storage.addCurrency(userId, arcaneAshReward, crystallineAnimusReward);
+
+      logSecurityEvent(userId, 'DELVE_TREASURE_COLLECTED', 'LOW', { 
+        tier, 
+        arcaneAshReward, 
+        crystallineAnimusReward,
+        newBalance: { arcaneAsh: currencies.arcaneAsh, crystallineAnimus: currencies.crystallineAnimus },
+      });
+
+      res.json({
+        success: true,
+        arcaneAshReward,
+        crystallineAnimusReward,
+        arcaneAsh: currencies.arcaneAsh,
+        crystallineAnimus: currencies.crystallineAnimus,
+      });
+    } catch (error) {
+      console.error("Error collecting treasure:", error);
+      res.status(500).json({ message: "Failed to collect treasure" });
+    }
+  });
 }

@@ -344,16 +344,50 @@ export class DelveScene extends Phaser.Scene {
     });
   }
 
-  private collectTreasure(room: DelveRoom): void {
+  private async collectTreasure(room: DelveRoom): Promise<void> {
     if (room.completed) {
       console.warn('Attempted to collect treasure from already-completed room');
       return;
     }
     room.completed = true;
-    this.gameState.addArcaneAsh(50 * this.currentDelve.tier);
-    this.gameState.addCrystallineAnimus(this.currentDelve.tier); // 1 CA per tier (whole numbers only)
-    this.showMessage('Treasure collected!');
-    this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
+    
+    // SERVER-AUTHORITATIVE: Collect treasure via server API
+    try {
+      const response = await fetch('/api/delve/treasure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          tier: this.currentDelve.tier,
+          sessionId: (this.currentDelve as any).sessionId,
+          roomId: room.id,
+        }),
+      });
+      
+      if (!response.ok) {
+        console.error('[TREASURE] Server rejected treasure collection');
+        this.showMessage('Failed to collect treasure!');
+        room.completed = false; // Revert completion status
+        return;
+      }
+      
+      const result = await response.json();
+      console.log('[TREASURE] Collected via server:', result);
+      
+      // Update local currency from server response
+      const player = this.gameState.getPlayer();
+      player.arcaneAsh = result.arcaneAsh;
+      player.crystallineAnimus = result.crystallineAnimus;
+      this.gameState.updatePlayer(player);
+      
+      this.showMessage(`Treasure collected! +${result.arcaneAshReward} AA, +${result.crystallineAnimusReward} CA`);
+      this.scene.restart({ delve: this.currentDelve, returnToLocation: this.returnToLocation });
+      
+    } catch (error) {
+      console.error('[TREASURE] Error collecting treasure:', error);
+      this.showMessage('Failed to collect treasure!');
+      room.completed = false; // Revert completion status
+    }
   }
 
   private solveChallenge(room: DelveRoom): void {
