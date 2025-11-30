@@ -1321,11 +1321,18 @@ export class CombatScene extends Phaser.Scene {
           
           for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
+              // [SECURITY] Pass sessionId for tier validation
+              // Delve combat uses delve_ prefix, wilderness uses wild_ prefix
+              const sessionId = this.currentDelve 
+                ? (this.currentDelve as any).sessionId 
+                : undefined;
+              
               response = await fetch('/api/loot/roll', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({
+                  sessionId, // Server validates tier against session (delve_ or wild_)
                   enemyName: enemy.name || 'Unknown Enemy',
                   tier: enemyTier,
                   isBoss: enemy.isBoss || false,

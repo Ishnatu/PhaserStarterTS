@@ -675,15 +675,41 @@ export class ExploreScene extends Phaser.Scene {
     uiElements.push(leaveBtn);
   }
 
-  private enterDelve(tier: number, x: number, y: number): void {
+  private async enterDelve(tier: number, x: number, y: number): Promise<void> {
     // Safety fallback: default to tier 1 if undefined
     const safeTier = tier ?? 1;
     
-    const generator = new DelveGenerator();
-    const delve = generator.generateDelve(safeTier);
-    delve.location = { x, y };
-    
-    SceneManager.getInstance().transitionTo('delve', { delve });
+    try {
+      // [SECURITY] Generate delve server-side to get sessionId for completion validation
+      const response = await fetch('/api/delve/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ tier: safeTier }),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to generate delve:', await response.text());
+        this.showMessage('Failed to enter delve. Please try again.');
+        return;
+      }
+      
+      const result = await response.json();
+      
+      // Reconstruct delve from server response
+      const delve = {
+        rooms: new Map(result.delve.rooms.map((r: any) => [r.id, r])),
+        entranceRoomId: result.delve.entranceRoomId,
+        tier: result.delve.tier,
+        location: { x, y },
+        sessionId: result.sessionId, // Store sessionId for completion
+      };
+      
+      SceneManager.getInstance().transitionTo('delve', { delve });
+    } catch (error) {
+      console.error('Error entering delve:', error);
+      this.showMessage('Failed to enter delve. Please try again.');
+    }
   }
 
   private checkRandomEncounter(): void {
@@ -875,7 +901,7 @@ export class ExploreScene extends Phaser.Scene {
     });
   }
 
-  private handleTreasureEncounter(encounterType: any): void {
+  private async handleTreasureEncounter(encounterType: any): Promise<void> {
     const uiElements: Phaser.GameObjects.GameObject[] = [];
     const { width, height } = this.cameras.main;
 
@@ -894,14 +920,58 @@ export class ExploreScene extends Phaser.Scene {
       wordWrap: { width: 400 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-    const loot = encounterType.loot;
-    this.gameState.addArcaneAsh(loot.aa);
-    this.gameState.addCrystallineAnimus(loot.ca);
+    // [SECURITY] Step 1: Create treasure session on server
+    let aaReward = 0;
+    let caReward = 0;
     
-    // Save state after collecting treasure
-    this.gameState.saveToServer();
+    try {
+      // First, create a treasure session
+      const sessionResponse = await fetch('/api/combat/treasure-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          type: 'treasure',
+          tier: 1, // Current zone tier
+        }),
+      });
+      
+      if (!sessionResponse.ok) {
+        console.error('Failed to create treasure session:', await sessionResponse.text());
+        return;
+      }
+      
+      const sessionData = await sessionResponse.json();
+      const sessionId = sessionData.sessionId;
+      
+      // [SECURITY] Step 2: Claim reward with valid session
+      const rewardResponse = await fetch('/api/combat/wilderness-reward', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ sessionId }),
+      });
+      
+      if (rewardResponse.ok) {
+        const result = await rewardResponse.json();
+        aaReward = result.arcaneAsh;
+        caReward = result.crystallineAnimus;
+        
+        // Update local state with server-authoritative values
+        const player = this.gameState.getPlayer();
+        player.arcaneAsh = result.newArcaneAsh;
+        player.crystallineAnimus = result.newCrystallineAnimus;
+        this.gameState.updatePlayer(player);
+        
+        console.log(`[SECURITY] Treasure reward claimed via session ${sessionId}: AA=${aaReward}, CA=${caReward}`);
+      } else {
+        console.error('Failed to claim treasure reward:', await rewardResponse.text());
+      }
+    } catch (error) {
+      console.error('Error claiming treasure reward:', error);
+    }
 
-    const lootText = this.add.text(width / 2, height / 2 + 40, `+${loot.aa} AA, +${loot.ca} CA`, {
+    const lootText = this.add.text(width / 2, height / 2 + 40, `+${aaReward} AA, +${caReward} CA`, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.medium,
       color: '#ffcc00',
@@ -1835,9 +1905,40 @@ export class ExploreScene extends Phaser.Scene {
     }
   }
 
-  private startWildCombat(enemies: any[]): void {
+  private async startWildCombat(enemies: any[]): Promise<void> {
+    // [SECURITY] Register wilderness encounter with server before combat
+    // This creates a session that validates loot claims
+    const tier = Math.max(...enemies.map((e: any) => e.tier || 1));
+    const hasBoss = enemies.some((e: any) => e.isBoss === true);
+    
+    let wildernessSessionId: string | undefined;
+    
+    try {
+      const response = await fetch('/api/combat/wilderness-encounter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          tier,
+          enemyCount: enemies.length,
+          hasBoss,
+        }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        wildernessSessionId = result.sessionId;
+        console.log(`[SECURITY] Wilderness encounter session created: ${wildernessSessionId}`);
+      } else {
+        console.error('Failed to create wilderness encounter session:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error creating wilderness encounter session:', error);
+    }
+    
     const generator = new DelveGenerator();
     const mockDelve = generator.generateDelve(1);
+    (mockDelve as any).sessionId = wildernessSessionId; // Store session for loot claims
     const mockRoom = mockDelve.rooms.get(mockDelve.entranceRoomId)!;
     mockRoom.type = 'combat';
     

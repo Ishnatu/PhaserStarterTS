@@ -85,10 +85,22 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - Strict session TTLs with automatic cleanup
 
 #### Rate Limiting & Request Validation
-- General API: 100 requests/minute per IP
+- General API: 30 requests/minute per IP (tightened from 100)
+- Combat endpoints: 20 requests/minute per IP
+- Loot endpoints: 5 requests/minute per IP
+- Delve endpoints: 3 requests/minute per IP
+- Save endpoints: 15 requests/minute per IP
 - Auth endpoints: 10 attempts/15 minutes
 - Security middleware validates request fingerprints
 - Bot detection for automation attempts
+
+#### Session-Based Encounter Validation (2024-11)
+- **Delve Sessions**: Server-generated sessionId required for delve completion and loot claims
+- **Wilderness Sessions**: Server-generated sessionId required for wilderness combat loot claims
+- Loot claims require valid session (delve_* or wild_* prefix) - no fallback
+- Session tracks enemy count and prevents over-claiming loot
+- Tier validation clamps claimed tier to session tier (delve) or zone access (wilderness)
+- Security logging for all session validation failures
 
 #### Security Monitoring System (`server/securityMonitor.ts`)
 - Comprehensive event logging with severity levels (LOW, MEDIUM, HIGH, CRITICAL)
@@ -147,6 +159,11 @@ Before deploying new features:
 - DDoS Protection: Relies on Replit's infrastructure
 - Encryption at Rest: Uses Replit's managed PostgreSQL
 - Backup/DR: Uses Replit's checkpoint system
+
+### Security TODO (Planned)
+- **Server-Authoritative Combat**: Full combat migration to server APIs (client currently runs combat locally, only loot claims are validated)
+- **Shrine/Tombstone Rewards**: Some non-combat encounters still have client-side reward components. Shrine offerings and tombstone looting should be fully migrated to server-validated endpoints.
+- **Real-time Zone Tracking**: Server doesn't track player position in real-time; zone access validated only during session creation.
 
 ## External Dependencies
 

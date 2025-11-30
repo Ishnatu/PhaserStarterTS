@@ -18,6 +18,238 @@ interface CombatSession {
   combatState: CombatState;
   rngSeed: number;
   rngCalls: number;
+  // Security: Track server-generated enemy data for loot validation
+  enemyTier: number;
+  hasBoss: boolean;
+  enemyNames: string[];
+}
+
+/**
+ * Pending loot entitlements - only created when combat is WON server-side
+ * This prevents attackers from calling loot/roll without winning combat
+ */
+interface PendingLootEntitlement {
+  userId: string;
+  sessionId: string;
+  enemyName: string;
+  tier: number;
+  isBoss: boolean;
+  createdAt: number;
+  consumed: boolean;
+}
+
+// Store pending loot entitlements that can only be created by winning combat
+const pendingLootEntitlements = new Map<string, PendingLootEntitlement>();
+
+// Cleanup old entitlements (5 minute expiry)
+const LOOT_ENTITLEMENT_EXPIRY_MS = 5 * 60 * 1000;
+
+function cleanupExpiredEntitlements() {
+  const now = Date.now();
+  for (const [key, entitlement] of pendingLootEntitlements) {
+    if (now - entitlement.createdAt > LOOT_ENTITLEMENT_EXPIRY_MS || entitlement.consumed) {
+      pendingLootEntitlements.delete(key);
+    }
+  }
+}
+
+// Export for loot route to access
+export function consumeLootEntitlement(userId: string, sessionId: string): PendingLootEntitlement | null {
+  cleanupExpiredEntitlements();
+  
+  const key = `${userId}_${sessionId}`;
+  const entitlement = pendingLootEntitlements.get(key);
+  
+  if (!entitlement) {
+    return null;
+  }
+  
+  if (entitlement.userId !== userId) {
+    return null;
+  }
+  
+  if (entitlement.consumed) {
+    return null;
+  }
+  
+  // Mark as consumed to prevent replay
+  entitlement.consumed = true;
+  pendingLootEntitlements.set(key, entitlement);
+  
+  return entitlement;
+}
+
+// Create loot entitlement when combat is won
+function createLootEntitlement(session: CombatSession, sessionId: string): void {
+  // Create entitlement for the first enemy (main reward)
+  // In multi-enemy combat, rewards are combined
+  const key = `${session.userId}_${sessionId}`;
+  
+  pendingLootEntitlements.set(key, {
+    userId: session.userId,
+    sessionId,
+    enemyName: session.enemyNames[0] || 'Unknown',
+    tier: session.enemyTier,
+    isBoss: session.hasBoss,
+    createdAt: Date.now(),
+    consumed: false,
+  });
+  
+  console.log(`[SECURITY] Created loot entitlement for ${session.userId}: tier=${session.enemyTier}, boss=${session.hasBoss}`);
+}
+
+/**
+ * [SECURITY] Wilderness encounter sessions
+ * Created before wilderness combat, validated during loot claims
+ * Prevents attackers from claiming loot without registering an encounter
+ */
+interface WildernessEncounterSession {
+  userId: string;
+  tier: number;
+  enemyCount: number;
+  hasBoss: boolean;
+  createdAt: number;
+  lootClaimed: number; // Track how many loot claims have been made
+}
+
+const wildernessEncounterSessions = new Map<string, WildernessEncounterSession>();
+const WILDERNESS_SESSION_EXPIRY_MS = 10 * 60 * 1000; // 10 minute expiry
+
+function cleanupExpiredWildernessSessions() {
+  const now = Date.now();
+  for (const [key, session] of wildernessEncounterSessions) {
+    if (now - session.createdAt > WILDERNESS_SESSION_EXPIRY_MS) {
+      wildernessEncounterSessions.delete(key);
+    }
+  }
+}
+
+/**
+ * Validate and consume a wilderness encounter session for loot claims
+ * Returns the session info if valid, null if invalid/exhausted
+ */
+export function consumeWildernessEncounterLoot(userId: string, sessionId: string): { tier: number; isBoss: boolean } | null {
+  cleanupExpiredWildernessSessions();
+  
+  const session = wildernessEncounterSessions.get(sessionId);
+  
+  if (!session) {
+    return null;
+  }
+  
+  if (session.userId !== userId) {
+    return null;
+  }
+  
+  // Check if all enemies have been looted
+  if (session.lootClaimed >= session.enemyCount) {
+    return null;
+  }
+  
+  // Increment loot claim counter
+  session.lootClaimed++;
+  wildernessEncounterSessions.set(sessionId, session);
+  
+  return { tier: session.tier, isBoss: session.hasBoss && session.lootClaimed === session.enemyCount };
+}
+
+/**
+ * Create a wilderness encounter session (called before combat starts)
+ */
+export function createWildernessEncounterSession(
+  userId: string, 
+  tier: number, 
+  enemyCount: number, 
+  hasBoss: boolean
+): string {
+  cleanupExpiredWildernessSessions();
+  
+  const sessionId = `wild_${userId}_${Date.now()}`;
+  
+  wildernessEncounterSessions.set(sessionId, {
+    userId,
+    tier,
+    enemyCount,
+    hasBoss,
+    createdAt: Date.now(),
+    lootClaimed: 0,
+  });
+  
+  console.log(`[SECURITY] Created wilderness encounter session ${sessionId}: tier=${tier}, enemies=${enemyCount}, boss=${hasBoss}`);
+  
+  return sessionId;
+}
+
+/**
+ * [SECURITY] Treasure encounter session tracking
+ * Prevents spamming /api/combat/wilderness-reward without valid encounter
+ */
+interface TreasureSession {
+  sessionId: string;
+  userId: string;
+  tier: number;
+  type: 'treasure' | 'shrine';
+  expiresAt: number;
+  claimed: boolean;
+}
+
+const activeTreasureSessions = new Map<string, TreasureSession>();
+
+export function createTreasureSession(userId: string, tier: number, type: 'treasure' | 'shrine'): string {
+  const sessionId = `treasure_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+  const expiresAt = Date.now() + 30 * 60 * 1000; // 30 min expiry
+  
+  activeTreasureSessions.set(sessionId, {
+    sessionId,
+    userId,
+    tier,
+    type,
+    expiresAt,
+    claimed: false,
+  });
+  
+  console.log(`[SECURITY] Created treasure session ${sessionId}: tier=${tier}, type=${type}`);
+  
+  return sessionId;
+}
+
+export function consumeTreasureSession(sessionId: string, userId: string): TreasureSession | null {
+  const session = activeTreasureSessions.get(sessionId);
+  
+  if (!session) {
+    console.log(`[SECURITY] Treasure session not found: ${sessionId}`);
+    return null;
+  }
+  
+  if (session.userId !== userId) {
+    logSecurityEvent(userId, 'TREASURE_SESSION_USER_MISMATCH', 'CRITICAL', {
+      message: `Treasure session ${sessionId} belongs to different user`,
+      expectedUser: session.userId,
+      claimingUser: userId,
+    });
+    return null;
+  }
+  
+  if (session.expiresAt < Date.now()) {
+    activeTreasureSessions.delete(sessionId);
+    console.log(`[SECURITY] Treasure session expired: ${sessionId}`);
+    return null;
+  }
+  
+  if (session.claimed) {
+    logSecurityEvent(userId, 'TREASURE_SESSION_ALREADY_CLAIMED', 'HIGH', {
+      message: `Treasure session ${sessionId} already claimed`,
+      sessionId,
+    });
+    return null;
+  }
+  
+  // Mark as claimed and delete
+  session.claimed = true;
+  activeTreasureSessions.delete(sessionId);
+  
+  console.log(`[SECURITY] Consumed treasure session ${sessionId}`);
+  return session;
 }
 
 /**
@@ -102,6 +334,213 @@ async function finalizeAbandonedCombat(session: CombatSession): Promise<boolean>
 
 export function registerCombatRoutes(app: Express) {
   /**
+   * POST /api/combat/wilderness-encounter
+   * [SECURITY] Registers a wilderness encounter before combat starts
+   * Client must call this before entering combat in the wilderness
+   * Returns a sessionId that must be used when claiming loot
+   */
+  app.post("/api/combat/wilderness-encounter", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { tier, enemyCount, hasBoss } = req.body;
+
+      // [SECURITY] Validate input
+      if (typeof tier !== 'number' || tier < 1 || tier > 5) {
+        return res.status(400).json({ message: "Invalid tier: must be 1-5" });
+      }
+
+      if (typeof enemyCount !== 'number' || enemyCount < 1 || enemyCount > 5) {
+        return res.status(400).json({ message: "Invalid enemy count: must be 1-5" });
+      }
+
+      // [SECURITY] Validate tier against player's accessible zones
+      const progress = await storage.getDelveProgress(userId);
+      let maxAccessibleTier = 1;
+      
+      // Zone unlock requirements
+      const requirements: Record<number, number> = { 1: 0, 2: 5, 3: 10, 4: 20, 5: 50 };
+      
+      for (let t = 2; t <= 5; t++) {
+        const required = requirements[t];
+        const completed = progress?.[t - 1] || 0;
+        if (completed >= required) {
+          maxAccessibleTier = t;
+        } else {
+          break;
+        }
+      }
+
+      // Clamp tier to player's accessible zones
+      const validatedTier = Math.min(tier, maxAccessibleTier);
+      
+      if (tier > maxAccessibleTier) {
+        logSecurityEvent(userId, 'WILD_ENCOUNTER_TIER_EXCEEDS_ACCESS', 'MEDIUM', {
+          message: `Wilderness encounter tier ${tier} exceeds max accessible ${maxAccessibleTier}`,
+          ip: req.ip,
+          claimedTier: tier,
+          maxAccessibleTier,
+        });
+      }
+
+      // Create wilderness encounter session
+      const sessionId = createWildernessEncounterSession(
+        userId,
+        validatedTier,
+        enemyCount,
+        hasBoss || false
+      );
+
+      res.json({
+        success: true,
+        sessionId,
+        validatedTier, // Let client know if tier was clamped
+      });
+    } catch (error) {
+      console.error("Error creating wilderness encounter:", error);
+      res.status(500).json({ message: "Failed to create encounter session" });
+    }
+  });
+
+  /**
+   * POST /api/combat/treasure-session
+   * [SECURITY] Creates a treasure encounter session before claiming rewards
+   * Client must call this when a treasure/shrine encounter is triggered
+   */
+  app.post("/api/combat/treasure-session", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { type, tier } = req.body;
+
+      // [SECURITY] Validate encounter type
+      const validTypes = ['treasure', 'shrine'];
+      if (!validTypes.includes(type)) {
+        logSecurityEvent(userId, 'TREASURE_SESSION_INVALID_TYPE', 'HIGH', {
+          message: `Invalid treasure session type: ${type}`,
+          ip: req.ip,
+          type,
+        });
+        return res.status(400).json({ message: "Invalid encounter type" });
+      }
+
+      // [SECURITY] Validate tier against player's accessible zones
+      const progress = await storage.getDelveProgress(userId);
+      let maxAccessibleTier = 1;
+      
+      const requirements: Record<number, number> = { 1: 0, 2: 5, 3: 10, 4: 20, 5: 50 };
+      
+      for (let t = 2; t <= 5; t++) {
+        const required = requirements[t];
+        const completed = progress?.[t - 1] || 0;
+        if (completed >= required) {
+          maxAccessibleTier = t;
+        } else {
+          break;
+        }
+      }
+
+      // Clamp tier to player's accessible zones
+      const validatedTier = Math.min(tier || 1, maxAccessibleTier);
+      
+      if (tier > maxAccessibleTier) {
+        logSecurityEvent(userId, 'TREASURE_SESSION_TIER_EXCEEDS_ACCESS', 'MEDIUM', {
+          message: `Treasure session tier ${tier} exceeds max accessible ${maxAccessibleTier}`,
+          ip: req.ip,
+          claimedTier: tier,
+          maxAccessibleTier,
+        });
+      }
+
+      // Create treasure session
+      const sessionId = createTreasureSession(userId, validatedTier, type);
+
+      res.json({
+        success: true,
+        sessionId,
+        validatedTier,
+      });
+    } catch (error) {
+      console.error("Error creating treasure session:", error);
+      res.status(500).json({ message: "Failed to create treasure session" });
+    }
+  });
+
+  /**
+   * POST /api/combat/wilderness-reward
+   * [SECURITY] Grants non-combat wilderness rewards (treasure, shrine)
+   * REQUIRES valid sessionId from /api/combat/treasure-session
+   * Session can only be claimed once
+   */
+  app.post("/api/combat/wilderness-reward", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { sessionId } = req.body;
+
+      // [SECURITY] Require valid session - NO FALLBACK
+      if (!sessionId) {
+        logSecurityEvent(userId, 'TREASURE_REWARD_NO_SESSION', 'CRITICAL', {
+          message: 'Treasure reward claim without session',
+          ip: req.ip,
+        });
+        return res.status(403).json({ message: "Valid session required for treasure claims" });
+      }
+
+      // [SECURITY] Validate and consume session (single use)
+      const session = consumeTreasureSession(sessionId, userId);
+      if (!session) {
+        logSecurityEvent(userId, 'TREASURE_REWARD_INVALID_SESSION', 'HIGH', {
+          message: `Invalid or expired treasure session: ${sessionId}`,
+          ip: req.ip,
+          sessionId,
+        });
+        return res.status(403).json({ message: "Invalid or expired session" });
+      }
+
+      // Use tier from validated session, not client
+      const validatedTier = session.tier;
+      const type = session.type;
+
+      // [SERVER-AUTHORITATIVE] Generate rewards with deterministic RNG
+      // Seed from session ID for auditability
+      const sessionSeed = sessionId.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+      const rng = new SeededRNG(sessionSeed);
+      
+      // Treasure: 40-80 AA, 3-6 CA (scaled by tier)
+      // Shrine: No immediate reward - handled separately
+      let arcaneAsh = 0;
+      let crystallineAnimus = 0;
+
+      if (type === 'treasure') {
+        const baseAA = rng.nextInt(40, 80, 'treasure_aa');
+        const baseCA = rng.nextInt(3, 6, 'treasure_ca');
+        
+        // Scale by tier
+        arcaneAsh = Math.floor(baseAA * (1 + (validatedTier - 1) * 0.2));
+        crystallineAnimus = Math.floor(baseCA * (1 + (validatedTier - 1) * 0.3));
+      }
+
+      // Ensure player currency record exists
+      await storage.ensurePlayerCurrency(userId, 0, 0);
+
+      // [CRITICAL] Persist currency rewards to database
+      const updatedCurrency = await storage.addCurrency(userId, arcaneAsh, crystallineAnimus);
+
+      console.log(`[SECURITY] Wilderness reward granted via session ${sessionId}: ${type}, tier=${validatedTier}, AA=${arcaneAsh}, CA=${crystallineAnimus}`);
+
+      res.json({
+        success: true,
+        type,
+        arcaneAsh,
+        crystallineAnimus,
+        newArcaneAsh: updatedCurrency.arcaneAsh,
+        newCrystallineAnimus: updatedCurrency.crystallineAnimus,
+      });
+    } catch (error) {
+      console.error("Error granting wilderness reward:", error);
+      res.status(500).json({ message: "Failed to grant reward" });
+    }
+  });
+
+  /**
    * POST /api/combat/initiate
    * Starts a new combat encounter with server-rolled initiative
    * 
@@ -174,6 +613,12 @@ export function registerCombatRoutes(app: Express) {
         isWildEncounter || false
       );
 
+      // [SECURITY] Determine enemy tier and boss status for loot validation
+      // Tier is based on the highest tier enemy in the encounter
+      // Boss status is true if any enemy is a boss
+      const enemyTier = Math.max(...enemies.map(e => e.tier || 1));
+      const hasBoss = enemies.some(e => e.isBoss === true);
+
       // Store combat session with RNG state for deterministic replay
       const sessionId = `${userId}_${Date.now()}`;
       activeCombatSessions.set(sessionId, {
@@ -181,6 +626,10 @@ export function registerCombatRoutes(app: Express) {
         combatState,
         rngSeed: seed,
         rngCalls: rng.getCallCount(),
+        // Security: Track server-generated enemy data
+        enemyTier,
+        hasBoss,
+        enemyNames: enemyNames as string[],
       });
 
       res.json({
@@ -361,6 +810,15 @@ export function registerCombatRoutes(app: Express) {
       const combatEnded = combatSystem.isCombatComplete(updatedState);
 
       if (combatEnded) {
+        // [SECURITY] Check if player won (all enemies defeated)
+        const playerWon = updatedState.enemies.every((e: Enemy) => e.health <= 0);
+        
+        if (playerWon) {
+          // Create loot entitlement - ONLY way to legitimately claim loot
+          createLootEntitlement(session, sessionId);
+          console.log(`[SECURITY] Combat victory for ${userId} - loot entitlement created`);
+        }
+        
         // Clean up session
         activeCombatSessions.delete(sessionId);
       }
@@ -369,6 +827,7 @@ export function registerCombatRoutes(app: Express) {
         success: true,
         combatState: updatedState,
         combatEnded,
+        sessionId, // Include sessionId for loot claiming
         result: actionResult,
       });
     } catch (error) {
@@ -420,6 +879,15 @@ export function registerCombatRoutes(app: Express) {
       const combatEnded = combatSystem.isCombatComplete(updatedState);
 
       if (combatEnded) {
+        // [SECURITY] Check if player won (all enemies defeated)
+        const playerWon = updatedState.enemies.every((e: Enemy) => e.health <= 0);
+        
+        if (playerWon) {
+          // Create loot entitlement - ONLY way to legitimately claim loot
+          createLootEntitlement(session, sessionId);
+          console.log(`[SECURITY] Combat victory for ${userId} - loot entitlement created`);
+        }
+        
         // Clean up session
         activeCombatSessions.delete(sessionId);
       }
@@ -428,6 +896,7 @@ export function registerCombatRoutes(app: Express) {
         success: true,
         combatState: updatedState,
         combatEnded,
+        sessionId, // Include sessionId for loot claiming
       });
     } catch (error) {
       console.error("Error processing enemy turns:", error);

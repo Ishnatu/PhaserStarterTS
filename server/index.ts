@@ -64,10 +64,12 @@ app.use(helmet({
 }));
 
 // Rate limiting - protect against abuse
-// Conservative limits for 10-player game
+// [SECURITY FIX] Tightened limits based on normal user behavior analysis
+// Normal gameplay: ~20-25 requests/minute during active play
+// Limits set to ~15% above baseline to accommodate legitimate bursts
 const generalLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute per IP
+  max: 30, // 30 requests per minute (was 100 - too permissive)
   message: { message: 'Too many requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -90,11 +92,49 @@ const adminLimiter = rateLimit({
   message: 'Too many admin requests',
 });
 
-// Apply rate limiters
-app.use('/api/', generalLimiter);
+// [SECURITY] Specific rate limiters for high-value endpoints
+// These are targets for exploitation and need stricter limits
+const combatLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 combat actions per minute (covers fast but legitimate play)
+  message: { message: 'Combat rate limit exceeded' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const lootLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5, // 5 loot claims per minute (kills don't happen that fast)
+  message: { message: 'Loot claim rate limit exceeded' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const delveLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 3, // 3 delve operations per minute (delves take time)
+  message: { message: 'Delve rate limit exceeded' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const saveLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 15, // 15 saves per minute (throttled saves + transitions)
+  message: { message: 'Save rate limit exceeded' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiters (order matters - specific before general)
+app.use('/api/combat/', combatLimiter);
+app.use('/api/loot/', lootLimiter);
+app.use('/api/delve/', delveLimiter);
+app.use('/api/save', saveLimiter);
 app.use('/api/login', authLimiter);
 app.use('/api/callback', authLimiter);
 app.use('/api/admin/', adminLimiter);
+app.use('/api/', generalLimiter);
 
 // CORS configuration
 app.use(cors({

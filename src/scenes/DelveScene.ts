@@ -240,11 +240,17 @@ export class DelveScene extends Phaser.Scene {
     
     // Award XP for delve completion via server (server-authoritative, persisted to database)
     try {
+      // [SECURITY] Pass sessionId to validate this is a legitimate delve completion
+      const sessionId = (this.currentDelve as any).sessionId;
+      if (!sessionId) {
+        console.error('Missing delve sessionId - cannot complete delve');
+      }
+      
       const response = await fetch('/api/delve/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ tier: this.currentDelve.tier }),
+        body: JSON.stringify({ tier: this.currentDelve.tier, sessionId }),
       });
       
       if (response.ok) {

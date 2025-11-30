@@ -4,7 +4,7 @@ import { isAuthenticated } from "../replitAuth";
 import { DelveGenerator } from "../systems/DelveGenerator";
 import { SeededRNG } from "../utils/SeededRNG";
 import { storage } from "../storage";
-import { calculateMaxHealth, calculateMaxStamina } from "../security";
+import { calculateMaxHealth, calculateMaxStamina, logSecurityEvent } from "../security";
 import type { DelveRoom } from "../../shared/types";
 
 // Delve completion XP rewards per tier (matches client-side xpSystem.ts)
@@ -24,6 +24,85 @@ const TRAP_DISARM_XP: Record<number, number> = {
   4: 17,
   5: 25,
 };
+
+/**
+ * [SECURITY] Active delve sessions - tracks server-generated delves
+ * Prevents players from claiming completion rewards for delves they never started
+ */
+interface ActiveDelveSession {
+  userId: string;
+  tier: number;
+  roomCount: number;
+  createdAt: number;
+  completed: boolean;
+}
+
+const activeDelves = new Map<string, ActiveDelveSession>();
+
+// Cleanup old delve sessions (30 minute expiry - delves shouldn't take longer)
+const DELVE_SESSION_EXPIRY_MS = 30 * 60 * 1000;
+
+function cleanupExpiredDelveSessions() {
+  const now = Date.now();
+  for (const [key, session] of activeDelves) {
+    if (now - session.createdAt > DELVE_SESSION_EXPIRY_MS || session.completed) {
+      activeDelves.delete(key);
+    }
+  }
+}
+
+/**
+ * Validate and consume a delve session for completion
+ * Returns the tier if valid, null if invalid/consumed
+ */
+function consumeDelveSession(userId: string, sessionId: string): number | null {
+  cleanupExpiredDelveSessions();
+  
+  const session = activeDelves.get(sessionId);
+  
+  if (!session) {
+    return null;
+  }
+  
+  if (session.userId !== userId) {
+    return null;
+  }
+  
+  if (session.completed) {
+    return null;
+  }
+  
+  // Mark as completed to prevent replay
+  session.completed = true;
+  activeDelves.set(sessionId, session);
+  
+  return session.tier;
+}
+
+/**
+ * [SECURITY] Check if a delve session is active (non-destructive)
+ * Used by loot route to validate enemy tier during delve combat
+ * Returns the tier if valid, null if session doesn't exist or is invalid
+ */
+export function getActiveDelveSession(userId: string, sessionId: string): { tier: number; roomCount: number } | null {
+  cleanupExpiredDelveSessions();
+  
+  const session = activeDelves.get(sessionId);
+  
+  if (!session) {
+    return null;
+  }
+  
+  if (session.userId !== userId) {
+    return null;
+  }
+  
+  if (session.completed) {
+    return null;
+  }
+  
+  return { tier: session.tier, roomCount: session.roomCount };
+}
 
 export function registerDelveRoutes(app: Express) {
   /**
@@ -55,11 +134,24 @@ export function registerDelveRoutes(app: Express) {
 
       // Generate delve server-side
       const delve = delveGenerator.generateDelve(tier);
+      const rooms = Array.from(delve.rooms.values());
+
+      // [SECURITY] Create delve session to track this delve
+      const sessionId = `delve_${userId}_${Date.now()}`;
+      activeDelves.set(sessionId, {
+        userId,
+        tier,
+        roomCount: rooms.length,
+        createdAt: Date.now(),
+        completed: false,
+      });
+      console.log(`[SECURITY] Created delve session ${sessionId} for tier ${tier}`);
 
       res.json({
         success: true,
+        sessionId, // Return sessionId for completion verification
         delve: {
-          rooms: Array.from(delve.rooms.values()),
+          rooms,
           entranceRoomId: delve.entranceRoomId,
           tier: delve.tier,
         },
@@ -73,17 +165,44 @@ export function registerDelveRoutes(app: Express) {
   /**
    * POST /api/delve/complete
    * Grants XP reward for completing a delve and tracks delve count
+   * 
+   * [SECURITY FIX] Now requires a valid sessionId from delve generation
+   * Delve sessions are created when a delve is generated server-side
+   * This prevents attackers from claiming completion rewards for arbitrary tiers
+   * 
    * SERVER-AUTHORITATIVE: XP and delve count are persisted to database immediately
    */
   app.post("/api/delve/complete", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { tier } = req.body;
+      const { sessionId } = req.body;
 
-      // Validate input
-      if (typeof tier !== 'number' || tier < 1 || tier > 5) {
-        return res.status(400).json({ message: "Invalid tier: must be between 1 and 5" });
+      // [SECURITY] Require sessionId to complete delve
+      if (!sessionId) {
+        logSecurityEvent(userId, 'DELVE_NO_SESSION', 'HIGH', {
+          message: 'Delve completion attempted without sessionId - possible exploit attempt',
+          ip: req.ip,
+          body: req.body,
+        });
+        return res.status(400).json({ message: "Session ID required to complete delve" });
       }
+
+      // [SECURITY] Consume delve session - verifies delve was generated server-side
+      const validatedTier = consumeDelveSession(userId, sessionId);
+
+      if (validatedTier === null) {
+        logSecurityEvent(userId, 'DELVE_INVALID_SESSION', 'CRITICAL', {
+          message: 'Delve completion with invalid/consumed session - EXPLOIT ATTEMPT',
+          ip: req.ip,
+          sessionId,
+          body: req.body,
+        });
+        return res.status(403).json({ message: "Invalid delve completion - no valid delve session found" });
+      }
+
+      // [SECURITY] Use server-stored tier, NOT client input
+      const tier = validatedTier;
+      console.log(`[SECURITY] Delve completion verified for ${userId}: tier=${tier}`);
 
       // Get XP reward for this tier
       const xpReward = DELVE_COMPLETION_XP[tier];
