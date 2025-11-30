@@ -291,9 +291,13 @@ export function validateCombatTiming(
 
 /**
  * Generate CSRF token
+ * SECURITY: No fallback secret - SESSION_SECRET must be validated at server startup
  */
 export function generateCSRFToken(sessionId: string): string {
-  const secret = process.env.SESSION_SECRET || 'default-secret';
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    throw new Error('SECURITY FATAL: SESSION_SECRET not available for CSRF token generation');
+  }
   return crypto
     .createHmac('sha256', secret)
     .update(sessionId + Date.now().toString())
