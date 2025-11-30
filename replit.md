@@ -99,8 +99,8 @@ Prevents multi-account farming and bot exploitation:
 - Trap attempts: 10/day
 - Treasure claims: 8/day  
 - Shrine offers: 5/day
-- Maximum AA from encounters: 2000/day
-- Maximum CA from encounters: 100/day
+- Maximum AA from encounters: 1,000 per character level (Level 1 = 1,000/day, Level 10 = 10,000/day)
+- Maximum CA from encounters: 100/day (flat)
 
 **Reward Structure Changes:**
 - **Treasure**: No longer gives free currency - requires combat victory against guardian

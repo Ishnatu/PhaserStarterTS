@@ -25,9 +25,15 @@ const DAILY_CAPS = {
   trapAttempts: 10,        // Max 10 trap attempts per day
   treasureClaims: 8,       // Max 8 treasure claims per day (now requires combat)
   shrineOffers: 5,         // Max 5 shrine offers per day
-  maxDailyAA: 2000,        // Hard cap on daily AA earnings from encounters
-  maxDailyCA: 100,         // Hard cap on daily CA earnings from encounters
+  aaPerLevel: 1000,        // AA cap scales with level: 1000 per character level
+  maxDailyCA: 100,         // Hard cap on daily CA earnings from encounters (flat)
 };
+
+// Calculate level-based AA cap
+function getMaxDailyAA(level: number): number {
+  const clampedLevel = Math.max(1, Math.min(level, 10)); // Levels 1-10
+  return clampedLevel * DAILY_CAPS.aaPerLevel;
+}
 
 function getPlayerDailyEarnings(userId: string): DailyEarnings {
   const today = new Date().toISOString().split('T')[0];
@@ -73,7 +79,7 @@ function checkDailyCap(userId: string, encounterType: 'trap' | 'treasure' | 'shr
   return { allowed: true };
 }
 
-function recordEncounterReward(userId: string, encounterType: 'trap' | 'treasure' | 'shrine', aa: number, ca: number): { aaGranted: number; caGranted: number; capped: boolean } {
+function recordEncounterReward(userId: string, encounterType: 'trap' | 'treasure' | 'shrine', aa: number, ca: number, playerLevel: number = 1): { aaGranted: number; caGranted: number; capped: boolean } {
   const earnings = getPlayerDailyEarnings(userId);
   
   // Track attempt
@@ -89,8 +95,9 @@ function recordEncounterReward(userId: string, encounterType: 'trap' | 'treasure
       break;
   }
   
-  // Calculate capped rewards
-  const remainingAA = Math.max(0, DAILY_CAPS.maxDailyAA - earnings.aaEarnedToday);
+  // Calculate capped rewards - AA cap scales with level
+  const maxDailyAA = getMaxDailyAA(playerLevel);
+  const remainingAA = Math.max(0, maxDailyAA - earnings.aaEarnedToday);
   const remainingCA = Math.max(0, DAILY_CAPS.maxDailyCA - earnings.caEarnedToday);
   
   const aaGranted = Math.min(aa, remainingAA);
@@ -108,16 +115,30 @@ export function registerEncounterRoutes(app: Express) {
   /**
    * GET /api/encounter/daily-status
    * Returns daily encounter caps and current usage
+   * AA cap scales with character level (1000 per level)
    */
   app.get("/api/encounter/daily-status", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const earnings = getPlayerDailyEarnings(userId);
       
+      // Fetch player level to calculate dynamic AA cap
+      const currency = await storage.getPlayerCurrency(userId);
+      const playerLevel = currency?.level ?? 1;
+      const maxDailyAA = getMaxDailyAA(playerLevel);
+      
       res.json({
         success: true,
         date: earnings.date,
-        caps: DAILY_CAPS,
+        playerLevel,
+        caps: {
+          trapAttempts: DAILY_CAPS.trapAttempts,
+          treasureClaims: DAILY_CAPS.treasureClaims,
+          shrineOffers: DAILY_CAPS.shrineOffers,
+          maxDailyAA,                         // Dynamic based on level
+          maxDailyCA: DAILY_CAPS.maxDailyCA,  // Flat cap
+          aaPerLevel: DAILY_CAPS.aaPerLevel,  // For display purposes
+        },
         usage: {
           trapAttempts: earnings.trapAttemptsToday,
           treasureClaims: earnings.treasureClaimsToday,
@@ -177,6 +198,10 @@ export function registerEncounterRoutes(app: Express) {
       const rng = new SeededRNG(seedNum);
       const skillCheck = rng.next();
       
+      // Fetch player level for dynamic AA cap
+      const currency = await storage.getPlayerCurrency(userId);
+      const playerLevel = currency?.level ?? 1;
+      
       // ECONOMIC SECURITY: 40% success rate (down from 60%)
       // Risk-reward: Lower success rate justifies the reward
       if (skillCheck < 0.40) {
@@ -184,8 +209,8 @@ export function registerEncounterRoutes(app: Express) {
         const baseAA = rng.nextInt(20, 40); // Reduced from 40-80
         const baseCA = rng.nextInt(1, 3);   // Reduced from 3-6
 
-        // Apply daily caps
-        const { aaGranted, caGranted, capped } = recordEncounterReward(userId, 'trap', baseAA, baseCA);
+        // Apply daily caps (AA cap scales with level)
+        const { aaGranted, caGranted, capped } = recordEncounterReward(userId, 'trap', baseAA, baseCA, playerLevel);
 
         if (aaGranted > 0 || caGranted > 0) {
           await storage.ensurePlayerCurrency(userId, 0, 0);
@@ -282,6 +307,10 @@ export function registerEncounterRoutes(app: Express) {
       const seedNum = hashStringToNumber(`${encounterToken}-${userId}-treasure`);
       const rng = new SeededRNG(seedNum);
       
+      // Fetch player level for dynamic AA cap
+      const currency = await storage.getPlayerCurrency(userId);
+      const playerLevel = currency?.level ?? 1;
+      
       // ECONOMIC SECURITY: No more free currency from treasure encounters
       // Treasure now gives discovery/exploration rewards only
       // Currency requires combat victory (combatVictory flag from client after winning guardian fight)
@@ -297,8 +326,8 @@ export function registerEncounterRoutes(app: Express) {
         aaReward = rng.nextInt(baseAA, baseAA + 15);
         caReward = tier > 1 ? rng.nextInt(0, tier - 1) : 0; // Even lower CA
         
-        // FIX: Only count toward daily cap when actually granting currency
-        const { aaGranted, caGranted, capped } = recordEncounterReward(userId, 'treasure', aaReward, caReward);
+        // FIX: Only count toward daily cap when actually granting currency (AA cap scales with level)
+        const { aaGranted, caGranted, capped } = recordEncounterReward(userId, 'treasure', aaReward, caReward, playerLevel);
         
         if (aaGranted > 0 || caGranted > 0) {
           await storage.ensurePlayerCurrency(userId, 0, 0);
@@ -427,8 +456,10 @@ export function registerEncounterRoutes(app: Express) {
         result.message = 'Void shadows protect you! +2 armor for 5 minutes.';
       } else {
         // ECONOMIC SECURITY: Apply daily CA cap to shrine rewards
+        // Pass player level for consistency (even though CA cap is flat, AA might be added later)
+        const playerLevel = currentCurrency?.level ?? 1;
         const baseCA = rng.nextInt(3, 6); // Reduced from 5-10
-        const { caGranted, capped } = recordEncounterReward(userId, 'shrine', 0, baseCA);
+        const { caGranted, capped } = recordEncounterReward(userId, 'shrine', 0, baseCA, playerLevel);
         
         if (caGranted > 0) {
           await storage.addCurrency(userId, 0, caGranted);
