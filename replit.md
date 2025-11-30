@@ -97,10 +97,12 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 #### Session-Based Encounter Validation (2024-11)
 - **Delve Sessions**: Server-generated sessionId required for delve completion and loot claims
 - **Wilderness Sessions**: Server-generated sessionId required for wilderness combat loot claims
-- Loot claims require valid session (delve_* or wild_* prefix) - no fallback
+- **Treasure Sessions**: Server-generated sessionId required for treasure reward claims
+- Loot claims require valid session (delve_*, wild_*, or treasure_* prefix) - no fallback
 - Session tracks enemy count and prevents over-claiming loot
 - Tier validation clamps claimed tier to session tier (delve) or zone access (wilderness)
 - Security logging for all session validation failures
+- Treasure rewards use deterministic SeededRNG for auditability
 
 #### Security Monitoring System (`server/securityMonitor.ts`)
 - Comprehensive event logging with severity levels (LOW, MEDIUM, HIGH, CRITICAL)
