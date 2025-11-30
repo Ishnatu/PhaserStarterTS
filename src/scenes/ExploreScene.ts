@@ -1324,13 +1324,26 @@ export class ExploreScene extends Phaser.Scene {
       promptText.setColor('#ffcc00');
       
       try {
+        const zoneId = (this.gameState.getPlayer().discoveredZones ?? ['roboka'])[0] || 'roboka';
+        
+        const sessionResponse = await fetch('/api/encounter/trap/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ zoneId }),
+        });
+        
+        if (!sessionResponse.ok) {
+          throw new Error('Failed to create trap session');
+        }
+        
+        const { sessionId } = await sessionResponse.json();
+        
         const response = await fetch('/api/encounter/trap/attempt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({
-            zoneId: this.gameState.getPlayer().discoveredZones?.[this.gameState.getPlayer().discoveredZones?.length - 1] || 'roboka',
-          }),
+          body: JSON.stringify({ sessionId }),
         });
         
         if (!response.ok) {
@@ -1341,10 +1354,10 @@ export class ExploreScene extends Phaser.Scene {
         
         this.time.delayedCall(1500, () => {
           if (result.disarmed) {
-            const player = this.gameState.getPlayer();
-            player.arcaneAsh = result.arcaneAsh;
-            player.crystallineAnimus = result.crystallineAnimus;
-            this.gameState.updatePlayer(player);
+            const playerUpdate = this.gameState.getPlayer();
+            playerUpdate.arcaneAsh = result.arcaneAsh;
+            playerUpdate.crystallineAnimus = result.crystallineAnimus;
+            this.gameState.updatePlayer(playerUpdate);
 
             promptText.setText('SUCCESS!');
             promptText.setColor('#44ff44');

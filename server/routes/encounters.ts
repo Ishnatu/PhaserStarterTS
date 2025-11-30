@@ -11,8 +11,16 @@ interface TrapEncounterSession {
   zoneId: string;
 }
 
+interface TrapSessionRateLimit {
+  count: number;
+  windowStart: number;
+}
+
 const trapSessions = new Map<string, TrapEncounterSession>();
+const trapSessionRateLimits = new Map<string, TrapSessionRateLimit>();
 const TRAP_SESSION_EXPIRY_MS = 5 * 60 * 1000;
+const TRAP_SESSION_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const TRAP_SESSION_RATE_LIMIT_MAX = 3;
 
 function cleanupExpiredTrapSessions() {
   const now = Date.now();
@@ -39,19 +47,49 @@ export function registerEncounterRoutes(app: Express) {
   app.post("/api/encounter/trap/attempt", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { sessionId, zoneId } = req.body;
+      const { sessionId } = req.body;
 
       cleanupExpiredTrapSessions();
       
-      let validSession = false;
-      if (sessionId) {
-        const session = trapSessions.get(sessionId);
-        if (session && session.userId === userId && !session.consumed) {
-          validSession = true;
-          session.consumed = true;
-          trapSessions.set(sessionId, session);
-        }
+      if (!sessionId) {
+        logSecurityEvent(userId, 'TRAP_NO_SESSION', 'CRITICAL', {
+          message: 'Trap attempt without sessionId - EXPLOIT ATTEMPT',
+          ip: req.ip,
+        });
+        return res.status(403).json({ message: "Session ID required - encounter not registered" });
       }
+      
+      const session = trapSessions.get(sessionId);
+      if (!session) {
+        logSecurityEvent(userId, 'TRAP_INVALID_SESSION', 'CRITICAL', {
+          message: 'Trap attempt with invalid sessionId - EXPLOIT ATTEMPT',
+          ip: req.ip,
+          sessionId,
+        });
+        return res.status(403).json({ message: "Invalid or expired session" });
+      }
+      
+      if (session.userId !== userId) {
+        logSecurityEvent(userId, 'TRAP_SESSION_MISMATCH', 'CRITICAL', {
+          message: 'Trap session user mismatch - EXPLOIT ATTEMPT',
+          ip: req.ip,
+          sessionId,
+          sessionUserId: session.userId,
+        });
+        return res.status(403).json({ message: "Session does not belong to this user" });
+      }
+      
+      if (session.consumed) {
+        logSecurityEvent(userId, 'TRAP_SESSION_REUSE', 'HIGH', {
+          message: 'Trap session already consumed - replay attempt',
+          ip: req.ip,
+          sessionId,
+        });
+        return res.status(403).json({ message: "Session already used" });
+      }
+      
+      session.consumed = true;
+      trapSessions.set(sessionId, session);
 
       const rng = new SeededRNG(Date.now() + parseInt(userId.replace(/\D/g, '').slice(0, 9) || '0', 10));
       const skillCheck = rng.next();
@@ -64,9 +102,8 @@ export function registerEncounterRoutes(app: Express) {
         const currencies = await storage.addCurrency(userId, aa, ca);
 
         logSecurityEvent(userId, 'TRAP_DISARM_SUCCESS', 'LOW', {
-          sessionId: sessionId || 'no_session',
-          validSession,
-          zoneId,
+          sessionId,
+          zoneId: session.zoneId,
           arcaneAshReward: aa,
           crystallineAnimusReward: ca,
         });
@@ -83,9 +120,8 @@ export function registerEncounterRoutes(app: Express) {
         const damage = rng.nextInt(15, 25);
 
         logSecurityEvent(userId, 'TRAP_DISARM_FAILED', 'LOW', {
-          sessionId: sessionId || 'no_session',
-          validSession,
-          zoneId,
+          sessionId,
+          zoneId: session.zoneId,
           damage,
         });
 
@@ -105,6 +141,28 @@ export function registerEncounterRoutes(app: Express) {
     try {
       const userId = req.user.claims.sub;
       const { zoneId } = req.body;
+
+      const now = Date.now();
+      let rateLimit = trapSessionRateLimits.get(userId);
+      
+      if (!rateLimit || now - rateLimit.windowStart > TRAP_SESSION_RATE_LIMIT_WINDOW_MS) {
+        rateLimit = { count: 0, windowStart: now };
+      }
+      
+      rateLimit.count++;
+      trapSessionRateLimits.set(userId, rateLimit);
+      
+      if (rateLimit.count > TRAP_SESSION_RATE_LIMIT_MAX) {
+        logSecurityEvent(userId, 'TRAP_SESSION_RATE_LIMIT', 'HIGH', {
+          message: 'Trap session rate limit exceeded - possible farming attempt',
+          ip: req.ip,
+          count: rateLimit.count,
+        });
+        return res.status(429).json({ 
+          message: "Too many trap sessions requested. Please wait before trying again.",
+          retryAfter: Math.ceil((rateLimit.windowStart + TRAP_SESSION_RATE_LIMIT_WINDOW_MS - now) / 1000),
+        });
+      }
 
       const sessionId = createTrapSession(userId, zoneId || 'unknown');
 
