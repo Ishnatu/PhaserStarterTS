@@ -5,6 +5,7 @@ import { LootEngine } from "../systems/LootEngine";
 import { SeededRNG } from "../utils/SeededRNG";
 import { storage } from "../storage";
 import { calculateMaxHealth, calculateMaxStamina, logSecurityEvent } from "../security";
+import { trackCurrencyGain } from "../securityMonitor";
 import { getActiveDelveSession } from "./delve";
 import { consumeWildernessEncounterLoot } from "./combat";
 import type { InventoryItem } from "../../shared/types";
@@ -207,6 +208,9 @@ export function registerLootRoutes(app: Express) {
       // CRITICAL: Persist currency rewards (both AA and CA) to database immediately
       // This ensures the reward survives the save/load security sanitization
       const updatedCurrency = await storage.addCurrency(userId, arcaneAsh, crystallineAnimus);
+      
+      // [SECURITY] Track currency gain for anomaly detection
+      trackCurrencyGain(userId, arcaneAsh, crystallineAnimus, `loot_tier${validatedTier}`, req.ip);
       
       // CRITICAL: Persist XP reward to database immediately
       const xpResult = await storage.grantExperience(userId, xpReward);

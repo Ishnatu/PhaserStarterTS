@@ -8,6 +8,7 @@ import { WeaponValidator } from "../systems/WeaponValidator";
 import { SeededRNG } from "../utils/SeededRNG";
 import { storage } from "../storage";
 import { validateSavePayload, enforceServerAuthoritativeValues, recalculatePlayerStats, logSecurityEvent } from "../security";
+import { trackCurrencyGain } from "../securityMonitor";
 import type { CombatState, Enemy, PlayerData, WeaponAttack } from "../../shared/types";
 
 /**
@@ -535,6 +536,9 @@ export function registerCombatRoutes(app: Express) {
 
       // [CRITICAL] Persist currency rewards to database
       const updatedCurrency = await storage.addCurrency(userId, arcaneAsh, crystallineAnimus);
+      
+      // [SECURITY] Track currency gain for anomaly detection
+      trackCurrencyGain(userId, arcaneAsh, crystallineAnimus, `${type}_tier${validatedTier}`, req.ip);
 
       console.log(`[SECURITY] Wilderness reward granted via session ${sessionId}: ${type}, tier=${validatedTier}, AA=${arcaneAsh}, CA=${crystallineAnimus}`);
 

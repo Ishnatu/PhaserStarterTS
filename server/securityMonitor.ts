@@ -647,3 +647,125 @@ export function cleanupIPTrackers(): void {
     }
   }
 }
+
+/**
+ * ============================================================================
+ * CURRENCY ANOMALY DETECTION
+ * ============================================================================
+ * 
+ * Tracks currency changes per player to detect abnormal gains.
+ * Flags accounts that acquire resources faster than legitimately possible.
+ */
+
+interface CurrencyTracker {
+  playerId: string;
+  aaGainedInWindow: number;
+  caGainedInWindow: number;
+  windowStart: Date;
+  lastUpdate: Date;
+  flagged: boolean;
+  flagReason?: string;
+}
+
+const currencyTrackers = new Map<string, CurrencyTracker>();
+const CURRENCY_WINDOW_MS = 60 * 1000; // 1 minute window
+
+const CURRENCY_THRESHOLDS = {
+  maxAAPerMinute: 500, // Maximum legitimate AA gain per minute (boss kills + treasures)
+  maxCAPerMinute: 30, // Maximum legitimate CA gain per minute
+};
+
+/**
+ * Track currency gain and detect anomalies
+ * Call this whenever currency is added to a player
+ */
+export function trackCurrencyGain(
+  playerId: string,
+  arcaneAshGained: number,
+  crystallineAnimusGained: number,
+  source: string,
+  ip?: string
+): { anomalyDetected: boolean; reason?: string } {
+  const now = new Date();
+  let tracker = currencyTrackers.get(playerId);
+  
+  if (!tracker || now.getTime() - tracker.windowStart.getTime() > CURRENCY_WINDOW_MS) {
+    // Start new tracking window
+    tracker = {
+      playerId,
+      aaGainedInWindow: 0,
+      caGainedInWindow: 0,
+      windowStart: now,
+      lastUpdate: now,
+      flagged: false,
+    };
+  }
+  
+  tracker.aaGainedInWindow += arcaneAshGained;
+  tracker.caGainedInWindow += crystallineAnimusGained;
+  tracker.lastUpdate = now;
+  currencyTrackers.set(playerId, tracker);
+  
+  // Check for anomalies
+  if (tracker.aaGainedInWindow > CURRENCY_THRESHOLDS.maxAAPerMinute) {
+    tracker.flagged = true;
+    tracker.flagReason = `AA gain spike: ${tracker.aaGainedInWindow} in 1 min`;
+    
+    logSecurityEvent('CURRENCY_ANOMALY_AA', 'HIGH', {
+      playerId,
+      aaGainedInWindow: tracker.aaGainedInWindow,
+      threshold: CURRENCY_THRESHOLDS.maxAAPerMinute,
+      source,
+      ip,
+    }, playerId, ip || 'unknown', 'unknown');
+    
+    return { 
+      anomalyDetected: true, 
+      reason: `Arcane Ash gain ${tracker.aaGainedInWindow} exceeds threshold ${CURRENCY_THRESHOLDS.maxAAPerMinute}/min`
+    };
+  }
+  
+  if (tracker.caGainedInWindow > CURRENCY_THRESHOLDS.maxCAPerMinute) {
+    tracker.flagged = true;
+    tracker.flagReason = `CA gain spike: ${tracker.caGainedInWindow} in 1 min`;
+    
+    logSecurityEvent('CURRENCY_ANOMALY_CA', 'HIGH', {
+      playerId,
+      caGainedInWindow: tracker.caGainedInWindow,
+      threshold: CURRENCY_THRESHOLDS.maxCAPerMinute,
+      source,
+      ip,
+    }, playerId, ip || 'unknown', 'unknown');
+    
+    return { 
+      anomalyDetected: true, 
+      reason: `Crystalline Animus gain ${tracker.caGainedInWindow} exceeds threshold ${CURRENCY_THRESHOLDS.maxCAPerMinute}/min`
+    };
+  }
+  
+  return { anomalyDetected: false };
+}
+
+/**
+ * Get currency tracking stats for admin review
+ */
+export function getCurrencyTrackingStats(): {
+  totalTrackedPlayers: number;
+  flaggedPlayers: { playerId: string; reason: string }[];
+} {
+  const flaggedPlayers: { playerId: string; reason: string }[] = [];
+  
+  for (const [_, tracker] of currencyTrackers) {
+    if (tracker.flagged) {
+      flaggedPlayers.push({
+        playerId: tracker.playerId,
+        reason: tracker.flagReason || 'Unknown',
+      });
+    }
+  }
+  
+  return {
+    totalTrackedPlayers: currencyTrackers.size,
+    flaggedPlayers,
+  };
+}

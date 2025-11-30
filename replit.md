@@ -53,3 +53,46 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **ORM**: Drizzle ORM
 - **Authentication**: openid-client (Replit Auth)
 - **Session Store**: connect-pg-simple
+
+## Security Documentation (2024-11-30)
+
+### Race Condition & Double-Claim Protection
+Critical operations use PostgreSQL transactions with row-level locking:
+- **Forging** (`/api/forge/attempt`): Full transaction with `FOR UPDATE` on game save and currency
+- **Withdrawals**: All withdrawal operations use transactions (request, sign, claim, cancel)
+- **Currency deduction**: Atomic `WHERE balance >= amount` prevents negative balances
+
+Per-player operation locks prevent concurrent exploits:
+- `activeForgeOperations` Set - blocks concurrent forge attempts per user
+- Security event logged on blocked concurrent attempts
+
+### Session-Based Idempotency
+Single-use session tokens prevent double-claiming:
+- **Wilderness encounters**: `wildernessEncounterSessions` Map with loot count tracking
+- **Treasure/Shrine**: `activeTreasureSessions` Map with `claimed` boolean flag
+- **Loot entitlements**: Consumed on claim, expired after 5 minutes
+- Sessions validate user ownership and expiry before consumption
+
+### Currency Anomaly Detection
+Real-time monitoring for impossible resource gains (`server/securityMonitor.ts`):
+- **AA threshold**: 500 AA/minute max (flags faster gains)
+- **CA threshold**: 30 CA/minute max (flags faster gains)
+- Anomalies logged as HIGH severity security events
+- `trackCurrencyGain()` called on all reward endpoints
+
+### Storage & Secret Management
+- All secrets stored in Replit Secrets (SESSION_SECRET, DATABASE_URL, ADMIN_KEY)
+- No hardcoded passwords or fallback secrets in code
+- Server refuses to start without properly configured secrets
+- Frontend code has zero access to environment variables
+
+### XSS/CSRF Protection
+- CSP via Helmet.js with restrictive directives
+- `sanitizeUsername()` strips HTML from user input
+- All text uses `textContent`/`setText()` (not innerHTML)
+- Session cookies use `sameSite: 'lax'`
+
+### Known Limitations (TODO for Production)
+- In-memory session tracking lost on server restart
+- Single-server design - would need Redis for multi-instance
+- Daily earning counters in-memory (reset on restart)
