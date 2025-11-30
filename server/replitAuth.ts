@@ -7,6 +7,7 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
+import { trackAccountCreation, trackAccountLogin, logSecurityEvent } from "./securityMonitor";
 
 const getOidcConfig = memoize(
   async () => {
@@ -28,13 +29,15 @@ export function getSession() {
     tableName: "sessions",
   });
   return session({
+    name: 'gfc.sid',              // Custom session name to avoid fingerprinting
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      httpOnly: true,
-      secure: true,
+      httpOnly: true,             // Prevents XSS access to session cookie
+      secure: true,               // HTTPS only
+      sameSite: 'lax',            // CSRF protection - 'lax' allows OAuth redirects
       maxAge: sessionTtl,
     },
   });
@@ -50,16 +53,47 @@ function updateUserSession(
   user.expires_at = user.claims?.exp;
 }
 
-async function upsertUser(claims: any) {
-  const username = claims["preferred_username"] || claims["name"] || claims["email"]?.split("@")[0] || `user_${claims["sub"].slice(0, 8)}`;
+async function upsertUser(claims: any): Promise<boolean> {
+  const userId = claims["sub"];
+  const username = claims["preferred_username"] || claims["name"] || claims["email"]?.split("@")[0] || `user_${userId.slice(0, 8)}`;
+  
+  // Check if this is a new user (for Sybil detection)
+  const existingUser = await storage.getUser(userId);
+  const isNewAccount = !existingUser;
   
   await storage.upsertUser({
-    id: claims["sub"],
+    id: userId,
     username,
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
   });
+  
+  return isNewAccount;
+}
+
+// Track login/creation for Sybil detection (called from callback with IP)
+function trackAuthEvent(userId: string, ip: string, isNewAccount: boolean): void {
+  if (isNewAccount) {
+    const sybilCheck = trackAccountCreation(ip, userId);
+    if (sybilCheck.suspicious) {
+      logSecurityEvent('SYBIL_NEW_ACCOUNT', sybilCheck.blocked ? 'CRITICAL' : 'HIGH', {
+        userId,
+        ip,
+        reason: sybilCheck.reason,
+        blocked: sybilCheck.blocked,
+      });
+    }
+  } else {
+    const loginCheck = trackAccountLogin(ip, userId);
+    if (loginCheck.suspicious) {
+      logSecurityEvent('SYBIL_LOGIN_PATTERN', 'HIGH', {
+        userId,
+        ip,
+        reason: loginCheck.reason,
+      });
+    }
+  }
 }
 
 export async function setupAuth(app: Express) {
@@ -74,9 +108,10 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const user = {};
+    const user: any = {};
     updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
+    const isNewAccount = await upsertUser(tokens.claims());
+    user.isNewAccount = isNewAccount; // Store for Sybil tracking in callback
     verified(null, user);
   };
 
@@ -114,9 +149,33 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/callback", (req, res, next) => {
     ensureStrategy(req.hostname);
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      successReturnToOrRedirect: "/",
-      failureRedirect: "/api/login",
+    
+    // Store IP before authentication for Sybil tracking
+    const authIp = req.ip || req.connection?.remoteAddress || 'unknown';
+    
+    passport.authenticate(`replitauth:${req.hostname}`, (err: any, user: any, info: any) => {
+      if (err) {
+        return next(err);
+      }
+      if (!user) {
+        return res.redirect("/api/login");
+      }
+      
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          return next(loginErr);
+        }
+        
+        // Track for Sybil detection after successful login
+        if (user.claims?.sub) {
+          trackAuthEvent(user.claims.sub, authIp, user.isNewAccount || false);
+        }
+        
+        // Redirect to home (or returnTo if set in session)
+        const returnTo = (req.session as any)?.returnTo || "/";
+        delete (req.session as any)?.returnTo;
+        return res.redirect(returnTo);
+      });
     })(req, res, next);
   });
 

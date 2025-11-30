@@ -136,6 +136,39 @@ From `securityMonitor.ts`:
 - Missing browser headers detection
 - Combat timing validation (minimum 2 sec/enemy)
 
+## Authentication & Session Security (2024-11-30)
+
+### Architecture
+- **Provider**: Replit Auth via OpenID Connect (no custom JWTs)
+- **Session Store**: PostgreSQL via `connect-pg-simple` (server-side, not localStorage)
+- **Token Refresh**: Automatic OIDC refresh token flow in `isAuthenticated` middleware
+
+### Cookie Security
+```javascript
+cookie: {
+  name: 'gfc.sid',        // Custom name to prevent fingerprinting
+  httpOnly: true,         // XSS protection - JS cannot access cookie
+  secure: true,           // HTTPS only
+  sameSite: 'lax',        // CSRF protection (allows OAuth redirects)
+  maxAge: 7 days
+}
+```
+
+### Session Secret
+- Validated at startup to be 32+ characters
+- Server refuses to start if SESSION_SECRET is missing or too short
+- See `validateEnvironment()` in `server/index.ts`
+
+### Sybil Tracking Integration
+- `trackAuthEvent()` called on every login/signup
+- New accounts trigger `trackAccountCreation()` for IP velocity checks
+- Returning users trigger `trackAccountLogin()` for account-switch detection
+- Suspicious activity logged as SYBIL_NEW_ACCOUNT or SYBIL_LOGIN_PATTERN
+
+### Logout
+- `POST /api/auth/logout` destroys server-side session
+- `GET /api/logout` calls Replit OIDC end-session endpoint
+
 ## Web3 Security Checklist (Pre-Mainnet)
 
 ### Smart Contract Development
