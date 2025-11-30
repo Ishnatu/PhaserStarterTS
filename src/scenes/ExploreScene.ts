@@ -47,6 +47,9 @@ export class ExploreScene extends Phaser.Scene {
   private statsPanel!: StatsPanel;
   private movementStepCounter: number = 0;
   private encounterCooldown: boolean = false;
+  private pendingEncounter: { token: string; type: string; description: string; combatMetadata?: any } | null = null;
+  private lastMovementReportTime: number = 0;
+  private readonly MOVEMENT_REPORT_INTERVAL: number = 500;
   private staminaDebt: number = 0;
   private isOverlayActive: boolean = false;
   private readonly TILE_SIZE: number = 32;
@@ -712,15 +715,46 @@ export class ExploreScene extends Phaser.Scene {
     }
   }
 
-  private checkRandomEncounter(): void {
-    const player = this.gameState.getPlayer();
-    const encounterMultiplier = BuffManager.getEncounterRateMultiplier(player);
-    const adjustedChance = GameConfig.WORLD.RANDOM_ENCOUNTER_CHANCE * encounterMultiplier;
+  private async checkRandomEncounter(): Promise<void> {
+    const now = Date.now();
+    if (now - this.lastMovementReportTime < this.MOVEMENT_REPORT_INTERVAL) {
+      return;
+    }
+    this.lastMovementReportTime = now;
     
-    if (Math.random() < adjustedChance) {
-      this.movementStepCounter = 0;
-      this.encounterCooldown = true;
-      this.triggerEncounter();
+    const player = this.gameState.getPlayer();
+    const zoneId = (player.discoveredZones ?? ['roboka'])[0] || 'roboka';
+    const encounterMultiplier = BuffManager.getEncounterRateMultiplier(player);
+    
+    try {
+      const response = await fetch('/api/exploration/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          zoneId,
+          position: { x: this.player.x, y: this.player.y },
+          encounterRateMultiplier: encounterMultiplier,
+        }),
+      });
+      
+      if (!response.ok) {
+        console.error('[ENCOUNTER] Server movement report failed:', response.status);
+        return;
+      }
+      
+      const result = await response.json();
+      
+      if (result.encounter) {
+        this.pendingEncounter = result.encounter;
+        this.movementStepCounter = 0;
+        this.encounterCooldown = true;
+        this.triggerEncounterFromServer(result.encounter);
+      } else {
+        this.movementStepCounter = result.stepCounter || 0;
+      }
+    } catch (error) {
+      console.error('[ENCOUNTER] Error reporting movement:', error);
     }
   }
 
@@ -870,6 +904,34 @@ export class ExploreScene extends Phaser.Scene {
       this.handleTombstoneEncounter(encounterType);
     } else if (encounterType.type === 'wandering_merchant') {
       this.handleWanderingMerchantEncounter(encounterType);
+    }
+  }
+
+  private triggerEncounterFromServer(encounter: { token: string; type: string; description: string; combatMetadata?: any }): void {
+    console.log('[ENCOUNTER] Server-authoritative encounter:', encounter.type, 'token:', encounter.token.substring(0, 15) + '...');
+    this.isOverlayActive = true;
+
+    const encounterData = {
+      type: encounter.type,
+      description: encounter.description,
+      token: encounter.token,
+      combatMetadata: encounter.combatMetadata,
+    };
+
+    if (encounter.type === 'combat') {
+      this.handleServerCombatEncounter(encounterData);
+    } else if (encounter.type === 'treasure') {
+      this.handleServerTreasureEncounter(encounterData);
+    } else if (encounter.type === 'shrine') {
+      this.handleServerShrineEncounter(encounterData);
+    } else if (encounter.type === 'corrupted_void_portal') {
+      this.handleCorruptedVoidPortalEncounter(encounterData);
+    } else if (encounter.type === 'trapped_chest') {
+      this.handleServerTrappedChestEncounter(encounterData);
+    } else if (encounter.type === 'tombstone') {
+      this.handleTombstoneEncounter(encounterData);
+    } else if (encounter.type === 'wandering_merchant') {
+      this.handleWanderingMerchantEncounter(encounterData);
     }
   }
 
@@ -1412,6 +1474,368 @@ export class ExploreScene extends Phaser.Scene {
       }
     };
     this.escKey.once('down', escHandler);
+  }
+
+  private handleServerCombatEncounter(encounterData: { token: string; type: string; description: string; combatMetadata?: any }): void {
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+    const { width, height } = this.cameras.main;
+
+    const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x000000, 0.9)
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+    const titleText = this.add.text(width / 2, height / 2 - 100, 'Random Encounter!', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#ff8844',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    const descText = this.add.text(width / 2, height / 2 - 30, encounterData.description, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: 400 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    uiElements.push(overlay, titleText, descText);
+
+    this.time.delayedCall(2000, () => {
+      uiElements.forEach(el => el.destroy());
+      this.isOverlayActive = false;
+      this.startWildCombatWithToken(encounterData.token, encounterData.combatMetadata);
+    });
+  }
+
+  private async handleServerTreasureEncounter(encounterData: { token: string; type: string; description: string }): Promise<void> {
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+    const { width, height } = this.cameras.main;
+
+    const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x000000, 0.9)
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+    const titleText = this.add.text(width / 2, height / 2 - 100, 'Treasure Found!', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#ffcc00',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    const descText = this.add.text(width / 2, height / 2 - 30, encounterData.description, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: 400 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    uiElements.push(overlay, titleText, descText);
+
+    try {
+      const response = await fetch('/api/encounter/treasure/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ encounterToken: encounterData.token }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        const player = this.gameState.getPlayer();
+        player.arcaneAsh = result.arcaneAsh;
+        player.crystallineAnimus = result.crystallineAnimus;
+        this.gameState.updatePlayer(player);
+        
+        const rewardText = this.add.text(width / 2, height / 2 + 40, 
+          `+${result.arcaneAshReward} Arcane Ash\n+${result.crystallineAnimusReward} Crystalline Animus`, {
+          fontFamily: FONTS.primary,
+          fontSize: FONTS.size.small,
+          color: '#44ff44',
+          align: 'center',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+        uiElements.push(rewardText);
+        
+        console.log(`[TREASURE] Server reward claimed: AA=${result.arcaneAshReward}, CA=${result.crystallineAnimusReward}`);
+      } else {
+        console.error('[TREASURE] Failed to claim reward:', await response.text());
+      }
+    } catch (error) {
+      console.error('[TREASURE] Error claiming reward:', error);
+    }
+
+    this.time.delayedCall(3000, () => {
+      uiElements.forEach(el => el.destroy());
+      this.encounterCooldown = false;
+      this.isOverlayActive = false;
+    });
+  }
+
+  private handleServerShrineEncounter(encounterData: { token: string; type: string; description: string }): void {
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+
+    const overlay = this.add.rectangle(width / 2, height / 2, 520, 280, 0x2a0a2a, 0.95)
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+    const titleText = this.add.text(width / 2, height / 2 - 110, 'Shrine to the Faceless Old God', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#aa44ff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    const descText = this.add.text(width / 2, height / 2 - 50, 'Corrupted whispers promise\npower for the faithful.', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+      align: 'center',
+      lineSpacing: 6,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    const choiceText = this.add.text(width / 2, height / 2 + 20, 'Offer 50 Arcane Ash?', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffcc88',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    uiElements.push(overlay, titleText, descText, choiceText);
+    
+    const destroyAll = () => {
+      uiElements.forEach(el => el.destroy());
+      this.encounterCooldown = false;
+      this.isOverlayActive = false;
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    this.currentMenuCloseFunction = destroyAll;
+    this.menuState = 'encounter';
+
+    const yesBtnBg = this.add.rectangle(width / 2 - 90, height / 2 + 80, 130, 34, 0x444466)
+      .setScrollFactor(0).setDepth(1002)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', async () => {
+        if (player.arcaneAsh < 50) {
+          choiceText.setText('Not enough Arcane Ash!').setColor('#ff4444');
+          this.time.delayedCall(2000, destroyAll);
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/encounter/shrine/offer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ encounterToken: encounterData.token, offerAmount: 50 }),
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            const updatedPlayer = this.gameState.getPlayer();
+            updatedPlayer.arcaneAsh = result.arcaneAsh;
+            updatedPlayer.crystallineAnimus = result.crystallineAnimus;
+            
+            if (result.outcome === 'buff') {
+              BuffManager.addBuff(updatedPlayer, result.buffType);
+            }
+            
+            this.gameState.updatePlayer(updatedPlayer);
+            this.gameState.saveToServer();
+            
+            choiceText.setText(result.message).setColor(result.outcome === 'nothing' ? '#ff4444' : '#44ff44');
+          } else {
+            choiceText.setText('The shrine rejects your offering.').setColor('#ff4444');
+          }
+        } catch (error) {
+          console.error('[SHRINE] Error:', error);
+          choiceText.setText('Something went wrong...').setColor('#ff4444');
+        }
+        
+        this.time.delayedCall(3000, destroyAll);
+      });
+    
+    const yesBtnLabel = this.add.text(width / 2 - 90, height / 2 + 80, 'Offer', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
+    
+    const noBtnBg = this.add.rectangle(width / 2 + 90, height / 2 + 80, 130, 34, 0x664444)
+      .setScrollFactor(0).setDepth(1002)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', async () => {
+        try {
+          await fetch('/api/encounter/skip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ encounterToken: encounterData.token }),
+          });
+        } catch (error) {
+          console.error('[SHRINE] Error skipping:', error);
+        }
+        destroyAll();
+      });
+    
+    const noBtnLabel = this.add.text(width / 2 + 90, height / 2 + 80, 'Leave', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
+    
+    uiElements.push(yesBtnBg, yesBtnLabel, noBtnBg, noBtnLabel);
+  }
+
+  private handleServerTrappedChestEncounter(encounterData: { token: string; type: string; description: string }): void {
+    const uiElements: Phaser.GameObjects.GameObject[] = [];
+    const { width, height } = this.cameras.main;
+    const player = this.gameState.getPlayer();
+
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
+      .setOrigin(0).setScrollFactor(0).setDepth(1000);
+    const panel = this.add.rectangle(width / 2, height / 2, 700, 400, 0x2a1a0a)
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+
+    uiElements.push(overlay, panel);
+
+    const headerBaseY = height / 2 - 140;
+    const verticalGap = 55;
+
+    const titleText = this.add.text(width / 2, headerBaseY, 'Trapped Chest', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.large,
+      color: '#ff8844',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    const descText = this.add.text(width / 2, headerBaseY + verticalGap, 
+      '"' + encounterData.description + '"', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#aaaaaa',
+      align: 'center',
+      wordWrap: { width: 600 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    const promptText = this.add.text(width / 2, headerBaseY + verticalGap * 2, 
+      'Do you want to attempt to pick the lock?', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.small,
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    uiElements.push(titleText, descText, promptText);
+
+    const closeEncounter = () => {
+      uiElements.forEach(el => el.destroy());
+      this.encounterCooldown = false;
+      this.isOverlayActive = false;
+      this.menuState = 'none';
+      this.currentMenuCloseFunction = null;
+    };
+
+    this.currentMenuCloseFunction = closeEncounter;
+    this.menuState = 'encounter';
+
+    const buttonY = height / 2 + 130;
+
+    const attemptBtn = this.createButton(width / 2 - 100, buttonY, 'Attempt', async () => {
+      attemptBtn.destroy();
+      leaveBtn.destroy();
+      
+      promptText.setText('Attempting to disarm the trap...');
+      promptText.setColor('#ffcc00');
+      
+      try {
+        const response = await fetch('/api/encounter/trap/attempt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ encounterToken: encounterData.token }),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Server rejected trap attempt');
+        }
+        
+        const result = await response.json();
+        
+        this.time.delayedCall(1500, () => {
+          if (result.disarmed) {
+            const playerUpdate = this.gameState.getPlayer();
+            playerUpdate.arcaneAsh = result.arcaneAsh;
+            playerUpdate.crystallineAnimus = result.crystallineAnimus;
+            this.gameState.updatePlayer(playerUpdate);
+
+            promptText.setText('SUCCESS!');
+            promptText.setColor('#44ff44');
+            
+            const resultText = this.add.text(width / 2, headerBaseY + verticalGap * 2 + 50, 
+              `Disarmed the trap and claimed the treasure!\n+${result.arcaneAshReward} AA, +${result.crystallineAnimusReward} CA`, {
+              fontFamily: FONTS.primary,
+              fontSize: FONTS.size.small,
+              color: '#44ff44',
+              align: 'center',
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+            uiElements.push(resultText);
+          } else {
+            player.health = Math.max(0, player.health - result.damage);
+            this.gameState.updatePlayer(player);
+            this.gameState.saveToServer();
+
+            promptText.setText('FAILED!');
+            promptText.setColor('#ff4444');
+            
+            const resultText = this.add.text(width / 2, headerBaseY + verticalGap * 2 + 50, 
+              `The trap triggers!\nYou took ${result.damage} damage!`, {
+              fontFamily: FONTS.primary,
+              fontSize: FONTS.size.small,
+              color: '#ff4444',
+              align: 'center',
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+            uiElements.push(resultText);
+          }
+
+          this.time.delayedCall(2500, closeEncounter);
+        });
+      } catch (error) {
+        console.error('[TRAP] Error attempting trap:', error);
+        promptText.setText('ERROR!');
+        promptText.setColor('#ff4444');
+        this.time.delayedCall(2000, closeEncounter);
+      }
+    }).setScrollFactor(0).setDepth(1002);
+    uiElements.push(attemptBtn);
+
+    const leaveBtn = this.createButton(width / 2 + 100, buttonY, 'Leave It', async () => {
+      try {
+        await fetch('/api/encounter/skip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ encounterToken: encounterData.token }),
+        });
+      } catch (error) {
+        console.error('[TRAP] Error skipping:', error);
+      }
+      closeEncounter();
+    }).setScrollFactor(0).setDepth(1002);
+    uiElements.push(leaveBtn);
+  }
+
+  private startWildCombatWithToken(encounterToken: string, combatMetadata?: { tier: number; enemyCount: number; hasBoss: boolean }): void {
+    const player = this.gameState.getPlayer();
+    const zoneId = (player.discoveredZones ?? ['roboka'])[0] || 'roboka';
+    const tier = combatMetadata?.tier || (zoneId === 'fungal_hollows' ? 2 : 1);
+    const enemyCount = combatMetadata?.enemyCount || Math.floor(Math.random() * 2) + 1;
+    const hasBoss = combatMetadata?.hasBoss || false;
+    
+    const enemies = [];
+    
+    for (let i = 0; i < enemyCount; i++) {
+      enemies.push(EnemyFactory.createEnemy(tier, false));
+    }
+    
+    if (hasBoss) {
+      enemies.push(EnemyFactory.createEnemy(tier, true));
+    }
+    
+    SceneManager.getInstance().transitionTo('combat', {
+      enemies,
+      wildEncounter: true,
+      returnToLocation: { x: this.player.x, y: this.player.y },
+      encounterToken,
+    });
   }
 
   private handleWanderingMerchantEncounter(encounterType: any): void {

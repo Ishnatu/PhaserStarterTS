@@ -52,3 +52,40 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **ORM**: Drizzle ORM
 - **Authentication**: openid-client (Replit Auth)
 - **Session Store**: connect-pg-simple
+
+## Security Architecture
+
+### Server-Authoritative Encounter System (2024-11-30)
+**Closed Exploit**: Previously, trap encounters allowed client-driven session creation, enabling unlimited currency farming. Now fully server-authoritative.
+
+**Architecture**:
+- **PendingEncounterManager** (`server/encounters/PendingEncounterManager.ts`): Tracks player movement server-side, spawns encounters with SeededRNG, generates cryptographic tokens, validates/consumes tokens
+- **Movement Reporting**: Client reports position to `/api/exploration/move`; server decides if encounters spawn
+- **Encounter Tokens**: All encounter rewards require valid token from `validateAndConsumeEncounter()`
+- **Supported Encounters**: Combat, Treasure, Shrine, Trapped Chest all use server tokens
+
+**Endpoints**:
+- `/api/exploration/move` - Process movement, return encounter spawns
+- `/api/exploration/start` - Reset exploration state
+- `/api/exploration/end` - Clear pending encounters
+- `/api/encounter/trap/attempt` - Requires encounterToken
+- `/api/encounter/treasure/claim` - Requires encounterToken
+- `/api/encounter/shrine/offer` - Requires encounterToken
+- `/api/encounter/skip` - Consume unused encounter tokens
+
+**Security Features**:
+- Zone access validation against discovered zones
+- Cryptographic token generation (24-byte random)
+- 5-minute token expiry
+- Movement distance validation (max 200px per call)
+- Comprehensive security logging
+
+### Rate Limiting
+- General API: 30 requests/minute per IP
+- Combat endpoints: 20 requests/minute per IP
+- Loot endpoints: 5 requests/minute per IP
+- Delve endpoints: 3 requests/minute per IP
+- Save endpoints: 15 requests/minute per IP
+
+### Security TODO
+- **Tombstone Looting**: Still has client-side components, should be migrated to server endpoints

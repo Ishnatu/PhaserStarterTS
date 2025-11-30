@@ -11,6 +11,7 @@ import { registerShopRoutes } from "./routes/shop";
 import { registerRepairRoutes } from "./routes/repair";
 import { registerZoneRoutes } from "./routes/zones";
 import { registerEncounterRoutes } from "./routes/encounters";
+import { registerExplorationRoutes } from "./routes/exploration";
 import { 
   validateSavePayload, 
   recalculatePlayerStats, 
@@ -248,6 +249,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register encounter routes (wilderness encounters like trapped chests)
   registerEncounterRoutes(app);
+  
+  // Register exploration routes (server-authoritative movement and encounter spawning)
+  registerExplorationRoutes(app);
 
   // Logout endpoint
   app.post('/api/auth/logout', async (req, res) => {
