@@ -90,6 +90,52 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 ### Security TODO
 - **Tombstone Looting**: Still has client-side components, should be migrated to server endpoints
 
+## Economic Security (Anti-Bot/Sybil Measures)
+
+### Daily Earning Caps (2024-11-30)
+Prevents multi-account farming and bot exploitation:
+
+**Per-Account Daily Limits:**
+- Trap attempts: 10/day
+- Treasure claims: 8/day  
+- Shrine offers: 5/day
+- Maximum AA from encounters: 2000/day
+- Maximum CA from encounters: 100/day
+
+**Reward Structure Changes:**
+- **Treasure**: No longer gives free currency - requires combat victory against guardian
+- **Traps**: 40% success rate (down from 60%), rewards reduced to 20-40 AA + 1-3 CA
+- **Shrines**: 70% chance of nothing (risk-reward preserved), CA rewards reduced to 3-6
+
+**API Endpoint:**
+- `GET /api/encounter/daily-status` - Returns player's daily cap usage
+
+### Sybil Attack Detection (2024-11-30)
+IP velocity tracking to detect multi-account operations:
+
+**Thresholds:**
+- Max 3 new accounts per IP per 24 hours
+- Max 5 different account logins per IP per hour
+- Blocking after 6+ accounts from same IP in 24h
+
+**Detection Functions:**
+- `trackAccountCreation()` - Monitors new account velocity per IP
+- `trackAccountLogin()` - Detects account switching patterns
+- `isIPFlagged()` - Check if IP is flagged for suspicious activity
+- `getIPTrackingStats()` - Admin stats for flagged IPs
+
+**Security Events Logged:**
+- `SYBIL_ACCOUNT_VELOCITY` (CRITICAL) - Too many accounts from one IP
+- `SYBIL_LOGIN_VELOCITY` (HIGH) - Too many account switches
+- `TRAP_DAILY_CAP_REACHED` / `TREASURE_DAILY_CAP_REACHED` / `SHRINE_DAILY_CAP_REACHED` (MEDIUM)
+
+### Bot Detection (Existing)
+From `securityMonitor.ts`:
+- User-agent pattern matching (curl, wget, selenium, headless, etc.)
+- Request rate anomaly detection (120 req/min threshold)
+- Missing browser headers detection
+- Combat timing validation (minimum 2 sec/enemy)
+
 ## Web3 Security Checklist (Pre-Mainnet)
 
 ### Smart Contract Development

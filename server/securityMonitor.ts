@@ -7,6 +7,7 @@
  * - Request fingerprinting for replay attack prevention
  * - Rate limiting enhancement
  * - Suspicious activity tracking
+ * - IP/ASN velocity tracking for Sybil attack detection (Phase 4 Security)
  */
 
 import crypto from 'crypto';
@@ -443,4 +444,202 @@ export function validateAdminAccess(req: any): { valid: boolean; reason?: string
   }
   
   return { valid: true };
+}
+
+/**
+ * ============================================================================
+ * SYBIL ATTACK DETECTION - IP/ASN VELOCITY TRACKING
+ * ============================================================================
+ * 
+ * Tracks account creation and login patterns per IP address to detect
+ * multi-account farming operations.
+ */
+
+interface IPAccountTracker {
+  ip: string;
+  accountsCreated: { userId: string; timestamp: Date }[];
+  accountsLoggedIn: { userId: string; timestamp: Date }[];
+  firstSeen: Date;
+  lastSeen: Date;
+  flagged: boolean;
+  flagReason?: string;
+}
+
+const ipAccountTrackers = new Map<string, IPAccountTracker>();
+
+// Sybil detection thresholds
+const SYBIL_THRESHOLDS = {
+  maxAccountsPerIPPerDay: 3,      // More than 3 new accounts per IP per day is suspicious
+  maxAccountsPerIPTotal: 10,      // More than 10 accounts from same IP ever is very suspicious
+  maxLoginsPerIPPerHour: 5,       // More than 5 different accounts per hour per IP
+  velocityWindowMs: 60 * 60 * 1000, // 1 hour window for velocity checks
+  dailyWindowMs: 24 * 60 * 60 * 1000, // 24 hour window
+};
+
+/**
+ * Track account creation from an IP address
+ */
+export function trackAccountCreation(
+  ip: string,
+  userId: string
+): { suspicious: boolean; reason?: string; blocked: boolean } {
+  const now = new Date();
+  let tracker = ipAccountTrackers.get(ip);
+  
+  if (!tracker) {
+    tracker = {
+      ip,
+      accountsCreated: [],
+      accountsLoggedIn: [],
+      firstSeen: now,
+      lastSeen: now,
+      flagged: false,
+    };
+    ipAccountTrackers.set(ip, tracker);
+  }
+  
+  tracker.lastSeen = now;
+  tracker.accountsCreated.push({ userId, timestamp: now });
+  
+  // Clean old entries
+  const oneDayAgo = new Date(now.getTime() - SYBIL_THRESHOLDS.dailyWindowMs);
+  tracker.accountsCreated = tracker.accountsCreated.filter(a => a.timestamp > oneDayAgo);
+  
+  // Check velocity
+  const recentCreations = tracker.accountsCreated.length;
+  
+  if (recentCreations > SYBIL_THRESHOLDS.maxAccountsPerIPPerDay) {
+    tracker.flagged = true;
+    tracker.flagReason = `Too many accounts created: ${recentCreations} in 24h`;
+    
+    logSecurityEvent('SYBIL_ACCOUNT_VELOCITY', 'CRITICAL', {
+      ip,
+      userId,
+      accountsInLast24h: recentCreations,
+      threshold: SYBIL_THRESHOLDS.maxAccountsPerIPPerDay,
+      allAccounts: tracker.accountsCreated.map(a => a.userId),
+    });
+    
+    // Block after threshold
+    if (recentCreations > SYBIL_THRESHOLDS.maxAccountsPerIPPerDay * 2) {
+      return { 
+        suspicious: true, 
+        reason: 'Account creation blocked - too many accounts from this IP',
+        blocked: true 
+      };
+    }
+    
+    return { 
+      suspicious: true, 
+      reason: `Suspicious account velocity: ${recentCreations} accounts from same IP`,
+      blocked: false 
+    };
+  }
+  
+  return { suspicious: false, blocked: false };
+}
+
+/**
+ * Track account login from an IP address
+ */
+export function trackAccountLogin(
+  ip: string,
+  userId: string
+): { suspicious: boolean; reason?: string } {
+  const now = new Date();
+  let tracker = ipAccountTrackers.get(ip);
+  
+  if (!tracker) {
+    tracker = {
+      ip,
+      accountsCreated: [],
+      accountsLoggedIn: [],
+      firstSeen: now,
+      lastSeen: now,
+      flagged: false,
+    };
+    ipAccountTrackers.set(ip, tracker);
+  }
+  
+  tracker.lastSeen = now;
+  tracker.accountsLoggedIn.push({ userId, timestamp: now });
+  
+  // Clean old entries
+  const oneHourAgo = new Date(now.getTime() - SYBIL_THRESHOLDS.velocityWindowMs);
+  tracker.accountsLoggedIn = tracker.accountsLoggedIn.filter(a => a.timestamp > oneHourAgo);
+  
+  // Count unique accounts in last hour
+  const uniqueAccountsInHour = new Set(
+    tracker.accountsLoggedIn.map(a => a.userId)
+  ).size;
+  
+  if (uniqueAccountsInHour > SYBIL_THRESHOLDS.maxLoginsPerIPPerHour) {
+    tracker.flagged = true;
+    tracker.flagReason = `Too many account switches: ${uniqueAccountsInHour} in 1h`;
+    
+    logSecurityEvent('SYBIL_LOGIN_VELOCITY', 'HIGH', {
+      ip,
+      userId,
+      uniqueAccountsInHour,
+      threshold: SYBIL_THRESHOLDS.maxLoginsPerIPPerHour,
+      allAccounts: [...new Set(tracker.accountsLoggedIn.map(a => a.userId))],
+    });
+    
+    return { 
+      suspicious: true, 
+      reason: `Suspicious login pattern: ${uniqueAccountsInHour} different accounts from same IP in 1 hour`
+    };
+  }
+  
+  return { suspicious: false };
+}
+
+/**
+ * Check if an IP is flagged for Sybil behavior
+ */
+export function isIPFlagged(ip: string): { flagged: boolean; reason?: string } {
+  const tracker = ipAccountTrackers.get(ip);
+  if (!tracker) return { flagged: false };
+  return { flagged: tracker.flagged, reason: tracker.flagReason };
+}
+
+/**
+ * Get IP account tracking stats for admin review
+ */
+export function getIPTrackingStats(): {
+  totalTrackedIPs: number;
+  flaggedIPs: number;
+  suspiciousIPs: { ip: string; reason: string; accountCount: number }[];
+} {
+  const flaggedIPs: { ip: string; reason: string; accountCount: number }[] = [];
+  
+  for (const [ip, tracker] of ipAccountTrackers) {
+    if (tracker.flagged) {
+      flaggedIPs.push({
+        ip,
+        reason: tracker.flagReason || 'Unknown',
+        accountCount: tracker.accountsCreated.length,
+      });
+    }
+  }
+  
+  return {
+    totalTrackedIPs: ipAccountTrackers.size,
+    flaggedIPs: flaggedIPs.length,
+    suspiciousIPs: flaggedIPs.slice(0, 50), // Top 50 for admin review
+  };
+}
+
+/**
+ * Clean up old IP tracking data (call periodically)
+ */
+export function cleanupIPTrackers(): void {
+  const now = Date.now();
+  const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+  
+  for (const [ip, tracker] of ipAccountTrackers) {
+    if (now - tracker.lastSeen.getTime() > maxAge) {
+      ipAccountTrackers.delete(ip);
+    }
+  }
 }

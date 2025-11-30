@@ -5,7 +5,138 @@ import { logSecurityEvent } from "../security";
 import { SeededRNG } from "../utils/SeededRNG";
 import { pendingEncounterManager } from "../encounters/PendingEncounterManager";
 
+/**
+ * ECONOMIC SECURITY: Daily earning caps and tracking
+ * Prevents multi-account farming and bot exploitation
+ */
+interface DailyEarnings {
+  date: string; // YYYY-MM-DD
+  trapAttemptsToday: number;
+  treasureClaimsToday: number;
+  shrineOffersToday: number;
+  aaEarnedToday: number;
+  caEarnedToday: number;
+}
+
+const playerDailyEarnings = new Map<string, DailyEarnings>();
+
+// Daily caps - designed to require ~2 hours of active play to hit
+const DAILY_CAPS = {
+  trapAttempts: 10,        // Max 10 trap attempts per day
+  treasureClaims: 8,       // Max 8 treasure claims per day (now requires combat)
+  shrineOffers: 5,         // Max 5 shrine offers per day
+  maxDailyAA: 2000,        // Hard cap on daily AA earnings from encounters
+  maxDailyCA: 100,         // Hard cap on daily CA earnings from encounters
+};
+
+function getPlayerDailyEarnings(userId: string): DailyEarnings {
+  const today = new Date().toISOString().split('T')[0];
+  let earnings = playerDailyEarnings.get(userId);
+  
+  // Reset if it's a new day
+  if (!earnings || earnings.date !== today) {
+    earnings = {
+      date: today,
+      trapAttemptsToday: 0,
+      treasureClaimsToday: 0,
+      shrineOffersToday: 0,
+      aaEarnedToday: 0,
+      caEarnedToday: 0,
+    };
+    playerDailyEarnings.set(userId, earnings);
+  }
+  
+  return earnings;
+}
+
+function checkDailyCap(userId: string, encounterType: 'trap' | 'treasure' | 'shrine'): { allowed: boolean; reason?: string } {
+  const earnings = getPlayerDailyEarnings(userId);
+  
+  switch (encounterType) {
+    case 'trap':
+      if (earnings.trapAttemptsToday >= DAILY_CAPS.trapAttempts) {
+        return { allowed: false, reason: `Daily trap attempt limit reached (${DAILY_CAPS.trapAttempts}/day)` };
+      }
+      break;
+    case 'treasure':
+      if (earnings.treasureClaimsToday >= DAILY_CAPS.treasureClaims) {
+        return { allowed: false, reason: `Daily treasure limit reached (${DAILY_CAPS.treasureClaims}/day)` };
+      }
+      break;
+    case 'shrine':
+      if (earnings.shrineOffersToday >= DAILY_CAPS.shrineOffers) {
+        return { allowed: false, reason: `Daily shrine limit reached (${DAILY_CAPS.shrineOffers}/day)` };
+      }
+      break;
+  }
+  
+  return { allowed: true };
+}
+
+function recordEncounterReward(userId: string, encounterType: 'trap' | 'treasure' | 'shrine', aa: number, ca: number): { aaGranted: number; caGranted: number; capped: boolean } {
+  const earnings = getPlayerDailyEarnings(userId);
+  
+  // Track attempt
+  switch (encounterType) {
+    case 'trap':
+      earnings.trapAttemptsToday++;
+      break;
+    case 'treasure':
+      earnings.treasureClaimsToday++;
+      break;
+    case 'shrine':
+      earnings.shrineOffersToday++;
+      break;
+  }
+  
+  // Calculate capped rewards
+  const remainingAA = Math.max(0, DAILY_CAPS.maxDailyAA - earnings.aaEarnedToday);
+  const remainingCA = Math.max(0, DAILY_CAPS.maxDailyCA - earnings.caEarnedToday);
+  
+  const aaGranted = Math.min(aa, remainingAA);
+  const caGranted = Math.min(ca, remainingCA);
+  
+  earnings.aaEarnedToday += aaGranted;
+  earnings.caEarnedToday += caGranted;
+  
+  const capped = aaGranted < aa || caGranted < ca;
+  
+  return { aaGranted, caGranted, capped };
+}
+
 export function registerEncounterRoutes(app: Express) {
+  /**
+   * GET /api/encounter/daily-status
+   * Returns daily encounter caps and current usage
+   */
+  app.get("/api/encounter/daily-status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const earnings = getPlayerDailyEarnings(userId);
+      
+      res.json({
+        success: true,
+        date: earnings.date,
+        caps: DAILY_CAPS,
+        usage: {
+          trapAttempts: earnings.trapAttemptsToday,
+          treasureClaims: earnings.treasureClaimsToday,
+          shrineOffers: earnings.shrineOffersToday,
+          aaEarned: earnings.aaEarnedToday,
+          caEarned: earnings.caEarnedToday,
+        },
+      });
+    } catch (error) {
+      console.error("Error getting daily status:", error);
+      res.status(500).json({ message: "Failed to get daily status" });
+    }
+  });
+
+  /**
+   * POST /api/encounter/trap/attempt
+   * ECONOMIC SECURITY: Now has daily caps and reduced rewards
+   * Risk-reward balance: 40% fail (take damage), 60% succeed (reduced rewards)
+   */
   app.post("/api/encounter/trap/attempt", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -17,6 +148,19 @@ export function registerEncounterRoutes(app: Express) {
           ip: req.ip,
         });
         return res.status(403).json({ message: "Encounter token required - encounter not registered" });
+      }
+      
+      // Check daily cap BEFORE consuming token
+      const capCheck = checkDailyCap(userId, 'trap');
+      if (!capCheck.allowed) {
+        logSecurityEvent(userId, 'TRAP_DAILY_CAP_REACHED', 'MEDIUM', {
+          message: 'Player hit daily trap attempt cap',
+          ip: req.ip,
+        });
+        return res.status(429).json({ 
+          message: capCheck.reason,
+          dailyLimitReached: true 
+        });
       }
       
       const encounter = pendingEncounterManager.validateAndConsumeEncounter(
@@ -33,29 +177,45 @@ export function registerEncounterRoutes(app: Express) {
       const rng = new SeededRNG(seedNum);
       const skillCheck = rng.next();
       
-      if (skillCheck < 0.60) {
-        const aa = rng.nextInt(40, 80);
-        const ca = rng.nextInt(3, 6);
+      // ECONOMIC SECURITY: 40% success rate (down from 60%)
+      // Risk-reward: Lower success rate justifies the reward
+      if (skillCheck < 0.40) {
+        // ECONOMIC SECURITY: Reduced base rewards
+        const baseAA = rng.nextInt(20, 40); // Reduced from 40-80
+        const baseCA = rng.nextInt(1, 3);   // Reduced from 3-6
 
-        await storage.ensurePlayerCurrency(userId, 0, 0);
-        const currencies = await storage.addCurrency(userId, aa, ca);
+        // Apply daily caps
+        const { aaGranted, caGranted, capped } = recordEncounterReward(userId, 'trap', baseAA, baseCA);
+
+        if (aaGranted > 0 || caGranted > 0) {
+          await storage.ensurePlayerCurrency(userId, 0, 0);
+          await storage.addCurrency(userId, aaGranted, caGranted);
+        }
+        
+        const currencies = await storage.getPlayerCurrency(userId);
 
         logSecurityEvent(userId, 'TRAP_DISARM_SUCCESS', 'LOW', {
           encounterToken: encounterToken.substring(0, 10) + '...',
           zoneId: encounter.zoneId,
-          arcaneAshReward: aa,
-          crystallineAnimusReward: ca,
+          arcaneAshReward: aaGranted,
+          crystallineAnimusReward: caGranted,
+          wasCapped: capped,
         });
 
         res.json({
           success: true,
           disarmed: true,
-          arcaneAshReward: aa,
-          crystallineAnimusReward: ca,
-          arcaneAsh: currencies.arcaneAsh,
-          crystallineAnimus: currencies.crystallineAnimus,
+          arcaneAshReward: aaGranted,
+          crystallineAnimusReward: caGranted,
+          arcaneAsh: currencies?.arcaneAsh || 0,
+          crystallineAnimus: currencies?.crystallineAnimus || 0,
+          dailyCapped: capped,
         });
       } else {
+        // Record attempt even on failure (for daily tracking)
+        const earnings = getPlayerDailyEarnings(userId);
+        earnings.trapAttemptsToday++;
+        
         const damage = rng.nextInt(15, 25);
 
         logSecurityEvent(userId, 'TRAP_DISARM_FAILED', 'LOW', {
@@ -76,10 +236,16 @@ export function registerEncounterRoutes(app: Express) {
     }
   });
 
+  /**
+   * POST /api/encounter/treasure/claim
+   * ECONOMIC SECURITY: Treasure no longer gives free AA/CA
+   * Instead, it provides XP and exploration progress only
+   * Currency rewards require defeating guardians (combat encounters)
+   */
   app.post("/api/encounter/treasure/claim", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { encounterToken } = req.body;
+      const { encounterToken, combatVictory = false, combatSessionId } = req.body;
 
       if (!encounterToken) {
         logSecurityEvent(userId, 'TREASURE_NO_TOKEN', 'CRITICAL', {
@@ -87,6 +253,19 @@ export function registerEncounterRoutes(app: Express) {
           ip: req.ip,
         });
         return res.status(403).json({ message: "Encounter token required" });
+      }
+      
+      // Check daily cap
+      const capCheck = checkDailyCap(userId, 'treasure');
+      if (!capCheck.allowed) {
+        logSecurityEvent(userId, 'TREASURE_DAILY_CAP_REACHED', 'MEDIUM', {
+          message: 'Player hit daily treasure cap',
+          ip: req.ip,
+        });
+        return res.status(429).json({ 
+          message: capCheck.reason,
+          dailyLimitReached: true 
+        });
       }
       
       const encounter = pendingEncounterManager.validateAndConsumeEncounter(
@@ -103,27 +282,66 @@ export function registerEncounterRoutes(app: Express) {
       const seedNum = hashStringToNumber(`${encounterToken}-${userId}-treasure`);
       const rng = new SeededRNG(seedNum);
       
-      const baseAA = 20 + (tier * 15);
-      const aa = rng.nextInt(baseAA, baseAA + 20);
-      const ca = tier > 1 ? rng.nextInt(1, tier) : 0;
-
-      await storage.ensurePlayerCurrency(userId, 0, 0);
-      const currencies = await storage.addCurrency(userId, aa, ca);
-
-      logSecurityEvent(userId, 'TREASURE_CLAIM_SUCCESS', 'LOW', {
-        encounterToken: encounterToken.substring(0, 10) + '...',
-        zoneId: encounter.zoneId,
-        tier,
-        arcaneAshReward: aa,
-        crystallineAnimusReward: ca,
-      });
+      // ECONOMIC SECURITY: No more free currency from treasure encounters
+      // Treasure now gives discovery/exploration rewards only
+      // Currency requires combat victory (combatVictory flag from client after winning guardian fight)
+      
+      let aaReward = 0;
+      let caReward = 0;
+      let message = "You discovered a treasure cache!";
+      
+      if (combatVictory && combatSessionId) {
+        // Only grant currency if combat was won (validated separately by combat system)
+        // Reduced rewards compared to before
+        const baseAA = 15 + (tier * 10); // Reduced from 20 + tier*15
+        aaReward = rng.nextInt(baseAA, baseAA + 15);
+        caReward = tier > 1 ? rng.nextInt(0, tier - 1) : 0; // Even lower CA
+        
+        // FIX: Only count toward daily cap when actually granting currency
+        const { aaGranted, caGranted, capped } = recordEncounterReward(userId, 'treasure', aaReward, caReward);
+        
+        if (aaGranted > 0 || caGranted > 0) {
+          await storage.ensurePlayerCurrency(userId, 0, 0);
+          await storage.addCurrency(userId, aaGranted, caGranted);
+        }
+        
+        aaReward = aaGranted;
+        caReward = caGranted;
+        message = "You defeated the guardian and claimed the treasure!";
+        
+        logSecurityEvent(userId, 'TREASURE_CLAIM_WITH_COMBAT', 'LOW', {
+          encounterToken: encounterToken.substring(0, 10) + '...',
+          zoneId: encounter.zoneId,
+          tier,
+          arcaneAshReward: aaGranted,
+          crystallineAnimusReward: caGranted,
+          combatSessionId: combatSessionId?.substring(0, 15) + '...',
+          wasCapped: capped,
+        });
+      } else {
+        // No combat victory - just discovery (no currency)
+        // FIX: Do NOT count toward daily cap - only discovery, no reward consumed
+        // The encounter token is consumed to prevent repeated discovery spam
+        message = "You found a treasure cache, but it's guarded! Defeat the guardian to claim the contents.";
+        
+        logSecurityEvent(userId, 'TREASURE_DISCOVERED_NO_COMBAT', 'LOW', {
+          encounterToken: encounterToken.substring(0, 10) + '...',
+          zoneId: encounter.zoneId,
+          tier,
+          message: 'Treasure discovered but no combat victory - no currency awarded, daily cap not consumed',
+        });
+      }
+      
+      const currencies = await storage.getPlayerCurrency(userId);
 
       res.json({
         success: true,
-        arcaneAshReward: aa,
-        crystallineAnimusReward: ca,
-        arcaneAsh: currencies.arcaneAsh,
-        crystallineAnimus: currencies.crystallineAnimus,
+        message,
+        arcaneAshReward: aaReward,
+        crystallineAnimusReward: caReward,
+        arcaneAsh: currencies?.arcaneAsh || 0,
+        crystallineAnimus: currencies?.crystallineAnimus || 0,
+        requiresCombat: !combatVictory,
       });
     } catch (error) {
       console.error("Error claiming treasure:", error);
@@ -131,6 +349,11 @@ export function registerEncounterRoutes(app: Express) {
     }
   });
 
+  /**
+   * POST /api/encounter/shrine/offer
+   * ECONOMIC SECURITY: Added daily caps for shrine offers
+   * Shrine already has risk-reward (costs 50 AA, 70% chance of nothing)
+   */
   app.post("/api/encounter/shrine/offer", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -142,6 +365,19 @@ export function registerEncounterRoutes(app: Express) {
           ip: req.ip,
         });
         return res.status(403).json({ message: "Encounter token required" });
+      }
+      
+      // Check daily cap
+      const capCheck = checkDailyCap(userId, 'shrine');
+      if (!capCheck.allowed) {
+        logSecurityEvent(userId, 'SHRINE_DAILY_CAP_REACHED', 'MEDIUM', {
+          message: 'Player hit daily shrine cap',
+          ip: req.ip,
+        });
+        return res.status(429).json({ 
+          message: capCheck.reason,
+          dailyLimitReached: true 
+        });
       }
       
       const encounter = pendingEncounterManager.validateAndConsumeEncounter(
@@ -166,6 +402,10 @@ export function registerEncounterRoutes(app: Express) {
 
       await storage.deductCurrency(userId, offerCost, 0);
       
+      // Track the attempt
+      const earnings = getPlayerDailyEarnings(userId);
+      earnings.shrineOffersToday++;
+      
       const seedNum = hashStringToNumber(`${encounterToken}-${userId}-shrine`);
       const rng = new SeededRNG(seedNum);
       const roll = rng.next();
@@ -186,11 +426,18 @@ export function registerEncounterRoutes(app: Express) {
         result.buffDuration = 300000;
         result.message = 'Void shadows protect you! +2 armor for 5 minutes.';
       } else {
-        const caReward = rng.nextInt(5, 10);
-        await storage.addCurrency(userId, 0, caReward);
+        // ECONOMIC SECURITY: Apply daily CA cap to shrine rewards
+        const baseCA = rng.nextInt(3, 6); // Reduced from 5-10
+        const { caGranted, capped } = recordEncounterReward(userId, 'shrine', 0, baseCA);
+        
+        if (caGranted > 0) {
+          await storage.addCurrency(userId, 0, caGranted);
+        }
+        
         result.outcome = 'reward';
-        result.crystallineAnimusReward = caReward;
-        result.message = `The shrine rewards your faith! +${caReward} Crystalline Animus.`;
+        result.crystallineAnimusReward = caGranted;
+        result.message = `The shrine rewards your faith! +${caGranted} Crystalline Animus.`;
+        result.dailyCapped = capped;
       }
 
       const updatedCurrency = await storage.getPlayerCurrency(userId);
