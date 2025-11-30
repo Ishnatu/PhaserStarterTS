@@ -2,10 +2,11 @@ import Phaser from 'phaser';
 import { GameStateManager } from '../systems/GameStateManager';
 import { SceneManager } from '../systems/SceneManager';
 import { CombatSystem } from '../systems/CombatSystem';
+import { ServerCombatController } from '../systems/ServerCombatController';
 import { EnemyFactory } from '../systems/EnemyFactory';
 import { ItemDatabase } from '../config/ItemDatabase';
 import { DiceRoller } from '../utils/DiceRoller';
-import { Delve, DelveRoom, Enemy, PlayerEquipment, InventoryItem, WeaponAttack } from '../types/GameTypes';
+import { Delve, DelveRoom, Enemy, PlayerEquipment, InventoryItem, WeaponAttack, CombatState } from '../types/GameTypes';
 import { GameConfig } from '../config/GameConfig';
 import { DurabilityManager } from '../systems/DurabilityManager';
 import { FONTS } from '../config/fonts';
@@ -21,6 +22,8 @@ import { PixelArtBar } from '../utils/PixelArtBar';
 export class CombatScene extends Phaser.Scene {
   private gameState!: GameStateManager;
   private combatSystem!: CombatSystem;
+  private serverCombat!: ServerCombatController;
+  private useServerCombat: boolean = true;
   private currentDelve!: Delve;
   private currentRoom!: DelveRoom;
   private logText!: Phaser.GameObjects.Text;
@@ -105,6 +108,7 @@ export class CombatScene extends Phaser.Scene {
     this.gameState = GameStateManager.getInstance();
     this.gameState.setScene('combat');
     this.combatSystem = new CombatSystem();
+    this.serverCombat = new ServerCombatController();
 
     this.enemyContainers = [];
     this.enemyHealthTexts = [];
@@ -142,16 +146,23 @@ export class CombatScene extends Phaser.Scene {
       }
     });
 
-    const enemies = this.generateEnemies();
-    const player = this.gameState.getPlayer();
+    // Get enemy names for server-authoritative combat
+    const enemyNames = this.getEnemyNames();
     
-    this.combatSystem.initiateCombat(player, enemies);
-
-    this.renderPlayer();
-    this.renderEnemies(enemies);
-    this.renderCombatLog();
-    this.renderActionButtons();
-    this.renderWeaponAttacks();
+    if (this.useServerCombat) {
+      // SERVER-AUTHORITATIVE: Initiate combat via server
+      this.initiateCombatViaServer(enemyNames);
+    } else {
+      // LEGACY: Local combat (for fallback only)
+      const enemies = this.generateEnemies();
+      const player = this.gameState.getPlayer();
+      this.combatSystem.initiateCombat(player, enemies);
+      this.renderPlayer();
+      this.renderEnemies(enemies);
+      this.renderCombatLog();
+      this.renderActionButtons();
+      this.renderWeaponAttacks();
+    }
 
     // ESC key for menu
     this.escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
@@ -166,6 +177,154 @@ export class CombatScene extends Phaser.Scene {
     const audioManager = AudioManager.getInstance();
     audioManager.savePreviousMusic();
     audioManager.switchMusic(this, 'combat-music', true);
+  }
+
+  private getEnemyNames(): string[] {
+    // For wild encounters, use the pre-generated enemy names
+    if (this.isWildEncounter && this.wildEnemies) {
+      return this.wildEnemies.map(e => e.name);
+    }
+
+    // For delve encounters, generate enemy names based on tier
+    if (!this.currentDelve || !this.currentDelve.tier) {
+      return ['Void Spawn'];
+    }
+
+    const tier = this.currentDelve.tier;
+    const isBoss = this.currentRoom.type === 'boss';
+    
+    if (isBoss) {
+      // Get boss name for this tier
+      const bossEnemy = EnemyFactory.createEnemy(tier, true);
+      return [bossEnemy.name];
+    }
+
+    // Generate 1-2 random enemies for the tier
+    const numEnemies = Math.floor(Math.random() * 2) + 1;
+    const names: string[] = [];
+    for (let i = 0; i < numEnemies; i++) {
+      const enemy = EnemyFactory.createEnemy(tier, false);
+      names.push(enemy.name);
+    }
+    return names;
+  }
+
+  private async initiateCombatViaServer(enemyNames: string[]): Promise<void> {
+    try {
+      console.log('[SERVER COMBAT] Initiating combat via server with enemies:', enemyNames);
+      
+      const result = await this.serverCombat.initiateCombat(enemyNames, this.isWildEncounter);
+      
+      if (!result.success) {
+        throw new Error('Server combat initiation failed');
+      }
+
+      console.log('[SERVER COMBAT] Combat initiated successfully, sessionId:', result.sessionId);
+      
+      // Store sessionId on delve for loot claiming
+      if (this.currentDelve) {
+        (this.currentDelve as any).sessionId = result.sessionId;
+      }
+
+      // Get enemies from server combat state
+      const enemies = result.combatState.enemies;
+      
+      // Also initialize local combat system with server state for display purposes
+      const player = this.gameState.getPlayer();
+      this.combatSystem.initiateCombat(player, enemies, this.isWildEncounter);
+      
+      // Sync local state with server state
+      this.syncLocalStateWithServer(result.combatState);
+
+      // Render UI
+      this.renderPlayer();
+      this.renderEnemies(enemies);
+      this.renderCombatLog();
+      this.renderActionButtons();
+      this.renderWeaponAttacks();
+      
+      // Update display to reflect server state
+      this.updateCombatDisplayFromServerState(result.combatState);
+      
+    } catch (error) {
+      console.error('[SERVER COMBAT] Failed to initiate combat:', error);
+      
+      // Fallback to local combat if server fails
+      console.warn('[SERVER COMBAT] Falling back to local combat');
+      this.useServerCombat = false;
+      
+      const enemies = this.generateEnemies();
+      const player = this.gameState.getPlayer();
+      this.combatSystem.initiateCombat(player, enemies);
+      this.renderPlayer();
+      this.renderEnemies(enemies);
+      this.renderCombatLog();
+      this.renderActionButtons();
+      this.renderWeaponAttacks();
+    }
+  }
+
+  private syncLocalStateWithServer(serverState: CombatState): void {
+    const localState = this.combatSystem.getCombatState();
+    if (!localState) return;
+    
+    // Sync player stats
+    localState.player.health = serverState.player.health;
+    localState.player.stamina = serverState.player.stamina;
+    localState.actionsRemaining = serverState.actionsRemaining;
+    localState.currentTurn = serverState.currentTurn;
+    localState.combatLog = [...serverState.combatLog];
+    
+    // Sync enemy states
+    serverState.enemies.forEach((serverEnemy, index) => {
+      if (localState.enemies[index]) {
+        localState.enemies[index].health = serverEnemy.health;
+        localState.enemies[index].statusConditions = serverEnemy.statusConditions || [];
+      }
+    });
+  }
+
+  private updateCombatDisplayFromServerState(serverState: CombatState): void {
+    // Update player HP/SP bars
+    this.playerHealthBar?.update(serverState.player.health, serverState.player.maxHealth);
+    this.playerStaminaBar?.update(serverState.player.stamina, serverState.player.maxStamina);
+    
+    // Update action counter
+    if (this.actionCounterText) {
+      this.actionCounterText.setText(`Actions: ${serverState.actionsRemaining}/${serverState.maxActionsPerTurn}`);
+    }
+    
+    // Update enemy health
+    serverState.enemies.forEach((enemy, index) => {
+      const healthBar = this.enemyHealthBars[index];
+      const healthText = this.enemyHealthTexts[index];
+      const container = this.enemyContainers[index];
+      
+      if (healthBar) {
+        healthBar.update(enemy.health, enemy.maxHealth);
+      }
+      if (healthText) {
+        healthText.setText(`HP: ${enemy.health}/${enemy.maxHealth}`);
+      }
+      if (container && enemy.health <= 0) {
+        container.setAlpha(0.3);
+      }
+    });
+    
+    // Update combat log
+    if (this.logText) {
+      const allLogs = serverState.combatLog.join('\n');
+      this.logText.setText(allLogs);
+      
+      // Auto-scroll to bottom
+      const textHeight = this.logText.height;
+      const visibleHeight = this.logHeight - 20;
+      const maxScroll = Math.max(0, textHeight - visibleHeight);
+      this.logScrollY = maxScroll;
+      this.logText.y = 10 - this.logScrollY;
+    }
+    
+    this.refreshAttackButtons();
   }
 
   private generateEnemies(): Enemy[] {
@@ -926,6 +1085,11 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private attemptRun(): void {
+    if (this.useServerCombat) {
+      this.executeServerRun();
+      return;
+    }
+    
     const state = this.combatSystem.getCombatState();
     
     // Running costs 1 action
@@ -948,6 +1112,47 @@ export class CombatScene extends Phaser.Scene {
       });
     } else {
       this.executeRunAttempt(baseChance);
+    }
+  }
+
+  private async executeServerRun(): Promise<void> {
+    try {
+      this.showMessage('Attempting to flee...');
+      
+      const result = await this.serverCombat.attemptRun();
+      
+      if (result.fled) {
+        this.showMessage('Successfully escaped!');
+        
+        // Sync state from server
+        this.syncLocalStateWithServer(result.combatState);
+        
+        // Save player state
+        this.gameState.updatePlayer({
+          health: result.combatState.player.health,
+          stamina: result.combatState.player.stamina,
+        });
+        await this.gameState.saveToServer();
+        
+        this.time.delayedCall(1500, () => {
+          if (this.isWildEncounter) {
+            SceneManager.getInstance().transitionTo('explore', { returnToLocation: this.returnToLocation });
+          } else {
+            SceneManager.getInstance().transitionTo('delve', { 
+              delve: this.currentDelve,
+              returnToLocation: this.returnToLocation 
+            });
+          }
+        });
+      } else {
+        // Server handles the run attempt - just update display
+        this.syncLocalStateWithServer(result.combatState);
+        this.updateCombatDisplayFromServerState(result.combatState);
+      }
+      
+    } catch (error) {
+      console.error('[SERVER COMBAT] Run attempt failed:', error);
+      this.showMessage('Failed to flee! Try again.');
     }
   }
 
@@ -1079,20 +1284,25 @@ export class CombatScene extends Phaser.Scene {
     this.playLungeAnimation();
     
     this.time.delayedCall(200, () => {
-      const result = this.combatSystem.playerAttack(targetIndex, this.selectedAttack!);
-      this.selectedAttack = undefined;
-      this.updateCombatDisplay();
+      if (this.useServerCombat) {
+        this.executeServerAttack(targetIndex, this.selectedAttack!.name);
+        this.selectedAttack = undefined;
+      } else {
+        const result = this.combatSystem.playerAttack(targetIndex, this.selectedAttack!);
+        this.selectedAttack = undefined;
+        this.updateCombatDisplay();
 
-      this.time.delayedCall(1000, () => {
-        if (this.combatSystem.isCombatComplete()) {
-          this.endCombat();
-        } else {
-          const state = this.combatSystem.getCombatState();
-          if (state && state.currentTurn === 'enemy') {
-            this.enemyTurn();
+        this.time.delayedCall(1000, () => {
+          if (this.combatSystem.isCombatComplete()) {
+            this.endCombat();
+          } else {
+            const state = this.combatSystem.getCombatState();
+            if (state && state.currentTurn === 'enemy') {
+              this.enemyTurn();
+            }
           }
-        }
-      });
+        });
+      }
     });
   }
 
@@ -1107,30 +1317,103 @@ export class CombatScene extends Phaser.Scene {
     this.playLungeAnimation();
     
     this.time.delayedCall(200, () => {
-      const result = this.combatSystem.playerAttack(targetIndex, defaultAttack);
-      this.updateCombatDisplay();
+      if (this.useServerCombat) {
+        this.executeServerAttack(targetIndex, defaultAttack.name);
+      } else {
+        const result = this.combatSystem.playerAttack(targetIndex, defaultAttack);
+        this.updateCombatDisplay();
 
-      this.time.delayedCall(1000, () => {
-        if (this.combatSystem.isCombatComplete()) {
-          this.endCombat();
-        } else {
-          const state = this.combatSystem.getCombatState();
-          if (state && state.currentTurn === 'enemy') {
-            this.enemyTurn();
+        this.time.delayedCall(1000, () => {
+          if (this.combatSystem.isCombatComplete()) {
+            this.endCombat();
+          } else {
+            const state = this.combatSystem.getCombatState();
+            if (state && state.currentTurn === 'enemy') {
+              this.enemyTurn();
+            }
           }
+        });
+      }
+    });
+  }
+
+  private async executeServerAttack(targetIndex: number, attackName: string): Promise<void> {
+    try {
+      const state = this.combatSystem.getCombatState();
+      if (!state) return;
+      
+      const targetEnemy = state.enemies[targetIndex];
+      if (!targetEnemy) {
+        this.showMessage('Invalid target!');
+        return;
+      }
+
+      console.log('[SERVER COMBAT] Executing attack:', attackName, 'on target:', targetEnemy.id);
+      
+      const result = await this.serverCombat.performAttack(attackName, targetEnemy.id);
+      
+      // Sync local state with server response
+      this.syncLocalStateWithServer(result.combatState);
+      this.updateCombatDisplayFromServerState(result.combatState);
+      
+      this.time.delayedCall(1000, () => {
+        if (result.combatEnded) {
+          this.endCombat();
+        } else if (result.combatState.currentTurn === 'enemy') {
+          this.enemyTurn();
         }
       });
-    });
+      
+    } catch (error) {
+      console.error('[SERVER COMBAT] Attack failed:', error);
+      this.showMessage('Attack failed! Try again.');
+    }
   }
 
   private endPlayerTurn(): void {
     this.showMessage('Ending turn...');
     this.time.delayedCall(500, () => {
-      this.enemyTurn();
+      if (this.useServerCombat) {
+        this.executeServerEndTurn();
+      } else {
+        this.enemyTurn();
+      }
     });
   }
 
+  private async executeServerEndTurn(): Promise<void> {
+    try {
+      console.log('[SERVER COMBAT] Ending player turn via server');
+      
+      const result = await this.serverCombat.endTurn();
+      
+      // Sync local state with server response
+      this.syncLocalStateWithServer(result.combatState);
+      this.updateCombatDisplayFromServerState(result.combatState);
+      
+      this.time.delayedCall(1000, () => {
+        if (result.combatEnded) {
+          this.endCombat();
+        }
+        // Server handles all turn processing - when it returns, it's player's turn or combat ended
+        // No need to manually call enemyTurn() as server already processed enemy actions
+      });
+      
+    } catch (error) {
+      console.error('[SERVER COMBAT] End turn failed:', error);
+      this.showMessage('End turn failed! Try again.');
+    }
+  }
+
   private enemyTurn(): void {
+    if (this.useServerCombat) {
+      // In server-authoritative mode, enemy turns are processed by server via endTurn
+      // The server returns the updated state after enemy actions
+      this.executeServerEndTurn();
+      return;
+    }
+    
+    // Legacy local enemy turn processing
     this.combatSystem.enemyTurnStart();
     this.updateCombatDisplay();
     
@@ -1948,20 +2231,32 @@ export class CombatScene extends Phaser.Scene {
   private executeAoEAttack(): void {
     if (!this.selectedAttack) return;
     
-    const result = this.combatSystem.playerAttack(0, this.selectedAttack);
-    this.selectedAttack = undefined;
-    this.updateCombatDisplay();
-    
-    this.time.delayedCall(1000, () => {
-      if (this.combatSystem.isCombatComplete()) {
-        this.endCombat();
-      } else {
-        const state = this.combatSystem.getCombatState();
-        if (state && state.currentTurn === 'enemy') {
-          this.enemyTurn();
+    if (this.useServerCombat) {
+      // For AoE attacks, target first living enemy (server handles hitting all)
+      const state = this.combatSystem.getCombatState();
+      if (!state) return;
+      
+      const firstLivingEnemy = state.enemies.find(e => e.health > 0);
+      if (!firstLivingEnemy) return;
+      
+      this.executeServerAttack(state.enemies.indexOf(firstLivingEnemy), this.selectedAttack.name);
+      this.selectedAttack = undefined;
+    } else {
+      const result = this.combatSystem.playerAttack(0, this.selectedAttack);
+      this.selectedAttack = undefined;
+      this.updateCombatDisplay();
+      
+      this.time.delayedCall(1000, () => {
+        if (this.combatSystem.isCombatComplete()) {
+          this.endCombat();
+        } else {
+          const state = this.combatSystem.getCombatState();
+          if (state && state.currentTurn === 'enemy') {
+            this.enemyTurn();
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   private renderStatusIndicators(enemy: Enemy, enemyIndex: number, enemyX: number, enemyY: number): void {

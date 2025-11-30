@@ -7,7 +7,7 @@ import { EnemyFactory } from "../systems/EnemyFactory";
 import { WeaponValidator } from "../systems/WeaponValidator";
 import { SeededRNG } from "../utils/SeededRNG";
 import { storage } from "../storage";
-import { validateSavePayload, enforceServerAuthoritativeValues, recalculatePlayerStats } from "../security";
+import { validateSavePayload, enforceServerAuthoritativeValues, recalculatePlayerStats, logSecurityEvent } from "../security";
 import type { CombatState, Enemy, PlayerData, WeaponAttack } from "../../shared/types";
 
 /**
@@ -360,9 +360,15 @@ export function registerCombatRoutes(app: Express) {
       // Zone unlock requirements
       const requirements: Record<number, number> = { 1: 0, 2: 5, 3: 10, 4: 20, 5: 50 };
       
+      // Map tier numbers to property names
+      const tierKeys: Record<number, 'tier1' | 'tier2' | 'tier3' | 'tier4' | 'tier5'> = {
+        1: 'tier1', 2: 'tier2', 3: 'tier3', 4: 'tier4', 5: 'tier5'
+      };
+      
       for (let t = 2; t <= 5; t++) {
         const required = requirements[t];
-        const completed = progress?.[t - 1] || 0;
+        const prevTierKey = tierKeys[t - 1];
+        const completed = progress?.[prevTierKey] || 0;
         if (completed >= required) {
           maxAccessibleTier = t;
         } else {
@@ -428,9 +434,15 @@ export function registerCombatRoutes(app: Express) {
       
       const requirements: Record<number, number> = { 1: 0, 2: 5, 3: 10, 4: 20, 5: 50 };
       
+      // Map tier numbers to property names
+      const tierKeys: Record<number, 'tier1' | 'tier2' | 'tier3' | 'tier4' | 'tier5'> = {
+        1: 'tier1', 2: 'tier2', 3: 'tier3', 4: 'tier4', 5: 'tier5'
+      };
+      
       for (let t = 2; t <= 5; t++) {
         const required = requirements[t];
-        const completed = progress?.[t - 1] || 0;
+        const prevTierKey = tierKeys[t - 1];
+        const completed = progress?.[prevTierKey] || 0;
         if (completed >= required) {
           maxAccessibleTier = t;
         } else {
