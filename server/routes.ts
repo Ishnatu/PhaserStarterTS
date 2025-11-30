@@ -10,6 +10,7 @@ import { registerForgeRoutes } from "./routes/forge";
 import { registerShopRoutes } from "./routes/shop";
 import { registerRepairRoutes } from "./routes/repair";
 import { registerZoneRoutes } from "./routes/zones";
+import { registerEncounterRoutes } from "./routes/encounters";
 import { 
   validateSavePayload, 
   recalculatePlayerStats, 
@@ -244,6 +245,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register zone routes (mage tower warping and rift discovery)
   registerZoneRoutes(app);
+
+  // Register encounter routes (wilderness encounters like trapped chests)
+  registerEncounterRoutes(app);
 
   // Logout endpoint
   app.post('/api/auth/logout', async (req, res) => {

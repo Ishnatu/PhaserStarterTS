@@ -1316,56 +1316,73 @@ export class ExploreScene extends Phaser.Scene {
     const buttonY = height / 2 + 130;
 
     // Attempt button
-    const attemptBtn = this.createButton(width / 2 - 100, buttonY, 'Attempt', () => {
+    const attemptBtn = this.createButton(width / 2 - 100, buttonY, 'Attempt', async () => {
       attemptBtn.destroy();
       leaveBtn.destroy();
       
       promptText.setText('Attempting to disarm the trap...');
       promptText.setColor('#ffcc00');
       
-      this.time.delayedCall(1500, () => {
-        const skillCheck = Math.random();
+      try {
+        const response = await fetch('/api/encounter/trap/attempt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            zoneId: this.gameState.getPlayer().discoveredZones?.[this.gameState.getPlayer().discoveredZones?.length - 1] || 'roboka',
+          }),
+        });
         
-        if (skillCheck < 0.60) {
-          const aa = Math.floor(Math.random() * 41) + 40;
-          const ca = Math.floor(Math.random() * 4) + 3;
-          
-          this.gameState.addArcaneAsh(aa);
-          this.gameState.addCrystallineAnimus(ca);
-          this.gameState.saveToServer();
-
-          promptText.setText('SUCCESS!');
-          promptText.setColor('#44ff44');
-          
-          const resultText = this.add.text(width / 2, headerBaseY + verticalGap * 2 + 50, 
-            `Disarmed the trap and claimed the treasure!\n+${aa} AA, +${ca} CA`, {
-            fontFamily: FONTS.primary,
-            fontSize: FONTS.size.small,
-            color: '#44ff44',
-            align: 'center',
-          }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-          uiElements.push(resultText);
-        } else {
-          const damage = Math.floor(Math.random() * 11) + 15;
-          player.health = Math.max(0, player.health - damage);
-          this.gameState.updatePlayer(player);
-          this.gameState.saveToServer();
-
-          promptText.setText('FAILED!');
-          promptText.setColor('#ff4444');
-          
-          const resultText = this.add.text(width / 2, headerBaseY + verticalGap * 2 + 50, 
-            `The trap triggers!\nYou took ${damage} damage!`, {
-            fontFamily: FONTS.primary,
-            fontSize: FONTS.size.small,
-            color: '#ff4444',
-            align: 'center',
-          }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-          uiElements.push(resultText);
+        if (!response.ok) {
+          throw new Error('Server rejected trap attempt');
         }
+        
+        const result = await response.json();
+        
+        this.time.delayedCall(1500, () => {
+          if (result.disarmed) {
+            const player = this.gameState.getPlayer();
+            player.arcaneAsh = result.arcaneAsh;
+            player.crystallineAnimus = result.crystallineAnimus;
+            this.gameState.updatePlayer(player);
 
-        this.time.delayedCall(2500, closeEncounter);
-      });
+            promptText.setText('SUCCESS!');
+            promptText.setColor('#44ff44');
+            
+            const resultText = this.add.text(width / 2, headerBaseY + verticalGap * 2 + 50, 
+              `Disarmed the trap and claimed the treasure!\n+${result.arcaneAshReward} AA, +${result.crystallineAnimusReward} CA`, {
+              fontFamily: FONTS.primary,
+              fontSize: FONTS.size.small,
+              color: '#44ff44',
+              align: 'center',
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+            uiElements.push(resultText);
+          } else {
+            player.health = Math.max(0, player.health - result.damage);
+            this.gameState.updatePlayer(player);
+            this.gameState.saveToServer();
+
+            promptText.setText('FAILED!');
+            promptText.setColor('#ff4444');
+            
+            const resultText = this.add.text(width / 2, headerBaseY + verticalGap * 2 + 50, 
+              `The trap triggers!\nYou took ${result.damage} damage!`, {
+              fontFamily: FONTS.primary,
+              fontSize: FONTS.size.small,
+              color: '#ff4444',
+              align: 'center',
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+            uiElements.push(resultText);
+          }
+
+          this.time.delayedCall(2500, closeEncounter);
+        });
+      } catch (error) {
+        console.error('[TRAP] Error attempting trap:', error);
+        promptText.setText('ERROR!');
+        promptText.setColor('#ff4444');
+        this.time.delayedCall(2000, closeEncounter);
+      }
     }).setScrollFactor(0).setDepth(1002);
     uiElements.push(attemptBtn);
 
