@@ -760,3 +760,79 @@ export function getSecuritySummary(): {
     byType
   };
 }
+
+/**
+ * ============================================================================
+ * XSS PREVENTION - INPUT SANITIZATION
+ * ============================================================================
+ * 
+ * Sanitizes user-generated content to prevent XSS attacks.
+ * All user input (usernames, etc.) should be sanitized before storage.
+ */
+
+const HTML_ESCAPE_MAP: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#x27;',
+  '/': '&#x2F;',
+  '`': '&#x60;',
+  '=': '&#x3D;',
+};
+
+const HTML_ESCAPE_REGEX = /[&<>"'`=/]/g;
+
+/**
+ * Escape HTML special characters to prevent XSS
+ */
+export function escapeHtml(str: string): string {
+  if (typeof str !== 'string') return '';
+  return str.replace(HTML_ESCAPE_REGEX, (char) => HTML_ESCAPE_MAP[char] || char);
+}
+
+/**
+ * Sanitize username - removes dangerous characters and limits length
+ * Usernames should only contain alphanumeric, underscore, dash
+ */
+export function sanitizeUsername(username: string): string {
+  if (typeof username !== 'string') return 'player';
+  
+  // Remove any HTML/script tags first
+  let sanitized = username.replace(/<[^>]*>/g, '');
+  
+  // Allow only alphanumeric, underscore, dash, space
+  sanitized = sanitized.replace(/[^a-zA-Z0-9_\- ]/g, '');
+  
+  // Collapse multiple spaces
+  sanitized = sanitized.replace(/\s+/g, ' ').trim();
+  
+  // Limit length
+  sanitized = sanitized.substring(0, 32);
+  
+  // Fallback if empty
+  if (!sanitized || sanitized.length === 0) {
+    return 'player';
+  }
+  
+  return sanitized;
+}
+
+/**
+ * Validate and sanitize any user-provided text for display
+ * This should be used for any text that might be displayed in UI
+ */
+export function sanitizeDisplayText(text: string, maxLength: number = 100): string {
+  if (typeof text !== 'string') return '';
+  
+  // Escape HTML entities
+  let sanitized = escapeHtml(text);
+  
+  // Remove control characters
+  sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, '');
+  
+  // Limit length
+  sanitized = sanitized.substring(0, maxLength);
+  
+  return sanitized;
+}

@@ -8,6 +8,7 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 import { trackAccountCreation, trackAccountLogin, logSecurityEvent } from "./securityMonitor";
+import { sanitizeUsername } from "./security";
 
 const getOidcConfig = memoize(
   async () => {
@@ -55,7 +56,9 @@ function updateUserSession(
 
 async function upsertUser(claims: any): Promise<boolean> {
   const userId = claims["sub"];
-  const username = claims["preferred_username"] || claims["name"] || claims["email"]?.split("@")[0] || `user_${userId.slice(0, 8)}`;
+  // XSS Prevention: Sanitize username from OIDC claims
+  const rawUsername = claims["preferred_username"] || claims["name"] || claims["email"]?.split("@")[0] || `user_${userId.slice(0, 8)}`;
+  const username = sanitizeUsername(rawUsername);
   
   // Check if this is a new user (for Sybil detection)
   const existingUser = await storage.getUser(userId);

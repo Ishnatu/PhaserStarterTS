@@ -169,6 +169,44 @@ cookie: {
 - `POST /api/auth/logout` destroys server-side session
 - `GET /api/logout` calls Replit OIDC end-session endpoint
 
+## XSS, CSRF, and Injection Protection (2024-11-30)
+
+### Content Security Policy (CSP)
+Configured via Helmet.js in `server/index.ts`:
+```javascript
+contentSecurityPolicy: {
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Required for Phaser game engine
+    styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+    fontSrc: ["'self'", "https://fonts.gstatic.com"],
+    imgSrc: ["'self'", "data:", "blob:"],
+    connectSrc: ["'self'", "wss:", "ws:"],
+    mediaSrc: ["'self'", "data:", "blob:"],
+    workerSrc: ["'self'", "blob:"],
+  },
+}
+```
+**Note:** `'unsafe-inline'` and `'unsafe-eval'` are required for Phaser 3 game engine to function.
+
+### Input Sanitization (server/security.ts)
+- `sanitizeUsername()` - Strips HTML tags, allows only alphanumeric/underscore/dash, limits to 32 chars
+- `escapeHtml()` - Escapes HTML special characters (`<`, `>`, `&`, `"`, `'`, etc.)
+- `sanitizeDisplayText()` - General purpose text sanitization with length limits
+
+### Safe Rendering Practices
+- **Phaser UI**: Uses `setText()` which sets text content, not HTML (XSS-safe)
+- **DOM rendering**: Uses `textContent` instead of `innerHTML` for all user-visible text
+- **No `innerHTML` with user data**: Only `innerHTML = ''` for clearing containers
+
+### CSRF Protection
+- Session cookies use `sameSite: 'lax'` to prevent cross-site request forgery
+- All state-changing endpoints require authenticated session
+
+### User-Generated Content Locations
+- **Usernames**: Sanitized via `sanitizeUsername()` on account creation/login
+- **No chat/guild/profile features yet**: When added, must use sanitization functions
+
 ## Web3 Security Checklist (Pre-Mainnet)
 
 ### Smart Contract Development
