@@ -129,3 +129,51 @@ Multi-layer bot detection integrated into security middleware:
 - `actionRepetitionThreshold`: 50 per 5min
 - `sequenceLength`: 10 actions
 - `challengeTriggerSuspicionScore`: 5
+
+### Client-Side Security (2024-12-01)
+Comprehensive protection against client-side exploitation:
+
+**Build Pipeline Security:**
+- Production builds disable sourcemaps (`sourcemap: false`)
+- Terser minification with `drop_console` and `drop_debugger`
+- JavaScript obfuscation via `vite-plugin-obfuscator`:
+  - Control flow flattening
+  - Dead code injection
+  - Debug protection with interval checks
+  - String array encoding (base64)
+  - Self-defending code
+
+**Runtime Integrity Guard (`src/utils/IntegrityGuard.ts`):**
+- `Math.random()` monitoring: Periodic checks detect if Math.random is replaced (every 30s)
+- Global function monitoring: Detects tampering with Math.random and Date.now (every 60s)
+- Fetch interception: Blocks suspicious API payloads (`__bypass`, `__admin`, `__override`, `__cheat`)
+- Speed hack detection: Monitors elapsed time vs expected intervals (requires 3 consecutive fast intervals)
+- Violation reporting: All integrity violations logged to `/api/security/violation`
+- Non-blocking design: Monitors and reports without breaking Phaser or browser APIs
+
+**Server-Authoritative Architecture:**
+Client-side systems explicitly marked as non-authoritative:
+- `src/systems/ForgingSystem.ts`: `attemptForging()` throws error, redirects to server API
+- `src/systems/CombatSystem.ts`: For UI state only, actual combat runs server-side
+- `src/systems/EnemyFactory.ts`: For display only, enemies generated server-side
+- `src/utils/DiceRoller.ts`: For visual display, authoritative rolls use `SeededRNG`
+
+**What Client-Side Code Can Do:**
+- Render UI and sprites
+- Display server-provided combat state
+- Show attack buttons and enemy info
+- Visual predictions while waiting for server
+
+**What Client-Side Code CANNOT Do:**
+- Determine combat outcomes (server-only)
+- Generate loot drops (server-only via entitlements)
+- Execute forging attempts (server-only with transactions)
+- Award XP or currency (server-only)
+
+**Protected Against:**
+- DevTools function hooking (debug protection, self-defending)
+- `Math.random()` override attacks (frozen, monitored)
+- Speed hacks (timer interval monitoring)
+- Memory scanning (obfuscated strings, variable names)
+- Client modding (integrity checks report violations)
+- Local state tampering (all authoritative state server-side)

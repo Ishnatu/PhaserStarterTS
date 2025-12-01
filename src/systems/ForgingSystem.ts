@@ -58,111 +58,14 @@ export class ForgingSystem {
     return 0;
   }
 
-  static attemptForging(item: InventoryItem, playerAA: number, playerCA: number): ForgingResult {
-    const currentLevel = item.enhancementLevel || 0;
-    const targetLevel = currentLevel + 1;
-
-    if (targetLevel > 9) {
-      return {
-        success: false,
-        destroyed: false,
-        downgraded: false,
-        newLevel: currentLevel,
-        message: 'Item is already at maximum enhancement (+9)!'
-      };
-    }
-
-    const tier = this.forgingTiers.get(targetLevel);
-    if (!tier) {
-      return {
-        success: false,
-        destroyed: false,
-        downgraded: false,
-        newLevel: currentLevel,
-        message: 'Invalid forging tier!'
-      };
-    }
-
-    if (playerAA < tier.costAA || playerCA < tier.costCA) {
-      return {
-        success: false,
-        destroyed: false,
-        downgraded: false,
-        newLevel: currentLevel,
-        message: `Insufficient funds! Need ${tier.costAA} AA and ${tier.costCA} CA`
-      };
-    }
-
-    const successRoll = Math.random();
-    
-    if (successRoll < tier.successChance) {
-      // On success: increase enhancement level, maxDurability by 10, and restore to full
-      item.enhancementLevel = targetLevel;
-      item.maxDurability = (item.maxDurability || 100) + 10;
-      item.durability = item.maxDurability;
-      
-      // Roll for shiny
-      const shinyRoll = Math.random();
-      const shinyChance = this.getShinyChance(targetLevel);
-      const shinyCreated = shinyRoll < shinyChance;
-      
-      if (shinyCreated) {
-        item.isShiny = true;
-      }
-      
-      return {
-        success: true,
-        destroyed: false,
-        downgraded: false,
-        newLevel: targetLevel,
-        message: shinyCreated 
-          ? `★ SHINY! ★ Item enhanced to +${targetLevel} and glows with golden radiance!`
-          : `SUCCESS! Item enhanced to +${targetLevel}!`,
-        shinyCreated
-      };
-    }
-
-    const destructionRoll = Math.random();
-    if (destructionRoll < tier.destructionChance && !item.isShiny) {
-      return {
-        success: false,
-        destroyed: true,
-        downgraded: false,
-        newLevel: 0,
-        message: `DESTROYED! The item shattered during forging!`
-      };
-    }
-
-    if (tier.failureResult === 'downgrade') {
-      const newLevel = Math.max(0, currentLevel - 1);
-      // On downgrade: reduce enhancement level and maxDurability by 10 (if it went down a level)
-      if (newLevel < currentLevel) {
-        item.enhancementLevel = newLevel;
-        item.maxDurability = Math.max(100, (item.maxDurability || 100) - 10);
-        item.durability = Math.min(item.durability || 100, item.maxDurability);
-      }
-      
-      // Shiny items can downgrade but never be destroyed
-      const message = item.isShiny 
-        ? `FAILED! Shiny item downgraded to +${newLevel} (protected from destruction)`
-        : `FAILED! Item downgraded to +${newLevel}`;
-      
-      return {
-        success: false,
-        destroyed: false,
-        downgraded: true,
-        newLevel: newLevel,
-        message
-      };
-    }
-
-    return {
-      success: false,
-      destroyed: false,
-      downgraded: false,
-      newLevel: currentLevel,
-      message: `FAILED! No change to item.`
-    };
+  /**
+   * @deprecated DO NOT USE - Forging is server-authoritative only.
+   * Use the /api/forge/attempt endpoint instead.
+   * This method exists only for backward compatibility and will throw an error.
+   */
+  static attemptForging(_item: InventoryItem, _playerAA: number, _playerCA: number): ForgingResult {
+    console.error('[SECURITY] Client-side attemptForging called - this is not allowed. Use server API.');
+    throw new Error('Forging must be done via server API. Client-side forging is disabled for security.');
   }
 
   static calculateEnhancedDamage(baseWeapon: WeaponData, enhancementLevel: number): { numDice: number; dieSize: number; modifier: number } {

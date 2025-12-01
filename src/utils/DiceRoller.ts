@@ -1,5 +1,18 @@
 import { DiceRoll } from '../types/GameTypes';
 
+/**
+ * CLIENT-SIDE DICE ROLLER
+ * 
+ * SECURITY NOTE: This class is for VISUAL DISPLAY ONLY.
+ * All authoritative dice rolls happen on the server via SeededRNG.
+ * These client-side rolls are used for:
+ * - UI predictions while waiting for server response
+ * - Visual dice animations
+ * - Non-authoritative display purposes
+ * 
+ * Combat outcomes are ALWAYS determined by server-side rolls.
+ * Do NOT trust these values for game logic.
+ */
 export class DiceRoller {
   static rollDice(numDice: number, dieSize: number): number[] {
     const rolls: number[] = [];

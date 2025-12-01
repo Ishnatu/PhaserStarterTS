@@ -12,6 +12,9 @@ import { GameStateManager } from './systems/GameStateManager';
 import { ItemDatabase } from './config/ItemDatabase';
 import { HeartbeatManager } from './utils/HeartbeatManager';
 import { EnemyFactory } from './systems/EnemyFactory';
+import { initializeIntegrityGuard } from './utils/IntegrityGuard';
+
+initializeIntegrityGuard();
 
 // Global user cache
 declare global {

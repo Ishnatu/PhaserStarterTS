@@ -1,5 +1,24 @@
 import { Enemy, DiceRoll, WeaponType } from '../types/GameTypes';
 
+/**
+ * CLIENT-SIDE ENEMY FACTORY
+ * 
+ * SECURITY NOTE: This class is for UI DISPLAY and VISUAL REFERENCE ONLY.
+ * All authoritative enemy generation happens on the server via server/systems/EnemyFactory.
+ * 
+ * This client factory is used for:
+ * - Displaying enemy stats and information in the UI
+ * - Creating placeholder enemies for visual rendering
+ * - Loading enemy sprite configurations
+ * 
+ * The server generates enemies with server-side SeededRNG for:
+ * - Combat encounters
+ * - Loot drops
+ * - Enemy statistics
+ * 
+ * DO NOT trust client-side enemy data for authoritative game logic.
+ * All combat results and loot are validated and generated server-side.
+ */
 export class EnemyFactory {
   private static randomWeaponType(): WeaponType {
     const weaponTypes: WeaponType[] = ['dagger', 'shortsword', 'longsword', 'battleaxe', 'mace', 'warhammer', 'greatsword', 'greataxe', 'spear', 'rapier'];

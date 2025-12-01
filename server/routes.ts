@@ -816,6 +816,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(result);
   });
 
+  // Client-side integrity violation reporting endpoint
+  app.post("/api/security/violation", isAuthenticated, (req: any, res) => {
+    const playerId = req.user.claims.sub;
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    const { type, details, timestamp, violations } = req.body;
+    
+    if (!type || typeof type !== 'string') {
+      return res.status(400).json({ message: "Invalid violation type" });
+    }
+    
+    monitorLogEvent('CLIENT_INTEGRITY_VIOLATION', 'HIGH', {
+      violationType: type,
+      details: details || 'No details provided',
+      clientTimestamp: timestamp,
+      totalViolations: violations,
+    }, playerId, ip, userAgent, req.securityRequestId);
+    
+    res.json({ received: true });
+  });
+
   // Privacy Policy endpoint
   app.get("/api/privacy-policy", (req, res) => {
     res.json({

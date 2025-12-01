@@ -8,6 +8,27 @@ import { ConditionManager } from './ConditionManager';
 import { WeaponAttackDatabase } from '../config/WeaponAttackDatabase';
 import { ItemDatabase } from '../config/ItemDatabase';
 
+/**
+ * CLIENT-SIDE COMBAT SYSTEM
+ * 
+ * SECURITY NOTE: This class is for UI STATE MANAGEMENT and VISUAL FEEDBACK ONLY.
+ * All authoritative combat logic runs on the server via ServerCombatController API calls.
+ * 
+ * This client system is used for:
+ * - Rendering combat UI (health bars, enemy positions, attack buttons)
+ * - Visual predictions while waiting for server response
+ * - Combat log display synchronization
+ * - Client-side state caching for smoother UX
+ * 
+ * The ServerCombatController receives authoritative state from the server and
+ * updates this local state accordingly. DO NOT trust local calculations for:
+ * - Damage outcomes
+ * - Hit/miss determination
+ * - Loot generation
+ * - XP/currency rewards
+ * 
+ * All of those are computed server-side using SeededRNG and validated sessions.
+ */
 export class CombatSystem {
   private combatState: CombatState | null = null;
 
