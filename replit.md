@@ -177,3 +177,41 @@ Client-side systems explicitly marked as non-authoritative:
 - Memory scanning (obfuscated strings, variable names)
 - Client modding (integrity checks report violations)
 - Local state tampering (all authoritative state server-side)
+
+### API Endpoint Security (2024-12-01)
+Comprehensive security audit completed for 50+ API routes:
+
+**Authentication Coverage:**
+- All game routes use `isAuthenticated` middleware (verified across 9 route files)
+- Admin routes require `validateAdminAccess` with 32+ char ADMIN_KEY
+- Public routes limited to: `/api/login`, `/api/callback`, `/api/logout`, `/api/health`, static content
+
+**Request Validation:**
+- Centralized Zod schemas in `server/validation/schemas.ts`
+- Type-safe middleware in `server/validation/middleware.ts`
+- Validation failures logged to security monitor with LOW severity
+
+**Rate Limiting (per-endpoint):**
+- General API: 30/minute
+- Combat actions: 20/minute
+- Loot claims: 5/minute
+- Delve operations: 3/minute
+- Save operations: 15/minute
+- Auth attempts: 10/15 minutes
+- Admin endpoints: 10/minute
+
+**Session-Based Validation:**
+- Combat: `wildernessEncounterSessions` Map with loot count tracking
+- Treasure/Shrine: `activeTreasureSessions` Map with `claimed` flag
+- Delves: `activeDelves` Map with tier/roomCount/completed tracking
+- Encounters: `pendingEncounterManager` validates and consumes tokens
+
+**Health Monitoring:**
+- `GET /api/health` - Unauthenticated, returns server status, uptime, memory, active players
+
+### Database Security (2024-12-01)
+- **TLS Enforcement**: Neon PostgreSQL enforces TLS by default
+- **Connection Pooling**: Via `@neondatabase/serverless` Pool
+- **Parameterized Queries**: Drizzle ORM prevents SQL injection
+- **Row-Level Locking**: Critical operations use `FOR UPDATE`
+- **Atomic Currency Ops**: `WHERE balance >= amount` prevents negatives
