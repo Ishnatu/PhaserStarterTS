@@ -42,7 +42,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Anti-Bot & Anti-Cheat System**: Multi-layer bot detection including 24h activity pattern detection, action pattern analysis, and light interaction challenges.
 - **Client-Side Security**: Build pipeline security (disabling sourcemaps, minification, obfuscation) and a runtime integrity guard.
 - **API Endpoint Security**: All game routes use `isAuthenticated` middleware, admin routes require `validateAdminAccess`, and all requests are validated using Zod schemas. Rate limiting is applied per-endpoint.
-- **Database Security**: TLS enforcement, connection pooling, parameterized queries via Drizzle ORM, row-level locking, and atomic currency operations.
+- **Database Security**: TLS enforcement, connection pooling, parameterized queries via Drizzle ORM, row-level locking, atomic currency operations, versioned migrations, and slow query monitoring.
 - **Server-Side Game Logic Security**: Validates all server actions, employs idempotency and session tokens, race condition protection, and secure RNG.
 - **Network Security**: HTTPS/TLS, multi-layer rate limiting, request fingerprinting, spike detection, CSRF protection, CORS configuration, Helmet.js, Zod input validation, UUIDs for entities, replay attack protection, and WAF/DDoS protection via Replit infrastructure.
 
@@ -56,3 +56,27 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **ORM**: Drizzle ORM
 - **Authentication**: openid-client (Replit Auth)
 - **Session Store**: connect-pg-simple
+
+## Database Operations
+
+### Migration Workflow
+The project uses Drizzle ORM with versioned migrations for production safety:
+
+1. **Generate migration**: `npm run db:generate` - Creates timestamped SQL migration files in `/drizzle`
+2. **Apply migration**: `npm run db:migrate` - Runs pending migrations against the database
+3. **View schema**: `npm run db:studio` - Opens Drizzle Studio for database inspection
+4. **Push (dev only)**: `npm run db:push` - Direct schema push for rapid development
+
+Migration files are stored in `/drizzle` directory with timestamps for rollback traceability.
+
+### Query Monitoring
+Slow query monitoring is enabled with configurable thresholds:
+- `SLOW_QUERY_THRESHOLD_MS`: Warning threshold (default: 1000ms)
+- `CRITICAL_QUERY_THRESHOLD_MS`: Critical alert threshold (default: 5000ms)
+
+Admin endpoints for monitoring:
+- `GET /api/admin/database/query-stats` - Real-time query performance stats
+- `GET /api/admin/database/slow-queries` - Historical slow query log
+- `POST /api/admin/database/reset-query-stats` - Reset in-memory stats
+
+Slow queries are automatically logged to `security_audit_log` table with severity levels.

@@ -10,6 +10,7 @@ import {
 } from "../../shared/schema";
 import { eq, desc, sql, gte, and, count, sum } from "drizzle-orm";
 import { getIPTrackingStats, getSecurityStats } from "../securityMonitor";
+import { getQueryStats, resetQueryStats, getSlowQueryThreshold, getCriticalQueryThreshold } from "../db/queryMonitor";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
@@ -473,6 +474,107 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error resetting player limits:", error);
       res.status(500).json({ message: "Failed to reset limits" });
+    }
+  });
+
+  /**
+   * GET /api/admin/database/query-stats
+   * Get database query performance statistics
+   */
+  app.get("/api/admin/database/query-stats", async (req, res) => {
+    if (!validateAdminAccess(req, res)) return;
+    
+    try {
+      const stats = getQueryStats();
+      
+      res.json({
+        success: true,
+        thresholds: {
+          slowQueryMs: getSlowQueryThreshold(),
+          criticalQueryMs: getCriticalQueryThreshold(),
+        },
+        stats: {
+          totalQueries: stats.totalQueries,
+          slowQueries: stats.slowQueries,
+          failedQueries: stats.failedQueries,
+          averageDuration: stats.averageDuration,
+          p95Duration: stats.p95Duration,
+          p99Duration: stats.p99Duration,
+        },
+        queriesByType: stats.queriesByType,
+        slowestQueries: stats.slowestQueries.map(q => ({
+          queryType: q.queryType,
+          tableName: q.tableName,
+          duration: q.duration,
+          rowCount: q.rowCount,
+          success: q.success,
+          error: q.error,
+          timestamp: new Date(q.startTime).toISOString(),
+        })),
+      });
+    } catch (error) {
+      console.error("Error getting query stats:", error);
+      res.status(500).json({ message: "Failed to get query stats" });
+    }
+  });
+
+  /**
+   * POST /api/admin/database/reset-query-stats
+   * Reset query statistics (for testing/maintenance)
+   */
+  app.post("/api/admin/database/reset-query-stats", async (req, res) => {
+    if (!validateAdminAccess(req, res)) return;
+    
+    try {
+      resetQueryStats();
+      
+      res.json({
+        success: true,
+        message: "Query statistics reset successfully",
+      });
+    } catch (error) {
+      console.error("Error resetting query stats:", error);
+      res.status(500).json({ message: "Failed to reset query stats" });
+    }
+  });
+
+  /**
+   * GET /api/admin/database/slow-queries
+   * Get slow query log from database
+   */
+  app.get("/api/admin/database/slow-queries", async (req, res) => {
+    if (!validateAdminAccess(req, res)) return;
+    
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const hours = Math.min(parseInt(req.query.hours as string) || 24, 168);
+      
+      const slowQueryLogs = await db
+        .select()
+        .from(securityAuditLog)
+        .where(
+          and(
+            eq(securityAuditLog.eventType, 'SLOW_QUERY'),
+            gte(securityAuditLog.createdAt, new Date(Date.now() - hours * 60 * 60 * 1000))
+          )
+        )
+        .orderBy(desc(securityAuditLog.createdAt))
+        .limit(limit);
+      
+      res.json({
+        success: true,
+        count: slowQueryLogs.length,
+        timeRange: `${hours} hours`,
+        queries: slowQueryLogs.map(log => ({
+          id: log.id,
+          severity: log.severity,
+          metadata: log.metadata,
+          createdAt: log.createdAt,
+        })),
+      });
+    } catch (error) {
+      console.error("Error getting slow query logs:", error);
+      res.status(500).json({ message: "Failed to get slow query logs" });
     }
   });
 
