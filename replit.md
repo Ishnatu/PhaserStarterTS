@@ -36,6 +36,7 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Random Encounters**: Varied types (Combat, Treasure, Shrine, Corrupted Void Portal, Trapped Chest, Tombstone, Wandering Merchant), with a chance for Aetherbear boss.
 - **Forging & Enhancement System**: Server-authoritative +1 to +9 enhancements with success rates, exponential CA costs, failure penalties, and a "Shiny System."
 - **Web3 Withdrawal Security (Ronin Blockchain)**: Production-ready EIP-712 signature service for converting in-game currency to on-chain ERC-20 tokens.
+- **Wallet Binding System**: Persistent wallet-to-account linkage with 7-day unbind cooldown, user attestation requirement, and withdrawal verification. Prevents wallet rotation abuse and laundering.
 - **Security Architecture**: Implements server-authoritative design, authentication & session security, rate limiting, session-based encounter validation, a security monitoring system, input validation, anti-cheat measures, and security headers. Includes robust XSS, CSRF, and injection protection via CSP, input sanitization, safe rendering, and `sameSite: 'lax'` cookies.
 - **Secret Management**: All sensitive values stored in Replit Secrets, validated at startup. Admin endpoints protected by `x-admin-key`.
 - **Anti-Bot & Anti-Cheat System**: Multi-layer bot detection including 24h activity pattern detection, action pattern analysis, and light interaction challenges for suspicious players.
@@ -108,12 +109,13 @@ Comprehensive assessment of authentication mechanisms and account protection:
 - **RECOMMENDATION**: Add temporary lockout after N failed attempts
 
 **7. Account Linking (Wallet <-> Username):**
-- **SECURITY CONCERN** - Wallet addresses associated with withdrawal requests only
-- No persistent wallet-to-account binding
-- Each withdrawal stores: `playerId`, `walletAddress`, `nonce`
-- Players can use different wallets for different withdrawals
-- Lack of persistent binding allows wallet rotation and potential laundering
-- **RECOMMENDED**: Implement persistent wallet binding with user attestation (acknowledged link + re-auth) and monitoring to prevent rotation abuse
+- **IMPLEMENTED** - Persistent wallet binding with 7-day unbind cooldown
+- One wallet per account enforced via unique constraint
+- Binding requires user attestation (`attestationConfirmed: true`)
+- Wallet verification required before any withdrawal
+- Unbind requests trigger 7-day cooldown before rebinding allowed
+- Wallet changes logged as security events for monitoring
+- Duplicate wallet binding attempts blocked and logged
 
 **8. Password Recovery:**
 - **N/A** - Uses Replit Auth (OAuth-based)

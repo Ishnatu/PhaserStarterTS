@@ -159,18 +159,16 @@ export class WalletBindingService {
         }
       }
 
-      const [existingWalletBinding] = await tx
+      const existingWalletBindings = await tx
         .select()
         .from(playerWalletBindings)
-        .where(
-          and(
-            eq(playerWalletBindings.walletAddress, checksummedAddress),
-            eq(playerWalletBindings.status, 'active')
-          )
-        )
-        .limit(1);
+        .where(eq(playerWalletBindings.walletAddress, checksummedAddress));
 
-      if (existingWalletBinding) {
+      const conflictingBinding = existingWalletBindings.find(
+        b => b.playerId !== request.playerId && (b.status === 'active' || b.status === 'pending_unbind')
+      );
+
+      if (conflictingBinding) {
         await AuditLogger.log({
           eventType: 'wallet_binding_duplicate_attempt',
           playerId: request.playerId,
@@ -180,12 +178,18 @@ export class WalletBindingService {
           severity: 'warning',
           metadata: {
             walletAddress: checksummedAddress,
-            existingOwner: existingWalletBinding.playerId,
+            existingOwner: conflictingBinding.playerId,
+            existingStatus: conflictingBinding.status,
+            blockedReason: conflictingBinding.status === 'pending_unbind' 
+              ? 'Wallet is pending unbind from another account - must wait for cooldown' 
+              : 'Wallet is actively bound to another account',
           },
         });
         return { 
           success: false, 
-          error: 'This wallet is already bound to another account' 
+          error: conflictingBinding.status === 'pending_unbind'
+            ? 'This wallet is pending unbind from another account. Wait for the cooldown to complete.'
+            : 'This wallet is already bound to another account'
         };
       }
 
