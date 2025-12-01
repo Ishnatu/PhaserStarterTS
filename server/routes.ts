@@ -13,6 +13,7 @@ import { registerZoneRoutes } from "./routes/zones";
 import { registerEncounterRoutes } from "./routes/encounters";
 import { registerExplorationRoutes } from "./routes/exploration";
 import { registerWalletRoutes } from "./routes/wallet";
+import { registerAdminRoutes } from "./routes/admin";
 import { 
   validateSavePayload, 
   recalculatePlayerStats, 
@@ -240,6 +241,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register wallet binding routes (persistent wallet-to-account linkage)
   registerWalletRoutes(app);
+
+  // Register admin dashboard routes (economy analytics, security monitoring)
+  registerAdminRoutes(app);
 
   // Register delve generation routes (server-authoritative delve system)
   registerDelveRoutes(app);

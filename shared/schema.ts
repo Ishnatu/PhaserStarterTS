@@ -239,3 +239,24 @@ export type ForgeAttempt = typeof forgeAttempts.$inferSelect;
 export type InsertForgeAttempt = typeof forgeAttempts.$inferInsert;
 export type MarketplaceTrade = typeof marketplaceTrades.$inferSelect;
 export type InsertMarketplaceTrade = typeof marketplaceTrades.$inferInsert;
+
+// Daily limits - PERSISTENT tracking to prevent exploit via server restart
+export const playerDailyLimits = pgTable("player_daily_limits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull(),
+  date: varchar("date").notNull(), // YYYY-MM-DD format for easy comparison
+  trapAttempts: integer("trap_attempts").default(0).notNull(),
+  treasureClaims: integer("treasure_claims").default(0).notNull(),
+  shrineOffers: integer("shrine_offers").default(0).notNull(),
+  aaEarned: integer("aa_earned").default(0).notNull(),
+  caEarned: integer("ca_earned").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  unique("daily_limits_player_date_unique").on(table.playerId, table.date),
+  index("IDX_daily_limits_player").on(table.playerId),
+  index("IDX_daily_limits_date").on(table.date),
+]);
+
+export type PlayerDailyLimit = typeof playerDailyLimits.$inferSelect;
+export type InsertPlayerDailyLimit = typeof playerDailyLimits.$inferInsert;
