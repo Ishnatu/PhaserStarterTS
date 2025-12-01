@@ -145,6 +145,28 @@ export const SecurityViolationSchema = z.object({
   violations: z.number().int().optional(),
 });
 
+export const WalletAddressSchema = z.string()
+  .min(1)
+  .max(100)
+  .refine(
+    (addr) => {
+      const normalized = addr.toLowerCase().startsWith('ronin:') 
+        ? '0x' + addr.slice(6) 
+        : addr;
+      return /^0x[a-fA-F0-9]{40}$/.test(normalized);
+    },
+    { message: 'Invalid wallet address format. Use 0x... or ronin:... format.' }
+  );
+
+export const WalletBindSchema = z.object({
+  walletAddress: WalletAddressSchema,
+  attestationConfirmed: z.literal(true, 'You must acknowledge the wallet binding terms'),
+});
+
+export const WalletUnbindSchema = z.object({
+  confirmUnbind: z.literal(true, 'You must confirm the unbinding request'),
+});
+
 export type ForgeAttempt = z.infer<typeof ForgeAttemptSchema>;
 export type RepairAttempt = z.infer<typeof RepairAttemptSchema>;
 export type ShopPurchase = z.infer<typeof ShopPurchaseSchema>;
