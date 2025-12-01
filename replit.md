@@ -186,10 +186,11 @@ Comprehensive security audit completed for 50+ API routes:
 - Admin routes require `validateAdminAccess` with 32+ char ADMIN_KEY
 - Public routes limited to: `/api/login`, `/api/callback`, `/api/logout`, `/api/health`, static content
 
-**Request Validation:**
-- Centralized Zod schemas in `server/validation/schemas.ts`
+**Request Validation (Zod):**
+- Centralized schemas in `server/validation/schemas.ts`
 - Type-safe middleware in `server/validation/middleware.ts`
-- Validation failures logged to security monitor with LOW severity
+- Validation failures logged to security monitor with MEDIUM severity
+- **Validated routes:** `/api/forge/attempt`, `/api/shop/purchase`, `/api/loot/roll`, `/api/delve/*`, `/api/encounter/*`, `/api/repair/attempt`
 
 **Rate Limiting (per-endpoint):**
 - General API: 30/minute

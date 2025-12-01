@@ -5,6 +5,8 @@ import { recalculatePlayerStats, logSecurityEvent } from "../security";
 import { db } from "../db";
 import { gameSaves, playerCurrencies } from "../../shared/schema";
 import { eq, and, sql } from "drizzle-orm";
+import { validateBody } from "../validation/middleware";
+import { ForgeAttemptSchema } from "../validation/schemas";
 
 export interface ForgingResult {
   success: boolean;
@@ -26,7 +28,7 @@ export interface ForgingResult {
 const activeForgeOperations = new Set<string>();
 
 export function registerForgeRoutes(app: Express) {
-  app.post("/api/forge/attempt", isAuthenticated, async (req: any, res) => {
+  app.post("/api/forge/attempt", isAuthenticated, validateBody(ForgeAttemptSchema), async (req: any, res) => {
     const userId = req.user.claims.sub;
     
     // [SECURITY] Prevent concurrent forge operations per user
@@ -42,11 +44,6 @@ export function registerForgeRoutes(app: Express) {
     
     try {
       const { itemLocation, itemIndex, slotName } = req.body;
-
-      if (!itemLocation || (itemLocation !== 'equipment' && typeof itemIndex !== 'number')) {
-        activeForgeOperations.delete(userId);
-        return res.status(400).json({ message: "Invalid forge request: need itemLocation and itemIndex (or slotName for equipment)" });
-      }
 
       // [SECURITY] Use database transaction with row-level locking
       // This prevents TOCTOU race conditions on save and currency

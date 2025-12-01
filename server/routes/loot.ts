@@ -9,6 +9,8 @@ import { trackCurrencyGain } from "../securityMonitor";
 import { getActiveDelveSession } from "./delve";
 import { consumeWildernessEncounterLoot } from "./combat";
 import type { InventoryItem } from "../../shared/types";
+import { validateBody } from "../validation/middleware";
+import { LootRollSchema } from "../validation/schemas";
 
 /**
  * Per-player loot claim tracking for rate anomaly detection
@@ -40,7 +42,7 @@ export function registerLootRoutes(app: Express) {
    * SERVER-AUTHORITATIVE: All loot rolls happen server-side with seeded RNG
    * CRITICAL: Currency and XP rewards are persisted to database immediately
    */
-  app.post("/api/loot/roll", isAuthenticated, async (req: any, res) => {
+  app.post("/api/loot/roll", isAuthenticated, validateBody(LootRollSchema), async (req: any, res) => {
     console.log('[Loot API] Received request:', JSON.stringify(req.body));
     try {
       const userId = req.user.claims.sub;

@@ -6,6 +6,8 @@ import { SeededRNG } from "../utils/SeededRNG";
 import { storage } from "../storage";
 import { calculateMaxHealth, calculateMaxStamina, logSecurityEvent } from "../security";
 import type { DelveRoom } from "../../shared/types";
+import { validateBody } from "../validation/middleware";
+import { DelveGenerateSchema, DelveCompleteSchema, DelveTrapSchema, DelveTreasureSchema } from "../validation/schemas";
 
 // Delve completion XP rewards per tier (matches client-side xpSystem.ts)
 const DELVE_COMPLETION_XP: Record<number, number> = {
@@ -110,19 +112,10 @@ export function registerDelveRoutes(app: Express) {
    * Creates a procedural delve server-side with room types, traps, and encounters
    * SERVER-AUTHORITATIVE: Delve generation happens on server with seeded RNG
    */
-  app.post("/api/delve/generate", isAuthenticated, async (req: any, res) => {
+  app.post("/api/delve/generate", isAuthenticated, validateBody(DelveGenerateSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { tier } = req.body;
-
-      // Validate input
-      if (typeof tier !== 'number') {
-        return res.status(400).json({ message: "Invalid delve generation data: tier required" });
-      }
-
-      if (tier < 1 || tier > 5) {
-        return res.status(400).json({ message: "Tier must be between 1 and 5" });
-      }
 
       // [SERVER RNG] Create deterministic seed for delve generation
       // Combines userId hash + timestamp + tier for unique delves
@@ -172,20 +165,10 @@ export function registerDelveRoutes(app: Express) {
    * 
    * SERVER-AUTHORITATIVE: XP and delve count are persisted to database immediately
    */
-  app.post("/api/delve/complete", isAuthenticated, async (req: any, res) => {
+  app.post("/api/delve/complete", isAuthenticated, validateBody(DelveCompleteSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { sessionId } = req.body;
-
-      // [SECURITY] Require sessionId to complete delve
-      if (!sessionId) {
-        logSecurityEvent(userId, 'DELVE_NO_SESSION', 'HIGH', {
-          message: 'Delve completion attempted without sessionId - possible exploit attempt',
-          ip: req.ip,
-          body: req.body,
-        });
-        return res.status(400).json({ message: "Session ID required to complete delve" });
-      }
 
       // [SECURITY] Consume delve session - verifies delve was generated server-side
       const validatedTier = consumeDelveSession(userId, sessionId);
@@ -244,15 +227,10 @@ export function registerDelveRoutes(app: Express) {
    * Grants XP reward for successfully disarming a trap
    * SERVER-AUTHORITATIVE: XP is persisted to database immediately
    */
-  app.post("/api/delve/trap", isAuthenticated, async (req: any, res) => {
+  app.post("/api/delve/trap", isAuthenticated, validateBody(DelveTrapSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { tier } = req.body;
-
-      // Validate input
-      if (typeof tier !== 'number' || tier < 1 || tier > 5) {
-        return res.status(400).json({ message: "Invalid tier: must be between 1 and 5" });
-      }
 
       // Get XP reward for this tier
       const xpReward = TRAP_DISARM_XP[tier];
@@ -291,18 +269,10 @@ export function registerDelveRoutes(app: Express) {
    * SERVER-AUTHORITATIVE: Currency is persisted atomically to database
    * Reward: 50 AA per tier + 1 CA per tier
    */
-  app.post("/api/delve/treasure", isAuthenticated, async (req: any, res) => {
+  app.post("/api/delve/treasure", isAuthenticated, validateBody(DelveTreasureSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { tier, sessionId, roomId } = req.body;
-
-      // Validate input
-      if (typeof tier !== 'number' || tier < 1 || tier > 5) {
-        logSecurityEvent(userId, 'DELVE_INVALID_TIER', 'MEDIUM', {
-          tier, sessionId, roomId,
-        });
-        return res.status(400).json({ message: "Invalid tier: must be between 1 and 5" });
-      }
 
       // Validate session if provided (optional - for enhanced security)
       if (sessionId) {

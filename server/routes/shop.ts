@@ -2,6 +2,8 @@ import { Express } from "express";
 import { isAuthenticated } from "../replitAuth";
 import { storage } from "../storage";
 import { recalculatePlayerStats } from "../security";
+import { validateBody } from "../validation/middleware";
+import { ShopPurchaseSchema } from "../validation/schemas";
 
 interface ShopItem {
   itemId: string;
@@ -39,14 +41,10 @@ const SHOP_INVENTORY: ShopItem[] = [
 ];
 
 export function registerShopRoutes(app: Express) {
-  app.post("/api/shop/purchase", isAuthenticated, async (req: any, res) => {
+  app.post("/api/shop/purchase", isAuthenticated, validateBody(ShopPurchaseSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { itemId, price, currency } = req.body;
-
-      if (!itemId || typeof price !== 'number' || !['AA', 'CA'].includes(currency)) {
-        return res.status(400).json({ message: "Invalid purchase request" });
-      }
 
       const shopItem = SHOP_INVENTORY.find(item => item.itemId === itemId);
       if (!shopItem) {

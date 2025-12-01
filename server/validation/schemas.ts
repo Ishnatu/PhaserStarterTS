@@ -74,6 +74,10 @@ export const DelveCompleteSchema = z.object({
   sessionId: z.string().min(1).max(200),
 });
 
+export const DelveTrapSchema = z.object({
+  tier: TierSchema,
+});
+
 export const DelveTreasureSchema = z.object({
   tier: TierSchema,
   sessionId: z.string().max(200).optional(),

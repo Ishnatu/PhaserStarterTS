@@ -2,6 +2,8 @@ import { Express } from "express";
 import { isAuthenticated } from "../replitAuth";
 import { storage } from "../storage";
 import { recalculatePlayerStats } from "../security";
+import { validateBody } from "../validation/middleware";
+import { RepairAttemptSchema } from "../validation/schemas";
 
 interface RepairCost {
   aa: number;
@@ -32,18 +34,10 @@ function calculateRepairCost(item: any): RepairCost {
 }
 
 export function registerRepairRoutes(app: Express) {
-  app.post("/api/repair/attempt", isAuthenticated, async (req: any, res) => {
+  app.post("/api/repair/attempt", isAuthenticated, validateBody(RepairAttemptSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { itemLocation, itemIndex, slotName, currency } = req.body;
-
-      if (!itemLocation || !['AA', 'CA'].includes(currency)) {
-        return res.status(400).json({ message: "Invalid repair request" });
-      }
-
-      if (itemLocation !== 'equipment' && typeof itemIndex !== 'number') {
-        return res.status(400).json({ message: "Invalid item index" });
-      }
 
       const gameSave = await storage.getGameSaveByUserId(userId);
       if (!gameSave) {

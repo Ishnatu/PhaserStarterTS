@@ -4,6 +4,8 @@ import { storage } from "../storage";
 import { logSecurityEvent } from "../security";
 import { SeededRNG } from "../utils/SeededRNG";
 import { pendingEncounterManager } from "../encounters/PendingEncounterManager";
+import { validateBody } from "../validation/middleware";
+import { TrapAttemptSchema, TreasureClaimSchema, ShrineOfferSchema, EncounterTokenSchema } from "../validation/schemas";
 
 /**
  * ECONOMIC SECURITY: Daily earning caps and tracking
@@ -158,18 +160,10 @@ export function registerEncounterRoutes(app: Express) {
    * ECONOMIC SECURITY: Now has daily caps and reduced rewards
    * Risk-reward balance: 40% fail (take damage), 60% succeed (reduced rewards)
    */
-  app.post("/api/encounter/trap/attempt", isAuthenticated, async (req: any, res) => {
+  app.post("/api/encounter/trap/attempt", isAuthenticated, validateBody(TrapAttemptSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { encounterToken } = req.body;
-
-      if (!encounterToken) {
-        logSecurityEvent(userId, 'TRAP_NO_TOKEN', 'CRITICAL', {
-          message: 'Trap attempt without encounterToken - EXPLOIT ATTEMPT',
-          ip: req.ip,
-        });
-        return res.status(403).json({ message: "Encounter token required - encounter not registered" });
-      }
       
       // Check daily cap BEFORE consuming token
       const capCheck = checkDailyCap(userId, 'trap');
@@ -267,18 +261,10 @@ export function registerEncounterRoutes(app: Express) {
    * Instead, it provides XP and exploration progress only
    * Currency rewards require defeating guardians (combat encounters)
    */
-  app.post("/api/encounter/treasure/claim", isAuthenticated, async (req: any, res) => {
+  app.post("/api/encounter/treasure/claim", isAuthenticated, validateBody(TreasureClaimSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { encounterToken, combatVictory = false, combatSessionId } = req.body;
-
-      if (!encounterToken) {
-        logSecurityEvent(userId, 'TREASURE_NO_TOKEN', 'CRITICAL', {
-          message: 'Treasure claim without encounterToken - EXPLOIT ATTEMPT',
-          ip: req.ip,
-        });
-        return res.status(403).json({ message: "Encounter token required" });
-      }
       
       // Check daily cap
       const capCheck = checkDailyCap(userId, 'treasure');
@@ -383,18 +369,10 @@ export function registerEncounterRoutes(app: Express) {
    * ECONOMIC SECURITY: Added daily caps for shrine offers
    * Shrine already has risk-reward (costs 50 AA, 70% chance of nothing)
    */
-  app.post("/api/encounter/shrine/offer", isAuthenticated, async (req: any, res) => {
+  app.post("/api/encounter/shrine/offer", isAuthenticated, validateBody(ShrineOfferSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { encounterToken, offerAmount } = req.body;
-
-      if (!encounterToken) {
-        logSecurityEvent(userId, 'SHRINE_NO_TOKEN', 'CRITICAL', {
-          message: 'Shrine offer without encounterToken - EXPLOIT ATTEMPT',
-          ip: req.ip,
-        });
-        return res.status(403).json({ message: "Encounter token required" });
-      }
       
       // Check daily cap
       const capCheck = checkDailyCap(userId, 'shrine');
@@ -487,14 +465,10 @@ export function registerEncounterRoutes(app: Express) {
     }
   });
 
-  app.post("/api/encounter/skip", isAuthenticated, async (req: any, res) => {
+  app.post("/api/encounter/skip", isAuthenticated, validateBody(EncounterTokenSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { encounterToken } = req.body;
-
-      if (!encounterToken) {
-        return res.status(400).json({ message: "Encounter token required" });
-      }
       
       const encounter = pendingEncounterManager.validateAndConsumeEncounter(
         encounterToken,
