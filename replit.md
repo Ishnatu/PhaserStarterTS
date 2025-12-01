@@ -55,3 +55,132 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **ORM**: Drizzle ORM
 - **Authentication**: openid-client (Replit Auth)
 - **Session Store**: connect-pg-simple
+
+## Security Audit Details
+
+### Authentication & Account Security (2024-12-01)
+
+Comprehensive assessment of authentication mechanisms and account protection:
+
+**1. Session/Token Strength:**
+- Uses Replit Auth (OpenID Connect) via `openid-client` library
+- No raw JWT implementation - tokens managed by OIDC provider
+- Session secret validated at startup: minimum 32 characters required
+- Sessions stored in PostgreSQL with 1-week TTL (`connect-pg-simple`)
+- Custom session name (`gfc.sid`) to reduce fingerprinting
+
+**2. Token Expiration & Refresh:**
+- OIDC access tokens have provider-managed expiration
+- `isAuthenticated` middleware checks `expires_at` on every request
+- Automatic token refresh via `client.refreshTokenGrant()` when expired
+- Refresh tokens stored in session, never exposed to client
+- Session cookie `maxAge`: 7 days (aligned with session TTL)
+
+**3. Session Invalidation:**
+| Mechanism | Implementation |
+|-----------|----------------|
+| Logout | `req.session.destroy()` + OIDC `buildEndSessionUrl()` |
+| Active sessions | Heartbeat-based cleanup every 5 seconds |
+| Nonces | Auto-expiry after 5 minutes |
+| Combat sessions | Cleaned up periodically |
+| Delve sessions | 30-minute expiry + completion flag |
+| Encounter tokens | 30-minute expiry |
+
+**4. Device Fingerprinting:**
+- IP address tracked per player session
+- User-Agent tracked and changes logged as `USER_AGENT_CHANGE` events
+- `IP_CHANGE` logged as MEDIUM severity security event
+- Request fingerprinting validates: UA length, bot patterns, browser headers
+- Multi-instance detection via unique tab `instanceId` + heartbeat
+
+**5. MFA for Admin Accounts:**
+- **CRITICAL GAP** - Admin access via single 32+ char `ADMIN_KEY` only
+- Key validated via `x-admin-key` header
+- Unauthorized attempts logged as HIGH severity events
+- Single-factor protection leaves privileged endpoints vulnerable
+- **REQUIRED BEFORE PRODUCTION**: Add TOTP-based MFA or hardware key challenge for admin routes
+
+**6. Login Throttling & Lockout:**
+- Rate limiting: 10 login attempts per 15 minutes per IP
+- No explicit account lockout after failed attempts
+- Sybil detection: >3 accounts/IP/day or >5 logins/IP/hour flagged
+- Account creation blocking after 6+ accounts from same IP
+- **RECOMMENDATION**: Add temporary lockout after N failed attempts
+
+**7. Account Linking (Wallet <-> Username):**
+- **SECURITY CONCERN** - Wallet addresses associated with withdrawal requests only
+- No persistent wallet-to-account binding
+- Each withdrawal stores: `playerId`, `walletAddress`, `nonce`
+- Players can use different wallets for different withdrawals
+- Lack of persistent binding allows wallet rotation and potential laundering
+- **RECOMMENDED**: Implement persistent wallet binding with user attestation (acknowledged link + re-auth) and monitoring to prevent rotation abuse
+
+**8. Password Recovery:**
+- **N/A** - Uses Replit Auth (OAuth-based)
+- No passwords stored in the application
+- Account recovery handled by Replit identity provider
+- Users authenticate via Replit's OAuth flow
+
+**9. OAuth Hygiene:**
+- Uses `openid-client` library (industry standard)
+- Proper OIDC discovery via `client.discovery()`
+- Scopes: `openid email profile offline_access`
+- `prompt: 'login consent'` forces re-authentication
+- OIDC config memoized (1 hour) to reduce discovery calls
+- Callback URL dynamically set per hostname
+
+**10. Anti-Session Hijacking:**
+| Protection | Implementation |
+|------------|----------------|
+| Session binding | `userId` validated on all protected operations |
+| Combat session ownership | `session.userId !== userId` check returns 403 |
+| IP change detection | Logged as MEDIUM security event |
+| UA change detection | Logged as LOW security event |
+| Multi-tab detection | Heartbeat with unique `instanceId` per tab |
+| Cookie security | `httpOnly`, `secure`, `sameSite: 'lax'` |
+
+**11. Credential Storage:**
+- **No passwords stored** - OAuth-only authentication
+- Session secrets in environment variables (`SESSION_SECRET`)
+- Admin key in environment variable (`ADMIN_KEY`)
+- Withdrawal signer key in environment variable (for Web3)
+- All secrets validated at startup with minimum length requirements
+- Database credentials via `DATABASE_URL` (Replit-managed)
+
+### Network Security (2024-12-01)
+
+**1. HTTPS / Transport Security:**
+- Session cookies: `secure: true`, `httpOnly: true`, `sameSite: 'lax'`
+- Replit infrastructure provides TLS termination
+- `trust proxy: 1` configured for proper IP forwarding
+
+**2. Rate Limiting (Multi-Layer):**
+| Endpoint | Window | Max Requests |
+|----------|--------|--------------|
+| General API | 1 min | 30 |
+| Auth (login/callback) | 15 min | 10 |
+| Admin endpoints | 1 min | 10 |
+| Combat actions | 1 min | 20 |
+| Loot claims | 1 min | 5 |
+| Delve operations | 1 min | 3 |
+| Save operations | 1 min | 15 |
+| Per-account tracking | 1 min | 120 (flagging) |
+
+**3. Request Fingerprinting:**
+- User-Agent validation (length, bot patterns)
+- Detects: curl, wget, python, java, headless, phantom, selenium
+- Flags missing Accept-Language/Accept-Encoding headers
+
+**4. CORS & Security Headers:**
+- Origin restricted to `CLIENT_URL` environment variable
+- Helmet.js with CSP configured for Phaser compatibility
+- `crossOriginEmbedderPolicy: false` for Replit iframe
+
+**5. Replay Attack Protection:**
+- Cryptographic nonces with 5-minute expiry
+- Single-use session tokens consumed atomically
+- Loot entitlements marked `consumed` after claim
+
+**6. UUIDs for All Entities:**
+- All database IDs use `gen_random_uuid()`
+- No sequential/predictable IDs exposed to clients
