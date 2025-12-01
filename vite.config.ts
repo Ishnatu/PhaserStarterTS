@@ -1,5 +1,13 @@
 import { defineConfig } from 'vite';
-import obfuscatorPlugin from 'vite-plugin-obfuscator';
+import path from 'path';
+
+let obfuscatorPlugin: any = null;
+try {
+  const obfuscatorModule = await import('vite-plugin-obfuscator');
+  obfuscatorPlugin = obfuscatorModule.default || obfuscatorModule.obfuscatorPlugin || obfuscatorModule;
+} catch (e) {
+  console.warn('[BUILD] Obfuscator plugin not available, skipping code obfuscation');
+}
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -45,7 +53,7 @@ export default defineConfig({
     },
   },
   plugins: [
-    isProduction && obfuscatorPlugin({
+    isProduction && obfuscatorPlugin && typeof obfuscatorPlugin === 'function' && obfuscatorPlugin({
       include: ['src/**/*.ts', 'src/**/*.js'],
       exclude: ['node_modules'],
       options: {
@@ -71,7 +79,8 @@ export default defineConfig({
   ].filter(Boolean),
   resolve: {
     alias: {
-      '@shared': '/shared'
+      '@shared': path.resolve(__dirname, 'shared'),
+      '@assets': path.resolve(__dirname, 'attached_assets')
     }
   }
 });
