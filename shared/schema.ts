@@ -121,6 +121,25 @@ export const playerCurrencies = pgTable("player_currencies", {
   index("IDX_player_currencies_player").on(table.playerId),
 ]);
 
+// Wallet bindings - persistent wallet-to-account linkage for withdrawal security
+export const playerWalletBindings = pgTable("player_wallet_bindings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().unique(), // One wallet per player
+  walletAddress: varchar("wallet_address").notNull(), // Checksummed Ronin address
+  boundAt: timestamp("bound_at").defaultNow().notNull(), // When binding was created
+  lastUsedAt: timestamp("last_used_at"), // Last withdrawal using this wallet
+  attestedAt: timestamp("attested_at").notNull(), // When user acknowledged the binding
+  unbindRequestedAt: timestamp("unbind_requested_at"), // If player requested unbind
+  unbindAvailableAt: timestamp("unbind_available_at"), // After 7-day cooldown
+  status: varchar("status").notNull().default("active"), // active, pending_unbind, unbound
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("IDX_wallet_bindings_player").on(table.playerId),
+  index("IDX_wallet_bindings_wallet").on(table.walletAddress),
+  index("IDX_wallet_bindings_status").on(table.status),
+]);
+
 // Withdrawal requests - tracks nonces and signatures to prevent replay attacks
 export const playerWithdrawals = pgTable("player_withdrawals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -210,6 +229,8 @@ export type KarmaEvent = typeof karmaEvents.$inferSelect;
 export type InsertKarmaEvent = typeof karmaEvents.$inferInsert;
 export type PlayerCurrency = typeof playerCurrencies.$inferSelect;
 export type InsertPlayerCurrency = typeof playerCurrencies.$inferInsert;
+export type PlayerWalletBinding = typeof playerWalletBindings.$inferSelect;
+export type InsertPlayerWalletBinding = typeof playerWalletBindings.$inferInsert;
 export type PlayerWithdrawal = typeof playerWithdrawals.$inferSelect;
 export type InsertPlayerWithdrawal = typeof playerWithdrawals.$inferInsert;
 export type SecurityAuditLog = typeof securityAuditLog.$inferSelect;
