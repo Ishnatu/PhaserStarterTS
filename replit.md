@@ -42,6 +42,11 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Security Architecture**: Implements server-authoritative design, authentication & session security, rate limiting, session-based encounter validation, a security monitoring system, input validation, anti-cheat measures, and security headers. Includes robust XSS, CSRF, and injection protection via CSP, input sanitization, safe rendering, and `sameSite: 'lax'` cookies.
 - **Secret Management**: All sensitive values stored in Replit Secrets, validated at startup. Admin endpoints protected by `x-admin-key`.
 - **Web3 Security**: Smart contract development guidelines (OpenZeppelin, multisig, timelocks), key management strategies (KMS, 90-day rotation), front-end signing UX, and comprehensive monitoring and incident response protocols.
+- **Anti-Bot & Anti-Cheat System**: Multi-layer bot detection including 24h activity pattern detection, action pattern analysis, and light interaction challenges for suspicious players.
+- **Client-Side Security**: Build pipeline security (disabling sourcemaps, minification, obfuscation) and a runtime integrity guard (`Math.random()` monitoring, global function monitoring, fetch interception, speed hack detection). All critical game logic remains server-authoritative.
+- **API Endpoint Security**: All game routes use `isAuthenticated` middleware, admin routes require `validateAdminAccess`, and all requests are validated using Zod schemas. Rate limiting is applied per-endpoint.
+- **Database Security**: TLS enforcement, connection pooling, parameterized queries via Drizzle ORM to prevent SQL injection, row-level locking, and atomic currency operations.
+- **Server-Side Game Logic Security**: Validates all server actions, employs idempotency and session tokens, race condition protection using transactions and per-player locks, and secure RNG with deterministic seeds not exposed to clients.
 
 ## External Dependencies
 
@@ -54,165 +59,81 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Authentication**: openid-client (Replit Auth)
 - **Session Store**: connect-pg-simple
 
-## Security Documentation (2024-11-30)
+## Security Architecture Documentation
 
-### Race Condition & Double-Claim Protection
-Critical operations use PostgreSQL transactions with row-level locking:
-- **Forging** (`/api/forge/attempt`): Full transaction with `FOR UPDATE` on game save and currency
-- **Withdrawals**: All withdrawal operations use transactions (request, sign, claim, cancel)
-- **Currency deduction**: Atomic `WHERE balance >= amount` prevents negative balances
+### Server-Side Game Logic Security (2024-12-01)
+Comprehensive audit of server-authoritative action handling:
 
-Per-player operation locks prevent concurrent exploits:
-- `activeForgeOperations` Set - blocks concurrent forge attempts per user
-- Security event logged on blocked concurrent attempts
+**1. Server Action Validation:**
+- All combat outcomes computed server-side via `CombatSystem`
+- Enemy stats generated server-side via `EnemyFactory` with SeededRNG
+- Attack validation via `WeaponValidator.validateAttack()` against stored equipment
+- Loot/XP/currency awards computed server-side only
+- Item enhancement/forging uses database transactions with row-level locking
 
-### Session-Based Idempotency
-Single-use session tokens prevent double-claiming:
-- **Wilderness encounters**: `wildernessEncounterSessions` Map with loot count tracking
-- **Treasure/Shrine**: `activeTreasureSessions` Map with `claimed` boolean flag
-- **Loot entitlements**: Consumed on claim, expired after 5 minutes
-- Sessions validate user ownership and expiry before consumption
+**2. Idempotency & Session Tokens:**
+| System | Token Type | Storage | Expiry | Consumption |
+|--------|-----------|---------|--------|-------------|
+| Replay Prevention | Nonce | `requestNonces` Map | 5 min | Single-use, deleted on validate |
+| Combat Sessions | sessionId | `activeCombatSessions` Map | Session-based | Validated per action |
+| Wilderness Encounters | token | `wildernessEncounterSessions` Map | 30 min | Loot count tracked |
+| Treasure/Shrine | sessionId | `activeTreasureSessions` Map | Session-based | `claimed` boolean flag |
+| Delve Sessions | sessionId | `activeDelves` Map | 2 hours | `completed` flag |
+| Loot Entitlements | sessionId | `pendingLootEntitlements` Map | 5 min | `consumed` flag |
+| Forge Operations | userId | `activeForgeOperations` Set | Request duration | Blocks concurrent |
 
-### Currency Anomaly Detection
-Real-time monitoring for impossible resource gains (`server/securityMonitor.ts`):
-- **AA threshold**: 500 AA/minute max (flags faster gains)
-- **CA threshold**: 30 CA/minute max (flags faster gains)
-- Anomalies logged as HIGH severity security events
-- `trackCurrencyGain()` called on all reward endpoints
+**3. Race Condition Protection:**
+- **Forging**: Full `db.transaction` with `FOR UPDATE` on game save + currency rows
+- **Withdrawals**: Atomic nonce generation, balance deduction, and status updates
+- **Currency Deduction**: Atomic SQL `WHERE balance >= amount` prevents negatives
+- **Per-Player Locks**: `activeForgeOperations` Set blocks concurrent forge attempts
+- **Encounter Claims**: Session tokens consumed atomically, preventing double-claims
 
-### Storage & Secret Management
-- All secrets stored in Replit Secrets (SESSION_SECRET, DATABASE_URL, ADMIN_KEY)
-- No hardcoded passwords or fallback secrets in code
-- Server refuses to start without properly configured secrets
-- Frontend code has zero access to environment variables
+**4. RNG Security (SeededRNG):**
+- **Algorithm**: Xorshift PRNG with deterministic seed
+- **Seed Creation**: `userHash + Date.now() + (tier * multiplier)` - unpredictable to clients
+- **Seed Exposure**: Seeds NEVER sent to clients - only computed results
+- **State Restoration**: `fastForward(callCount)` allows deterministic replay
+- **Audit Trail**: All RNG calls logged with context for security review
+- **Protected Operations**: Combat rolls, loot drops, enemy generation, delve layout
 
-### XSS/CSRF Protection
-- CSP via Helmet.js with restrictive directives
-- `sanitizeUsername()` strips HTML from user input
-- All text uses `textContent`/`setText()` (not innerHTML)
-- Session cookies use `sameSite: 'lax'`
+**5. Anti-Bot & Anti-Cheat Heuristics:**
+- **24h Activity Patterns**: Flags players active >16h without 4h break
+- **Action Velocity**: Detects >50 same actions in 5 minutes
+- **Sequence Detection**: MD5 hash comparison of last 10 action sequences
+- **Cross-Account Patterns**: Identifies bot farms sharing action sequences
+- **Interaction Challenges**: Math/pattern/timing verification for suspicious players
+- **Sybil Detection**: IP velocity tracking (max 3 accounts/IP/day, max 10 total)
+- **Currency Anomaly**: Flags >500 AA/min or >30 CA/min gain rates
 
-### Known Limitations (TODO for Production)
-- In-memory session tracking lost on server restart
-- Single-server design - would need Redis for multi-instance
-- Daily earning counters in-memory (reset on restart)
+**6. Encounter Pacing (Bot Resistance):**
+- **Rate Limiting**: Combat 20/min, Loot 5/min, Delve 3/min
+- **Session Validation**: Each encounter requires valid server-generated token
+- **Tier Clamping**: Client-claimed tier clamped to session's validated tier
+- **Loot Count Tracking**: Wilderness sessions track loot claims, flag excess
 
-### Anti-Bot & Anti-Cheat System (2024-12-01)
-Multi-layer bot detection integrated into security middleware:
+**7. Load/Stability Measures:**
+- Express rate limiting with sliding window per endpoint
+- PostgreSQL connection pooling via Neon serverless
+- Session cleanup intervals (15s for heartbeats, 5min for expired tokens)
+- Memory-bounded audit logs (max 10,000 RNG entries, 10,000 security events)
+- Graceful error handling with generic messages (no stack traces to client)
 
-**24h Activity Pattern Detection:**
-- Tracks hourly activity slots per player (UTC-based)
-- Flags players active >16 hours without 4h break
-- Detects "never sleeps" pattern (<4h avg sleep over 3+ days)
-- Suspicion scores trigger interaction challenges at threshold
+**8. Withdrawal Security:**
+- Database-stored daily withdrawal cap (MAX_DAILY_WITHDRAWALS = 3/day)
+- Per-transaction balance check and atomic deduction
+- Atomic nonce generation via `FOR UPDATE` lock
+- Status transitions: pending → signed → claimed
+- AuditLogger tracks all withdrawal events with severity levels
 
-**Action Pattern Analysis:**
-- Tracks action sequences (last 10 actions hashed and compared)
-- Detects identical action patterns repeated 3+ times
-- Action velocity tracking: flags >50 same actions in 5 minutes
-- Cross-account pattern detection finds bot farms sharing sequences
+**Known Limitations (Single Instance):**
+- Session tokens (combat, encounter, delve) stored in-memory Maps
+- On server restart, active sessions are lost (players must re-initiate)
+- Not suitable for horizontal scaling without Redis/distributed session store
+- Acceptable for current target: ~10 concurrent players on single Replit instance
 
-**Light Interaction Challenges:**
-- Non-annoying verification for highly suspicious players
-- Three challenge types: math (simple arithmetic), pattern (sequence completion), timing (click within window)
-- 5-minute expiry, 3 max attempts
-- Passing clears flagged status
-
-**Admin Endpoints:**
-- `GET /api/admin/security/antibot` - Full anti-bot statistics
-- `GET /api/challenge/status` - Check if player has pending challenge
-- `POST /api/challenge/verify` - Submit challenge response
-
-**Thresholds (configurable in securityMonitor.ts):**
-- `maxConsecutiveActiveHours`: 16
-- `minSleepHoursPerDay`: 4
-- `actionRepetitionThreshold`: 50 per 5min
-- `sequenceLength`: 10 actions
-- `challengeTriggerSuspicionScore`: 5
-
-### Client-Side Security (2024-12-01)
-Comprehensive protection against client-side exploitation:
-
-**Build Pipeline Security:**
-- Production builds disable sourcemaps (`sourcemap: false`)
-- Terser minification with `drop_console` and `drop_debugger`
-- JavaScript obfuscation via `vite-plugin-obfuscator`:
-  - Control flow flattening
-  - Dead code injection
-  - Debug protection with interval checks
-  - String array encoding (base64)
-  - Self-defending code
-
-**Runtime Integrity Guard (`src/utils/IntegrityGuard.ts`):**
-- `Math.random()` monitoring: Periodic checks detect if Math.random is replaced (every 30s)
-- Global function monitoring: Detects tampering with Math.random and Date.now (every 60s)
-- Fetch interception: Blocks suspicious API payloads (`__bypass`, `__admin`, `__override`, `__cheat`)
-- Speed hack detection: Monitors elapsed time vs expected intervals (requires 3 consecutive fast intervals)
-- Violation reporting: All integrity violations logged to `/api/security/violation`
-- Non-blocking design: Monitors and reports without breaking Phaser or browser APIs
-
-**Server-Authoritative Architecture:**
-Client-side systems explicitly marked as non-authoritative:
-- `src/systems/ForgingSystem.ts`: `attemptForging()` throws error, redirects to server API
-- `src/systems/CombatSystem.ts`: For UI state only, actual combat runs server-side
-- `src/systems/EnemyFactory.ts`: For display only, enemies generated server-side
-- `src/utils/DiceRoller.ts`: For visual display, authoritative rolls use `SeededRNG`
-
-**What Client-Side Code Can Do:**
-- Render UI and sprites
-- Display server-provided combat state
-- Show attack buttons and enemy info
-- Visual predictions while waiting for server
-
-**What Client-Side Code CANNOT Do:**
-- Determine combat outcomes (server-only)
-- Generate loot drops (server-only via entitlements)
-- Execute forging attempts (server-only with transactions)
-- Award XP or currency (server-only)
-
-**Protected Against:**
-- DevTools function hooking (debug protection, self-defending)
-- `Math.random()` override attacks (frozen, monitored)
-- Speed hacks (timer interval monitoring)
-- Memory scanning (obfuscated strings, variable names)
-- Client modding (integrity checks report violations)
-- Local state tampering (all authoritative state server-side)
-
-### API Endpoint Security (2024-12-01)
-Comprehensive security audit completed for 50+ API routes:
-
-**Authentication Coverage:**
-- All game routes use `isAuthenticated` middleware (verified across 9 route files)
+### API Endpoint Security
+- All game routes use `isAuthenticated` middleware
 - Admin routes require `validateAdminAccess` with 32+ char ADMIN_KEY
-- Public routes limited to: `/api/login`, `/api/callback`, `/api/logout`, `/api/health`, static content
-
-**Request Validation (Zod):**
-- Centralized schemas in `server/validation/schemas.ts`
-- Type-safe middleware in `server/validation/middleware.ts`
-- Validation failures logged to security monitor with MEDIUM severity
-- **Validated routes:** `/api/forge/attempt`, `/api/shop/purchase`, `/api/loot/roll`, `/api/delve/*`, `/api/encounter/*`, `/api/repair/attempt`
-
-**Rate Limiting (per-endpoint):**
-- General API: 30/minute
-- Combat actions: 20/minute
-- Loot claims: 5/minute
-- Delve operations: 3/minute
-- Save operations: 15/minute
-- Auth attempts: 10/15 minutes
-- Admin endpoints: 10/minute
-
-**Session-Based Validation:**
-- Combat: `wildernessEncounterSessions` Map with loot count tracking
-- Treasure/Shrine: `activeTreasureSessions` Map with `claimed` flag
-- Delves: `activeDelves` Map with tier/roomCount/completed tracking
-- Encounters: `pendingEncounterManager` validates and consumes tokens
-
-**Health Monitoring:**
-- `GET /api/health` - Unauthenticated, returns server status, uptime, memory, active players
-
-### Database Security (2024-12-01)
-- **TLS Enforcement**: Neon PostgreSQL enforces TLS by default
-- **Connection Pooling**: Via `@neondatabase/serverless` Pool
-- **Parameterized Queries**: Drizzle ORM prevents SQL injection
-- **Row-Level Locking**: Critical operations use `FOR UPDATE`
-- **Atomic Currency Ops**: `WHERE balance >= amount` prevents negatives
+- Request validation via centralized Zod schemas in `server/validation/`
+- Rate limiting per endpoint (combat: 20/min, loot: 5/min, delve: 3/min)
