@@ -1,5 +1,6 @@
 import { SeededRNG } from '../utils/SeededRNG';
 import { logSecurityEvent } from '../security';
+import { validateMovement, MOVEMENT_LIMITS } from '../security/zoneValidation';
 
 export type EncounterType = 
   | 'combat' 
@@ -26,13 +27,21 @@ interface UserExplorationState {
   stepCounter: number;
   lastMoveTimestamp: number;
   encounterCooldownUntil: number;
+  suspiciousMovementCount: number;  // Track repeated violations
+}
+
+export interface MovementResult {
+  encounter: PendingEncounter | null;
+  stateUpdate: { stepCounter: number };
+  rejected?: boolean;
+  rejectReason?: string;
 }
 
 const ENCOUNTER_STEP_THRESHOLD = 10;
 const BASE_ENCOUNTER_CHANCE = 0.15;
 const ENCOUNTER_EXPIRY_MS = 5 * 60 * 1000;
 const ENCOUNTER_COOLDOWN_MS = 3000;
-const MAX_MOVE_DISTANCE_PER_CALL = 200;
+const MAX_SUSPICIOUS_MOVEMENTS = 5;  // Ban threshold for repeated violations
 
 class PendingEncounterManager {
   private pendingEncounters = new Map<string, PendingEncounter>();
@@ -99,40 +108,105 @@ class PendingEncounterManager {
     zoneId: string, 
     position: { x: number; y: number },
     encounterRateMultiplier: number = 1.0
-  ): { encounter: PendingEncounter | null; stateUpdate: { stepCounter: number } } {
+  ): MovementResult {
     const now = Date.now();
     
     let state = this.userExplorationState.get(userId);
     if (!state) {
+      // First movement - validate position is within zone bounds
+      const validationResult = validateMovement(userId, zoneId, null, position, 0);
+      
+      if (!validationResult.valid) {
+        logSecurityEvent(userId, 'INVALID_INITIAL_POSITION', 'HIGH', {
+          message: 'First movement position rejected',
+          position,
+          reason: validationResult.reason,
+        });
+        return { 
+          encounter: null, 
+          stateUpdate: { stepCounter: 0 },
+          rejected: true,
+          rejectReason: validationResult.reason,
+        };
+      }
+      
+      const validatedPosition = validationResult.clampedPosition || position;
+      
       state = {
-        lastPosition: position,
+        lastPosition: validatedPosition,
         stepCounter: 0,
         lastMoveTimestamp: now,
         encounterCooldownUntil: 0,
+        suspiciousMovementCount: 0,
       };
       this.userExplorationState.set(userId, state);
       return { encounter: null, stateUpdate: { stepCounter: 0 } };
     }
     
-    const dx = position.x - state.lastPosition.x;
-    const dy = position.y - state.lastPosition.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    
-    if (distance > MAX_MOVE_DISTANCE_PER_CALL) {
-      logSecurityEvent(userId, 'SUSPICIOUS_MOVEMENT', 'MEDIUM', {
-        message: 'Unusually large movement distance detected',
-        distance,
-        from: state.lastPosition,
-        to: position,
-      });
-      state.lastPosition = position;
-      state.lastMoveTimestamp = now;
-      return { encounter: null, stateUpdate: { stepCounter: state.stepCounter } };
+    // Check if user is temporarily banned for repeated violations
+    if (state.suspiciousMovementCount >= MAX_SUSPICIOUS_MOVEMENTS) {
+      const banTimeRemaining = state.lastMoveTimestamp + 60000 - now; // 1 minute ban
+      if (banTimeRemaining > 0) {
+        return {
+          encounter: null,
+          stateUpdate: { stepCounter: state.stepCounter },
+          rejected: true,
+          rejectReason: 'Temporarily blocked due to suspicious movement patterns',
+        };
+      } else {
+        // Ban expired, reset counter
+        state.suspiciousMovementCount = 0;
+      }
     }
+    
+    // Calculate time since last movement for velocity check
+    const timeDeltaMs = now - state.lastMoveTimestamp;
+    
+    // [SECURITY] Validate movement with zone bounds and distance checks
+    const validationResult = validateMovement(
+      userId, 
+      zoneId, 
+      state.lastPosition, 
+      position, 
+      timeDeltaMs
+    );
+    
+    if (!validationResult.valid) {
+      // Increment suspicious movement counter
+      state.suspiciousMovementCount++;
+      state.lastMoveTimestamp = now;
+      
+      logSecurityEvent(userId, 'MOVEMENT_REJECTED', 'HIGH', {
+        message: 'Movement validation failed',
+        reason: validationResult.reason,
+        suspiciousCount: state.suspiciousMovementCount,
+        fromPosition: state.lastPosition,
+        toPosition: position,
+      });
+      
+      return { 
+        encounter: null, 
+        stateUpdate: { stepCounter: state.stepCounter },
+        rejected: true,
+        rejectReason: validationResult.reason,
+      };
+    }
+    
+    // Reset suspicious counter on valid movement
+    if (state.suspiciousMovementCount > 0) {
+      state.suspiciousMovementCount = Math.max(0, state.suspiciousMovementCount - 1);
+    }
+    
+    // Use clamped position if it was adjusted
+    const validatedPosition = validationResult.clampedPosition || position;
+    
+    const dx = validatedPosition.x - state.lastPosition.x;
+    const dy = validatedPosition.y - state.lastPosition.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
     
     const steps = Math.floor(distance / 32);
     state.stepCounter += steps;
-    state.lastPosition = position;
+    state.lastPosition = validatedPosition;
     state.lastMoveTimestamp = now;
     
     if (now < state.encounterCooldownUntil) {
@@ -250,6 +324,20 @@ class PendingEncounterManager {
   
   resetUserExplorationState(userId: string): void {
     this.userExplorationState.delete(userId);
+  }
+  
+  /**
+   * [SECURITY] Initialize exploration with a validated starting position
+   * This prevents first-move teleportation exploits by setting the baseline position
+   */
+  initializeExplorationWithPosition(userId: string, position: { x: number; y: number }): void {
+    this.userExplorationState.set(userId, {
+      lastPosition: { ...position },
+      stepCounter: 0,
+      lastMoveTimestamp: Date.now(),
+      encounterCooldownUntil: 0,
+      suspiciousMovementCount: 0,
+    });
   }
   
   getStats(): { pendingEncounters: number; activeUsers: number } {

@@ -45,6 +45,12 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 - **Database Security**: TLS enforcement, connection pooling, parameterized queries via Drizzle ORM, row-level locking, atomic currency operations, versioned migrations, and slow query monitoring.
 - **Server-Side Game Logic Security**: Validates all server actions, employs idempotency and session tokens, race condition protection, and secure RNG.
 - **Network Security**: HTTPS/TLS, multi-layer rate limiting, request fingerprinting, spike detection, CSRF protection, CORS configuration, Helmet.js, Zod input validation, UUIDs for entities, replay attack protection, and WAF/DDoS protection via Replit infrastructure.
+- **Movement & Geometry Validation**: Server-side zone bounds validation, teleport detection, velocity/speed-hack detection, position clamping, and suspicious movement tracking with temporary bans.
+
+## Security Audit Documents
+
+- `INFRASTRUCTURE_SECURITY_AUDIT.md` - Infrastructure security checklist (36/110 baseline)
+- `GAME_DESIGN_EXPLOIT_AUDIT.md` - Game design exploit prevention audit (72/100 score)
 
 ## External Dependencies
 

@@ -4,6 +4,7 @@ import { storage } from "../storage";
 import { logSecurityEvent } from "../security";
 import { pendingEncounterManager, type EncounterType } from "../encounters/PendingEncounterManager";
 import { SeededRNG } from "../utils/SeededRNG";
+import { validatePosition, isValidZone } from "../security/zoneValidation";
 
 function getEncounterDescription(type: EncounterType): string {
   switch (type) {
@@ -53,6 +54,7 @@ export function registerExplorationRoutes(app: Express) {
       const userId = req.user.claims.sub;
       const { zoneId, position, encounterRateMultiplier } = req.body;
       
+      // [SECURITY] Basic input validation
       if (!position || typeof position.x !== 'number' || typeof position.y !== 'number') {
         return res.status(400).json({ message: "Invalid position" });
       }
@@ -60,6 +62,24 @@ export function registerExplorationRoutes(app: Express) {
       if (!zoneId || typeof zoneId !== 'string') {
         return res.status(400).json({ message: "Invalid zoneId" });
       }
+      
+      // [SECURITY] Validate zone bounds before any processing
+      const positionValidation = validatePosition(userId, zoneId, position);
+      if (!positionValidation.valid) {
+        logSecurityEvent(userId, 'MOVE_POSITION_INVALID', 'HIGH', {
+          message: 'Movement rejected - invalid position',
+          position,
+          reason: positionValidation.reason,
+          ip: req.ip,
+        });
+        return res.status(400).json({ 
+          message: "Invalid position coordinates",
+          rejected: true,
+        });
+      }
+      
+      // Use clamped position if adjusted
+      const validatedPosition = positionValidation.clampedPosition || position;
       
       const gameSave = await storage.getGameSaveByUserId(userId);
       if (!gameSave) {
@@ -81,12 +101,28 @@ export function registerExplorationRoutes(app: Express) {
         ? Math.max(0.1, Math.min(3.0, encounterRateMultiplier))
         : 1.0;
       
+      // [SECURITY] Process movement with enhanced validation
       const result = pendingEncounterManager.processMovement(
         userId,
         zoneId,
-        position,
+        validatedPosition,
         multiplier
       );
+      
+      // [SECURITY] Handle rejected movements (teleport/speed hack detection)
+      if (result.rejected) {
+        logSecurityEvent(userId, 'MOVEMENT_BLOCKED', 'HIGH', {
+          message: 'Movement blocked by security system',
+          reason: result.rejectReason,
+          position: validatedPosition,
+          ip: req.ip,
+        });
+        return res.status(403).json({ 
+          message: result.rejectReason || "Movement rejected",
+          rejected: true,
+          stepCounter: result.stateUpdate.stepCounter,
+        });
+      }
       
       if (result.encounter) {
         const encounterData: any = {
@@ -119,15 +155,60 @@ export function registerExplorationRoutes(app: Express) {
   app.post("/api/exploration/start", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { zoneId } = req.body;
+      const { zoneId, spawnPosition } = req.body;
       
+      // [SECURITY] Load player's last known position from save data
+      // This prevents first-move teleportation exploits
+      const gameSave = await storage.getGameSaveByUserId(userId);
+      let validatedSpawnPosition = { x: 800, y: 800 }; // Default spawn
+      
+      if (gameSave && gameSave.saveData) {
+        const playerData = typeof gameSave.saveData === 'string' 
+          ? JSON.parse(gameSave.saveData as string) 
+          : gameSave.saveData;
+        
+        // Use last known position if available
+        if (playerData.lastExplorationPosition) {
+          validatedSpawnPosition = playerData.lastExplorationPosition;
+        } else if (playerData.player?.position) {
+          validatedSpawnPosition = playerData.player.position;
+        }
+      }
+      
+      // [SECURITY] If client provided a spawn position, validate it's near the valid spawn
+      if (spawnPosition && typeof spawnPosition.x === 'number' && typeof spawnPosition.y === 'number') {
+        const dx = spawnPosition.x - validatedSpawnPosition.x;
+        const dy = spawnPosition.y - validatedSpawnPosition.y;
+        const spawnDistance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Allow some grace radius for spawn variation (e.g., zone entrances)
+        const SPAWN_GRACE_RADIUS = 300;
+        
+        if (spawnDistance > SPAWN_GRACE_RADIUS) {
+          logSecurityEvent(userId, 'SPAWN_POSITION_MANIPULATION', 'HIGH', {
+            message: 'Client spawn position too far from valid spawn',
+            clientSpawn: spawnPosition,
+            validSpawn: validatedSpawnPosition,
+            distance: spawnDistance,
+          });
+          // Use valid spawn position, not client's
+        } else {
+          validatedSpawnPosition = spawnPosition;
+        }
+      }
+      
+      // Reset exploration state with validated spawn position
       pendingEncounterManager.resetUserExplorationState(userId);
       pendingEncounterManager.clearUserEncounters(userId);
+      
+      // Initialize exploration state with validated position
+      pendingEncounterManager.initializeExplorationWithPosition(userId, validatedSpawnPosition);
       
       res.json({
         success: true,
         message: "Exploration session started",
         zoneId: zoneId || 'roboka',
+        spawnPosition: validatedSpawnPosition,
       });
     } catch (error) {
       console.error("Error starting exploration:", error);
