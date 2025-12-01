@@ -146,6 +146,29 @@ app.use(express.urlencoded({ extended: true }));
 
 // Note: securityMiddleware is applied in registerRoutes AFTER auth setup
 
+// Health check endpoint (unauthenticated, for monitoring)
+app.get('/api/health', async (req, res) => {
+  try {
+    const stats = getSecurityStats();
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      security: {
+        activePlayers: stats.activePlayers,
+        suspiciousPlayers: stats.suspiciousPlayers,
+      },
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: 'Health check failed',
+    });
+  }
+});
+
 // Log server startup
 logSecurityEvent('SERVER_START', 'LOW', { port: PORT }, null, 'server', 'system');
 
