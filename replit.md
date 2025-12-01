@@ -80,3 +80,8 @@ Admin endpoints for monitoring:
 - `POST /api/admin/database/reset-query-stats` - Reset in-memory stats
 
 Slow queries are automatically logged to `security_audit_log` table with severity levels.
+
+### Security Audit & Alerting
+- **Dependency Scanning**: `npm run security:check` for quick audit, `npm run security:audit` for full report
+- **External Alerting**: Slack webhook integration via `SLACK_SECURITY_WEBHOOK` secret
+- **Audit Document**: See `INFRASTRUCTURE_SECURITY_AUDIT.md` for comprehensive security checklist

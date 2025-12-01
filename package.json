@@ -11,7 +11,10 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx server/db/migrate.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "security:audit": "npm audit --json > security-audit-report.json || true; tsx server/security/runAudit.ts",
+    "security:audit-fix": "npm audit fix",
+    "security:check": "npm audit"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

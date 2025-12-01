@@ -10,6 +10,7 @@ import {
   parseQueryTypeAndTable,
   registerSlowQueryLogger 
 } from "./db/queryMonitor";
+import { alertSlowQuery } from "./security/alerting";
 
 neonConfig.webSocketConstructor = ws;
 
@@ -53,6 +54,17 @@ registerSlowQueryLogger(async (eventType: string, severity: string, metadata: Re
       severity,
       metadata,
     });
+    
+    const duration = metadata.duration ?? 0;
+    if (duration > 0) {
+      await alertSlowQuery(
+        metadata.queryType || 'UNKNOWN', 
+        metadata.tableName || 'unknown_table', 
+        duration
+      );
+    } else {
+      console.warn('[ALERT] Slow query event received without duration - possible instrumentation gap');
+    }
   } catch (error) {
     console.error('Failed to log to security_audit_log:', error);
   }
