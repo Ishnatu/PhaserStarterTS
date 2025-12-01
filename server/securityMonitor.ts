@@ -400,7 +400,7 @@ export function getSecurityStats(): {
 
 /**
  * Express middleware for request tracking (applies AFTER body/session parsing)
- * Only logs suspicious activity - does not block requests
+ * Includes anti-bot detection with activity and pattern tracking
  */
 export function securityMiddleware(req: any, res: any, next: () => void): void {
   const requestId = generateRequestId();
@@ -410,16 +410,37 @@ export function securityMiddleware(req: any, res: any, next: () => void): void {
   const userAgent = req.headers['user-agent'] || 'unknown';
   
   // Only track authenticated user actions for game API routes
-  // Skip fingerprint validation to avoid false positives
-  if (req.user?.claims?.sub && req.path.startsWith('/api/game')) {
-    const tracking = trackPlayerAction(req.user.claims.sub, req.path, ip, userAgent);
+  if (req.user?.claims?.sub && req.path.startsWith('/api/')) {
+    const playerId = req.user.claims.sub;
+    
+    // Standard action tracking
+    const tracking = trackPlayerAction(playerId, req.path, ip, userAgent);
     if (tracking.suspicious) {
       logSecurityEvent('SUSPICIOUS_BEHAVIOR', 'HIGH', {
         reason: tracking.reason,
         path: req.path,
         method: req.method,
-      }, req.user.claims.sub, ip, userAgent, requestId);
-      // Note: We log but don't block - server-authoritative design handles exploits
+      }, playerId, ip, userAgent, requestId);
+    }
+    
+    // Anti-bot: 24h activity pattern tracking
+    const activityCheck = trackActivityPattern(playerId, ip);
+    if (activityCheck.suspicious) {
+      req.botSuspicionReason = activityCheck.reason;
+      
+      // Create challenge if suspicion is high enough and no pending challenge exists
+      if (activityCheck.requiresChallenge && !hasPendingChallenge(playerId)) {
+        createInteractionChallenge(playerId);
+      }
+    }
+    
+    // Anti-bot: Action pattern tracking (for game actions only)
+    if (req.path.startsWith('/api/game') || req.path.startsWith('/api/combat') || 
+        req.path.startsWith('/api/loot') || req.path.startsWith('/api/delve')) {
+      const patternCheck = trackActionPattern(playerId, req.path, ip);
+      if (patternCheck.suspicious) {
+        req.botSuspicionReason = patternCheck.reason;
+      }
     }
   }
   
@@ -768,4 +789,642 @@ export function getCurrencyTrackingStats(): {
     totalTrackedPlayers: currencyTrackers.size,
     flaggedPlayers,
   };
+}
+
+/**
+ * ============================================================================
+ * ANTI-BOT DETECTION SYSTEM
+ * ============================================================================
+ * 
+ * Multi-layer bot detection targeting:
+ * - 24h activity patterns (bots never sleep)
+ * - Action sequence patterns (identical patterns across accounts)
+ * - Action velocity per type (repetitive farming loops)
+ * - Light interaction verification (non-annoying checks)
+ */
+
+interface ActivityPattern {
+  playerId: string;
+  hourlyActivity: Map<number, number>; // hour (0-23) -> action count
+  dailyHistory: { date: string; hoursActive: number; totalActions: number }[];
+  lastActionTime: Date;
+  consecutiveActiveHours: number;
+  longestSession: number; // hours without 4h break
+  flagged: boolean;
+  flagReason?: string;
+}
+
+interface ActionSequence {
+  actions: string[];
+  hash: string;
+  count: number;
+  lastSeen: Date;
+}
+
+interface PatternTracker {
+  playerId: string;
+  recentSequences: ActionSequence[];
+  actionTypeVelocity: Map<string, { count: number; windowStart: Date }>;
+  flagged: boolean;
+  flagReason?: string;
+}
+
+interface InteractionChallenge {
+  playerId: string;
+  challengeType: 'math' | 'pattern' | 'timing';
+  challengeData: any;
+  answer: string;
+  createdAt: Date;
+  expiresAt: Date;
+  attempts: number;
+  resolved: boolean;
+}
+
+const activityPatterns = new Map<string, ActivityPattern>();
+const patternTrackers = new Map<string, PatternTracker>();
+const pendingChallenges = new Map<string, InteractionChallenge>();
+
+const ANTI_BOT_THRESHOLDS = {
+  maxConsecutiveActiveHours: 16,       // More than 16 hours without 4h break
+  minSleepHoursPerDay: 4,              // Bots typically show 0 hours inactive
+  suspiciousHoursActivePerDay: 20,     // 20+ hours active in 24h period
+  actionRepetitionThreshold: 50,        // Same action type 50+ times in 5 min
+  sequenceSimilarityThreshold: 0.85,   // 85%+ similar action sequences
+  sequenceLength: 10,                  // Compare last 10 actions
+  challengeExpiryMs: 5 * 60 * 1000,    // 5 minutes to answer
+  maxChallengeAttempts: 3,
+  challengeTriggerSuspicionScore: 5,   // Trigger challenge after 5 suspicious events
+};
+
+/**
+ * Track player activity for 24h pattern analysis
+ * Detects "bots never sleep" behavior
+ */
+export function trackActivityPattern(
+  playerId: string,
+  ip?: string
+): { suspicious: boolean; reason?: string; requiresChallenge: boolean } {
+  const now = new Date();
+  const currentHour = now.getUTCHours();
+  const dateKey = now.toISOString().split('T')[0];
+  
+  let pattern = activityPatterns.get(playerId);
+  
+  if (!pattern) {
+    pattern = {
+      playerId,
+      hourlyActivity: new Map(),
+      dailyHistory: [],
+      lastActionTime: now,
+      consecutiveActiveHours: 0,
+      longestSession: 0,
+      flagged: false,
+    };
+    activityPatterns.set(playerId, pattern);
+  }
+  
+  // Update hourly activity
+  const hourlyCount = (pattern.hourlyActivity.get(currentHour) || 0) + 1;
+  pattern.hourlyActivity.set(currentHour, hourlyCount);
+  
+  // Calculate time since last action
+  const timeSinceLastAction = now.getTime() - pattern.lastActionTime.getTime();
+  const hoursSinceLastAction = timeSinceLastAction / (1000 * 60 * 60);
+  
+  // Update consecutive active hours
+  if (hoursSinceLastAction < 1) {
+    // Active within the same hour window
+    pattern.consecutiveActiveHours = Math.max(pattern.consecutiveActiveHours, 1);
+  } else if (hoursSinceLastAction < 4) {
+    // Still in session (less than 4h break)
+    pattern.consecutiveActiveHours += Math.floor(hoursSinceLastAction);
+  } else {
+    // Session break detected - reset counter
+    pattern.longestSession = Math.max(pattern.longestSession, pattern.consecutiveActiveHours);
+    pattern.consecutiveActiveHours = 1;
+  }
+  
+  pattern.lastActionTime = now;
+  
+  // Update daily history at end of day
+  if (pattern.dailyHistory.length === 0 || 
+      pattern.dailyHistory[pattern.dailyHistory.length - 1].date !== dateKey) {
+    // Finalize previous day and start new one
+    const hoursActive = pattern.hourlyActivity.size;
+    const totalActions = Array.from(pattern.hourlyActivity.values()).reduce((a, b) => a + b, 0);
+    
+    if (pattern.dailyHistory.length > 0) {
+      const lastDay = pattern.dailyHistory[pattern.dailyHistory.length - 1];
+      lastDay.hoursActive = hoursActive;
+      lastDay.totalActions = totalActions;
+    }
+    
+    pattern.dailyHistory.push({
+      date: dateKey,
+      hoursActive: 0,
+      totalActions: 0,
+    });
+    
+    // Keep only last 7 days
+    if (pattern.dailyHistory.length > 7) {
+      pattern.dailyHistory.shift();
+    }
+    
+    // Reset hourly activity for new day
+    pattern.hourlyActivity.clear();
+    pattern.hourlyActivity.set(currentHour, 1);
+  }
+  
+  // Check for suspicious patterns
+  let suspicionScore = 0;
+  let reasons: string[] = [];
+  
+  // Check 1: Excessive consecutive activity (no sleep)
+  if (pattern.consecutiveActiveHours > ANTI_BOT_THRESHOLDS.maxConsecutiveActiveHours) {
+    suspicionScore += 3;
+    reasons.push(`${pattern.consecutiveActiveHours}h consecutive activity (no breaks)`);
+  }
+  
+  // Check 2: Too many hours active in a day
+  const currentDayHoursActive = pattern.hourlyActivity.size;
+  if (currentDayHoursActive >= ANTI_BOT_THRESHOLDS.suspiciousHoursActivePerDay) {
+    suspicionScore += 2;
+    reasons.push(`${currentDayHoursActive}h active today (abnormal)`);
+  }
+  
+  // Check 3: Historical pattern - never sleeps
+  const recentDays = pattern.dailyHistory.filter(d => d.hoursActive > 0);
+  if (recentDays.length >= 3) {
+    const avgHoursActive = recentDays.reduce((a, d) => a + d.hoursActive, 0) / recentDays.length;
+    const sleepHours = 24 - avgHoursActive;
+    
+    if (sleepHours < ANTI_BOT_THRESHOLDS.minSleepHoursPerDay) {
+      suspicionScore += 4;
+      reasons.push(`Only ${sleepHours.toFixed(1)}h avg sleep over ${recentDays.length} days`);
+    }
+  }
+  
+  // Check 4: Longest session without break
+  if (pattern.longestSession > ANTI_BOT_THRESHOLDS.maxConsecutiveActiveHours) {
+    suspicionScore += 2;
+    reasons.push(`Longest session: ${pattern.longestSession}h without 4h break`);
+  }
+  
+  if (suspicionScore >= 3) {
+    pattern.flagged = true;
+    pattern.flagReason = reasons.join('; ');
+    
+    logSecurityEvent('BOT_ACTIVITY_PATTERN', suspicionScore >= 5 ? 'CRITICAL' : 'HIGH', {
+      playerId,
+      suspicionScore,
+      consecutiveActiveHours: pattern.consecutiveActiveHours,
+      longestSession: pattern.longestSession,
+      hoursActiveToday: currentDayHoursActive,
+      reasons,
+    }, playerId, ip || 'unknown', 'unknown');
+    
+    return {
+      suspicious: true,
+      reason: pattern.flagReason,
+      requiresChallenge: suspicionScore >= ANTI_BOT_THRESHOLDS.challengeTriggerSuspicionScore,
+    };
+  }
+  
+  return { suspicious: false, requiresChallenge: false };
+}
+
+/**
+ * Track action sequences to detect bot-like repetitive patterns
+ */
+export function trackActionPattern(
+  playerId: string,
+  action: string,
+  ip?: string
+): { suspicious: boolean; reason?: string } {
+  const now = new Date();
+  
+  let tracker = patternTrackers.get(playerId);
+  
+  if (!tracker) {
+    tracker = {
+      playerId,
+      recentSequences: [],
+      actionTypeVelocity: new Map(),
+      flagged: false,
+    };
+    patternTrackers.set(playerId, tracker);
+  }
+  
+  // Track action type velocity
+  const actionType = action.split('/').pop() || action; // Extract endpoint name
+  let velocity = tracker.actionTypeVelocity.get(actionType);
+  
+  if (!velocity || now.getTime() - velocity.windowStart.getTime() > 5 * 60 * 1000) {
+    // New 5-minute window
+    velocity = { count: 0, windowStart: now };
+  }
+  
+  velocity.count++;
+  tracker.actionTypeVelocity.set(actionType, velocity);
+  
+  // Check for repetitive farming
+  if (velocity.count > ANTI_BOT_THRESHOLDS.actionRepetitionThreshold) {
+    tracker.flagged = true;
+    tracker.flagReason = `Repetitive action: ${actionType} x${velocity.count} in 5min`;
+    
+    logSecurityEvent('BOT_REPETITIVE_ACTION', 'HIGH', {
+      playerId,
+      actionType,
+      count: velocity.count,
+      windowMinutes: 5,
+    }, playerId, ip || 'unknown', 'unknown');
+    
+    return {
+      suspicious: true,
+      reason: tracker.flagReason,
+    };
+  }
+  
+  // Build action sequence
+  if (tracker.recentSequences.length === 0) {
+    tracker.recentSequences.push({
+      actions: [action],
+      hash: '',
+      count: 1,
+      lastSeen: now,
+    });
+  } else {
+    const currentSeq = tracker.recentSequences[tracker.recentSequences.length - 1];
+    currentSeq.actions.push(action);
+    currentSeq.lastSeen = now;
+    
+    // When sequence reaches target length, hash and compare
+    if (currentSeq.actions.length >= ANTI_BOT_THRESHOLDS.sequenceLength) {
+      currentSeq.hash = crypto.createHash('md5')
+        .update(currentSeq.actions.join('|'))
+        .digest('hex');
+      
+      // Compare with previous sequences
+      for (let i = 0; i < tracker.recentSequences.length - 1; i++) {
+        const prevSeq = tracker.recentSequences[i];
+        if (prevSeq.hash === currentSeq.hash) {
+          currentSeq.count++;
+          
+          if (currentSeq.count >= 3) {
+            tracker.flagged = true;
+            tracker.flagReason = `Identical action sequence repeated ${currentSeq.count}x`;
+            
+            logSecurityEvent('BOT_SEQUENCE_PATTERN', 'HIGH', {
+              playerId,
+              sequenceHash: currentSeq.hash,
+              repeatCount: currentSeq.count,
+              sequenceActions: currentSeq.actions.slice(0, 5), // First 5 for logging
+            }, playerId, ip || 'unknown', 'unknown');
+            
+            return {
+              suspicious: true,
+              reason: tracker.flagReason,
+            };
+          }
+        }
+      }
+      
+      // Start new sequence tracking
+      tracker.recentSequences.push({
+        actions: [],
+        hash: '',
+        count: 1,
+        lastSeen: now,
+      });
+      
+      // Keep only last 20 sequences
+      while (tracker.recentSequences.length > 20) {
+        tracker.recentSequences.shift();
+      }
+    }
+  }
+  
+  return { suspicious: false };
+}
+
+/**
+ * Create a light interaction challenge for suspicious players
+ * These are simple, non-annoying checks that humans can solve easily
+ */
+export function createInteractionChallenge(
+  playerId: string
+): InteractionChallenge | null {
+  // Don't create if one is pending
+  if (pendingChallenges.has(playerId)) {
+    const existing = pendingChallenges.get(playerId)!;
+    if (!existing.resolved && Date.now() < existing.expiresAt.getTime()) {
+      return existing;
+    }
+  }
+  
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + ANTI_BOT_THRESHOLDS.challengeExpiryMs);
+  
+  // Random challenge type
+  const challengeTypes: ('math' | 'pattern' | 'timing')[] = ['math', 'pattern', 'timing'];
+  const challengeType = challengeTypes[Math.floor(Math.random() * challengeTypes.length)];
+  
+  let challengeData: any;
+  let answer: string;
+  
+  switch (challengeType) {
+    case 'math':
+      // Simple math: "What is X + Y?" or "What is X - Y?"
+      const a = Math.floor(Math.random() * 20) + 1;
+      const b = Math.floor(Math.random() * 10) + 1;
+      const op = Math.random() > 0.5 ? '+' : '-';
+      challengeData = { question: `What is ${a} ${op} ${b}?`, a, b, op };
+      answer = String(op === '+' ? a + b : a - b);
+      break;
+      
+    case 'pattern':
+      // Simple pattern: "Select the odd one out" or "What comes next?"
+      const patterns = [
+        { sequence: [2, 4, 6, 8], question: 'What comes next?', answer: '10' },
+        { sequence: [1, 3, 5, 7], question: 'What comes next?', answer: '9' },
+        { sequence: [5, 10, 15, 20], question: 'What comes next?', answer: '25' },
+        { sequence: [3, 6, 9, 12], question: 'What comes next?', answer: '15' },
+      ];
+      const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+      challengeData = { sequence: pattern.sequence, question: pattern.question };
+      answer = pattern.answer;
+      break;
+      
+    case 'timing':
+      // Timing check: Respond within X seconds (but not too fast)
+      const minDelay = 1000 + Math.floor(Math.random() * 2000); // 1-3 seconds
+      const maxDelay = minDelay + 5000; // +5 seconds window
+      challengeData = { 
+        instruction: 'Click the button when it turns green',
+        minDelayMs: minDelay,
+        maxDelayMs: maxDelay,
+      };
+      answer = `timing_${minDelay}_${maxDelay}`;
+      break;
+  }
+  
+  const challenge: InteractionChallenge = {
+    playerId,
+    challengeType,
+    challengeData,
+    answer,
+    createdAt: now,
+    expiresAt,
+    attempts: 0,
+    resolved: false,
+  };
+  
+  pendingChallenges.set(playerId, challenge);
+  
+  logSecurityEvent('CHALLENGE_CREATED', 'MEDIUM', {
+    playerId,
+    challengeType,
+  }, playerId, 'unknown', 'unknown');
+  
+  return challenge;
+}
+
+/**
+ * Verify a player's response to an interaction challenge
+ */
+export function verifyInteractionChallenge(
+  playerId: string,
+  response: string,
+  responseTimeMs?: number
+): { valid: boolean; reason?: string; challengeCleared: boolean } {
+  const challenge = pendingChallenges.get(playerId);
+  
+  if (!challenge) {
+    return { valid: false, reason: 'No pending challenge', challengeCleared: false };
+  }
+  
+  if (challenge.resolved) {
+    return { valid: false, reason: 'Challenge already resolved', challengeCleared: true };
+  }
+  
+  if (Date.now() > challenge.expiresAt.getTime()) {
+    pendingChallenges.delete(playerId);
+    
+    logSecurityEvent('CHALLENGE_EXPIRED', 'HIGH', {
+      playerId,
+      challengeType: challenge.challengeType,
+    }, playerId, 'unknown', 'unknown');
+    
+    return { valid: false, reason: 'Challenge expired', challengeCleared: false };
+  }
+  
+  challenge.attempts++;
+  
+  let isCorrect = false;
+  
+  if (challenge.challengeType === 'timing') {
+    // For timing challenges, verify response time is in valid range
+    if (responseTimeMs !== undefined) {
+      const minDelay = challenge.challengeData.minDelayMs;
+      const maxDelay = challenge.challengeData.maxDelayMs;
+      isCorrect = responseTimeMs >= minDelay && responseTimeMs <= maxDelay;
+    }
+  } else {
+    // For math/pattern challenges, compare answer
+    isCorrect = response.trim().toLowerCase() === challenge.answer.toLowerCase();
+  }
+  
+  if (isCorrect) {
+    challenge.resolved = true;
+    pendingChallenges.delete(playerId);
+    
+    logSecurityEvent('CHALLENGE_PASSED', 'LOW', {
+      playerId,
+      challengeType: challenge.challengeType,
+      attempts: challenge.attempts,
+    }, playerId, 'unknown', 'unknown');
+    
+    // Clear flagged status on passed challenge
+    const activityPattern = activityPatterns.get(playerId);
+    if (activityPattern) {
+      activityPattern.flagged = false;
+      activityPattern.flagReason = undefined;
+    }
+    
+    const patternTracker = patternTrackers.get(playerId);
+    if (patternTracker) {
+      patternTracker.flagged = false;
+      patternTracker.flagReason = undefined;
+    }
+    
+    return { valid: true, challengeCleared: true };
+  }
+  
+  if (challenge.attempts >= ANTI_BOT_THRESHOLDS.maxChallengeAttempts) {
+    pendingChallenges.delete(playerId);
+    
+    logSecurityEvent('CHALLENGE_FAILED', 'CRITICAL', {
+      playerId,
+      challengeType: challenge.challengeType,
+      attempts: challenge.attempts,
+    }, playerId, 'unknown', 'unknown');
+    
+    return { valid: false, reason: 'Max attempts exceeded - account flagged', challengeCleared: false };
+  }
+  
+  return { 
+    valid: false, 
+    reason: `Incorrect answer (attempt ${challenge.attempts}/${ANTI_BOT_THRESHOLDS.maxChallengeAttempts})`,
+    challengeCleared: false 
+  };
+}
+
+/**
+ * Check if player has a pending challenge
+ */
+export function hasPendingChallenge(playerId: string): boolean {
+  const challenge = pendingChallenges.get(playerId);
+  if (!challenge) return false;
+  if (challenge.resolved) return false;
+  if (Date.now() > challenge.expiresAt.getTime()) {
+    pendingChallenges.delete(playerId);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Get pending challenge data (without answer) for a player
+ * Does NOT create a new challenge - use createInteractionChallenge for that
+ */
+export function getPendingChallengeData(playerId: string): {
+  hasPendingChallenge: boolean;
+  challengeType?: 'math' | 'pattern' | 'timing';
+  challengeData?: any;
+  expiresAt?: Date;
+  attempts?: number;
+} | null {
+  const challenge = pendingChallenges.get(playerId);
+  
+  if (!challenge) {
+    return { hasPendingChallenge: false };
+  }
+  
+  if (challenge.resolved) {
+    return { hasPendingChallenge: false };
+  }
+  
+  if (Date.now() > challenge.expiresAt.getTime()) {
+    pendingChallenges.delete(playerId);
+    return { hasPendingChallenge: false };
+  }
+  
+  return {
+    hasPendingChallenge: true,
+    challengeType: challenge.challengeType,
+    challengeData: challenge.challengeData,
+    expiresAt: challenge.expiresAt,
+    attempts: challenge.attempts,
+  };
+}
+
+/**
+ * Get anti-bot stats for admin review
+ */
+export function getAntiBotStats(): {
+  totalTrackedPlayers: number;
+  flaggedActivityPatterns: { playerId: string; reason: string }[];
+  flaggedPatternTrackers: { playerId: string; reason: string }[];
+  pendingChallenges: number;
+} {
+  const flaggedActivity: { playerId: string; reason: string }[] = [];
+  const flaggedPatterns: { playerId: string; reason: string }[] = [];
+  
+  for (const [_, pattern] of activityPatterns) {
+    if (pattern.flagged) {
+      flaggedActivity.push({
+        playerId: pattern.playerId,
+        reason: pattern.flagReason || 'Unknown',
+      });
+    }
+  }
+  
+  for (const [_, tracker] of patternTrackers) {
+    if (tracker.flagged) {
+      flaggedPatterns.push({
+        playerId: tracker.playerId,
+        reason: tracker.flagReason || 'Unknown',
+      });
+    }
+  }
+  
+  return {
+    totalTrackedPlayers: activityPatterns.size,
+    flaggedActivityPatterns: flaggedActivity,
+    flaggedPatternTrackers: flaggedPatterns,
+    pendingChallenges: pendingChallenges.size,
+  };
+}
+
+/**
+ * Cleanup old anti-bot tracking data (call periodically)
+ */
+export function cleanupAntiBotTrackers(): void {
+  const now = Date.now();
+  const maxInactivityMs = 24 * 60 * 60 * 1000; // 24 hours
+  
+  for (const [playerId, pattern] of activityPatterns) {
+    if (now - pattern.lastActionTime.getTime() > maxInactivityMs) {
+      activityPatterns.delete(playerId);
+    }
+  }
+  
+  // Clean expired challenges
+  for (const [playerId, challenge] of pendingChallenges) {
+    if (challenge.resolved || now > challenge.expiresAt.getTime()) {
+      pendingChallenges.delete(playerId);
+    }
+  }
+}
+
+/**
+ * Cross-account pattern detection
+ * Identifies identical action patterns across different accounts (bot farms)
+ */
+export function detectCrossAccountPatterns(): {
+  suspiciousGroups: { accountIds: string[]; sharedPatternHash: string; similarity: number }[];
+} {
+  const patternGroups = new Map<string, string[]>(); // hash -> accountIds
+  
+  for (const [playerId, tracker] of patternTrackers) {
+    for (const seq of tracker.recentSequences) {
+      if (seq.hash) {
+        const accounts = patternGroups.get(seq.hash) || [];
+        if (!accounts.includes(playerId)) {
+          accounts.push(playerId);
+        }
+        patternGroups.set(seq.hash, accounts);
+      }
+    }
+  }
+  
+  const suspiciousGroups: { accountIds: string[]; sharedPatternHash: string; similarity: number }[] = [];
+  
+  for (const [hash, accounts] of patternGroups) {
+    if (accounts.length > 1) {
+      suspiciousGroups.push({
+        accountIds: accounts,
+        sharedPatternHash: hash,
+        similarity: 1.0, // Exact match
+      });
+      
+      logSecurityEvent('CROSS_ACCOUNT_PATTERN', 'CRITICAL', {
+        accounts,
+        patternHash: hash,
+        accountCount: accounts.length,
+      });
+    }
+  }
+  
+  return { suspiciousGroups };
 }

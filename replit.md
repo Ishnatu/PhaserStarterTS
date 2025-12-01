@@ -96,3 +96,36 @@ Real-time monitoring for impossible resource gains (`server/securityMonitor.ts`)
 - In-memory session tracking lost on server restart
 - Single-server design - would need Redis for multi-instance
 - Daily earning counters in-memory (reset on restart)
+
+### Anti-Bot & Anti-Cheat System (2024-12-01)
+Multi-layer bot detection integrated into security middleware:
+
+**24h Activity Pattern Detection:**
+- Tracks hourly activity slots per player (UTC-based)
+- Flags players active >16 hours without 4h break
+- Detects "never sleeps" pattern (<4h avg sleep over 3+ days)
+- Suspicion scores trigger interaction challenges at threshold
+
+**Action Pattern Analysis:**
+- Tracks action sequences (last 10 actions hashed and compared)
+- Detects identical action patterns repeated 3+ times
+- Action velocity tracking: flags >50 same actions in 5 minutes
+- Cross-account pattern detection finds bot farms sharing sequences
+
+**Light Interaction Challenges:**
+- Non-annoying verification for highly suspicious players
+- Three challenge types: math (simple arithmetic), pattern (sequence completion), timing (click within window)
+- 5-minute expiry, 3 max attempts
+- Passing clears flagged status
+
+**Admin Endpoints:**
+- `GET /api/admin/security/antibot` - Full anti-bot statistics
+- `GET /api/challenge/status` - Check if player has pending challenge
+- `POST /api/challenge/verify` - Submit challenge response
+
+**Thresholds (configurable in securityMonitor.ts):**
+- `maxConsecutiveActiveHours`: 16
+- `minSleepHoursPerDay`: 4
+- `actionRepetitionThreshold`: 50 per 5min
+- `sequenceLength`: 10 actions
+- `challengeTriggerSuspicionScore`: 5

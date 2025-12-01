@@ -24,7 +24,15 @@ import {
   getRecentSecurityEvents,
   logSecurityEvent as monitorLogEvent,
   validateAdminAccess,
-  securityMiddleware
+  securityMiddleware,
+  getAntiBotStats,
+  getIPTrackingStats,
+  getCurrencyTrackingStats,
+  createInteractionChallenge,
+  verifyInteractionChallenge,
+  hasPendingChallenge,
+  getPendingChallengeData,
+  detectCrossAccountPatterns
 } from "./securityMonitor";
 
 // Session tracking for multi-instance detection
@@ -766,6 +774,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     const events = getRecentSecurityEvents(count, severity as any, playerId);
     res.json({ events });
+  });
+
+  // Anti-bot monitoring endpoints (admin only)
+  app.get("/api/admin/security/antibot", (req: any, res) => {
+    const validation = validateAdminAccess(req);
+    if (!validation.valid) {
+      return res.status(403).json({ message: validation.reason || "Unauthorized" });
+    }
+    
+    const antiBotStats = getAntiBotStats();
+    const ipStats = getIPTrackingStats();
+    const currencyStats = getCurrencyTrackingStats();
+    const crossAccountPatterns = detectCrossAccountPatterns();
+    
+    res.json({
+      antiBot: antiBotStats,
+      ipTracking: ipStats,
+      currencyTracking: currencyStats,
+      crossAccountPatterns: crossAccountPatterns.suspiciousGroups,
+    });
+  });
+
+  // Player interaction challenge endpoints
+  // GET /api/challenge/status - returns existing challenge data (never creates new challenges)
+  app.get("/api/challenge/status", isAuthenticated, (req: any, res) => {
+    const playerId = req.user.claims.sub;
+    const challengeData = getPendingChallengeData(playerId);
+    res.json(challengeData);
+  });
+
+  app.post("/api/challenge/verify", isAuthenticated, (req: any, res) => {
+    const playerId = req.user.claims.sub;
+    const { response, responseTimeMs } = req.body;
+    
+    if (typeof response !== 'string') {
+      return res.status(400).json({ message: "Invalid response" });
+    }
+    
+    const result = verifyInteractionChallenge(playerId, response, responseTimeMs);
+    res.json(result);
   });
 
   // Privacy Policy endpoint
