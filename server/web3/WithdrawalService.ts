@@ -1,8 +1,9 @@
 import { ethers } from 'ethers';
 import { db } from '../db';
-import { playerWithdrawals, playerCurrencies } from '../../shared/schema';
+import { playerWithdrawals, playerCurrencies, playerWalletBindings } from '../../shared/schema';
 import { eq, and, desc, gte, sql } from 'drizzle-orm';
 import { AuditLogger } from './AuditLogger';
+import { WalletBindingService } from './WalletBindingService';
 
 export interface WithdrawalRequest {
   playerId: string;
@@ -72,6 +73,29 @@ export class WithdrawalService {
     userAgent?: string
   ): Promise<{ success: boolean; error?: string; withdrawalId?: string }> {
     this.checkWithdrawalsEnabled();
+    
+    const walletVerification = await WalletBindingService.verifyWalletForWithdrawal(
+      request.playerId,
+      request.walletAddress
+    );
+    
+    if (!walletVerification.valid) {
+      await AuditLogger.log({
+        eventType: 'withdrawal_wallet_binding_failed',
+        playerId: request.playerId,
+        sessionId,
+        ipAddress,
+        userAgent,
+        severity: 'warning',
+        metadata: {
+          requestedWallet: request.walletAddress,
+          error: walletVerification.error,
+          currencyType: request.currencyType,
+          amount: request.amount,
+        },
+      });
+      return { success: false, error: walletVerification.error };
+    }
     
     return db.transaction(async (tx) => {
       const playerBalances = await tx
@@ -183,6 +207,8 @@ export class WithdrawalService {
           balanceAfterReservation: reservedBalance,
         },
       });
+
+      await WalletBindingService.updateLastUsed(request.playerId);
 
       return { success: true, withdrawalId: withdrawal.id };
     }).catch((error: any) => {
