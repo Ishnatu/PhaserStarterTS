@@ -318,9 +318,9 @@ export class DelveScene extends Phaser.Scene {
   private getRoomDescription(room: DelveRoom): string {
     switch (room.type) {
       case 'combat':
-        return 'Hostile creatures lurk in this chamber.\nPrepare for battle!';
+        return 'Something lurks in the shadows ahead...';
       case 'boss':
-        return 'A powerful presence fills this room...\nThe final challenge awaits!';
+        return 'Something lurks in the shadows ahead...';
       case 'treasure':
         return 'Glittering treasure catches your eye.\nClaim your reward!';
       case 'puzzle':
