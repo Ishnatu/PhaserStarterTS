@@ -1820,18 +1820,25 @@ export class ExploreScene extends Phaser.Scene {
     const enemyCount = combatMetadata?.enemyCount || Math.floor(Math.random() * 2) + 1;
     const hasBoss = combatMetadata?.hasBoss || false;
     
-    const enemies = [];
+    const wildEnemies = [];
     
     for (let i = 0; i < enemyCount; i++) {
-      enemies.push(EnemyFactory.createEnemy(tier, false));
+      wildEnemies.push(EnemyFactory.createEnemy(tier, false));
     }
     
     if (hasBoss) {
-      enemies.push(EnemyFactory.createEnemy(tier, true));
+      wildEnemies.push(EnemyFactory.createEnemy(tier, true));
     }
     
+    // Create a dummy delve/room structure for wild encounters
+    // This prevents null reference errors in CombatScene
+    const dummyDelve = { tier, rooms: [], currentRoomIndex: 0 };
+    const dummyRoom = { type: hasBoss ? 'boss' : 'combat', enemies: wildEnemies, visited: false };
+    
     SceneManager.getInstance().transitionTo('combat', {
-      enemies,
+      delve: dummyDelve,
+      room: dummyRoom,
+      wildEnemies,
       wildEncounter: true,
       returnToLocation: { x: this.player.x, y: this.player.y },
       encounterToken,
