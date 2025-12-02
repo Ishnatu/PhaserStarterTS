@@ -271,7 +271,18 @@ export class CombatScene extends Phaser.Scene {
 
   private syncLocalStateWithServer(serverState: CombatState): void {
     const localState = this.combatSystem.getCombatState();
-    if (!localState) return;
+    if (!localState) {
+      console.error('[SYNC] No local state to sync!');
+      return;
+    }
+    
+    // DEBUG: Log sync operation
+    console.log('[SYNC] Syncing server state:', {
+      serverPlayerVictory: serverState.playerVictory,
+      serverIsComplete: serverState.isComplete,
+      localPlayerVictoryBefore: localState.playerVictory,
+      localIsCompleteBefore: localState.isComplete,
+    });
     
     // Sync player stats
     localState.player.health = serverState.player.health;
@@ -284,6 +295,12 @@ export class CombatScene extends Phaser.Scene {
     // This was missing and caused "Victory" log but "Defeat" screen!
     localState.isComplete = serverState.isComplete;
     localState.playerVictory = serverState.playerVictory;
+    
+    // DEBUG: Verify sync worked
+    console.log('[SYNC] After sync:', {
+      localPlayerVictoryAfter: localState.playerVictory,
+      localIsCompleteAfter: localState.isComplete,
+    });
     
     // Sync enemy states
     serverState.enemies.forEach((serverEnemy, index) => {
@@ -1557,13 +1574,19 @@ export class CombatScene extends Phaser.Scene {
 
   private async endCombat(): Promise<void> {
     const state = this.combatSystem.getCombatState();
-    if (!state) return;
+    if (!state) {
+      console.error('[endCombat] No combat state!');
+      return;
+    }
 
-    // DEBUG: Log combat state for rewards debugging
-    console.log('[endCombat] Combat state:', {
+    // DEBUG: Log combat state for victory/defeat determination
+    console.log('[endCombat] Reading state for victory check:', {
       playerVictory: state.playerVictory,
+      isComplete: state.isComplete,
+      playerHealth: state.player.health,
       enemyCount: state.enemies.length,
-      enemies: state.enemies.map(e => ({ name: e.name, tier: e.tier, isBoss: e.isBoss, health: e.health }))
+      enemies: state.enemies.map(e => ({ name: e.name, health: e.health })),
+      allEnemiesDead: state.enemies.every(e => e.health <= 0),
     });
 
     this.gameState.updatePlayer({
