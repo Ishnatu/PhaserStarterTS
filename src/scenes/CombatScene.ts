@@ -375,7 +375,16 @@ export class CombatScene extends Phaser.Scene {
     this.playerSprite.setScale(0.24);
     
     const player = this.gameState.getPlayer();
-    this.previousPlayerHealth = player.health;
+    
+    // Ensure we have valid health/stamina values (defensive coding)
+    const displayHealth = player.health || 0;
+    const displayMaxHealth = player.maxHealth || 100;
+    const displayStamina = player.stamina || 0;
+    const displayMaxStamina = player.maxStamina || 50;
+    
+    this.previousPlayerHealth = displayHealth;
+    
+    console.log('[COMBAT] renderPlayer - health:', displayHealth, '/', displayMaxHealth, 'stamina:', displayStamina, '/', displayMaxStamina);
     
     // Player info panel with HP/SP bars (Pink area - top left)
     const panelX = 20;
@@ -412,7 +421,7 @@ export class CombatScene extends Phaser.Scene {
       panelWidth - 20,
       30
     );
-    this.playerHealthBar.update(player.health, player.maxHealth);
+    this.playerHealthBar.update(displayHealth, displayMaxHealth);
 
     // SP Bar
     this.playerStaminaBar = new PixelArtBar(
@@ -425,7 +434,7 @@ export class CombatScene extends Phaser.Scene {
       panelWidth - 20,
       30
     );
-    this.playerStaminaBar.update(player.stamina, player.maxStamina);
+    this.playerStaminaBar.update(displayStamina, displayMaxStamina);
 
     // Hidden text elements for backward compatibility (used in updateCombatDisplay)
     this.playerHealthText = this.add.text(0, 0, '', { fontSize: '1px' }).setVisible(false);

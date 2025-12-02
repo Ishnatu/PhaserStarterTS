@@ -133,17 +133,21 @@ export class PixelArtBar {
   }
   
   public update(current: number, max: number): void {
-    this.currentValue = current;
-    this.maxValue = max;
+    // Handle invalid/undefined values
+    const safeMax = (max && max > 0) ? max : 100;
+    const safeCurrent = (current && current >= 0) ? current : 0;
+    
+    this.currentValue = safeCurrent;
+    this.maxValue = safeMax;
     
     // Update tooltip if it exists
     if (this.tooltipText) {
       const label = this.container.getData('label');
-      this.tooltipText.setText(`${label} ${current}/${max}`);
+      this.tooltipText.setText(`${label} ${safeCurrent}/${safeMax}`);
     }
     
-    // Calculate fill percentage
-    const fillPercent = Math.max(0, Math.min(1, current / max));
+    // Calculate fill percentage (safe division)
+    const fillPercent = Math.max(0, Math.min(1, safeCurrent / safeMax));
     const fillWidth = Math.floor((this.barWidth - 12) * fillPercent);
     const emptyWidth = this.barWidth - 12 - fillWidth;
     
