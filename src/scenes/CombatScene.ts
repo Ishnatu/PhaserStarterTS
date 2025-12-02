@@ -280,6 +280,11 @@ export class CombatScene extends Phaser.Scene {
     localState.currentTurn = serverState.currentTurn;
     localState.combatLog = [...serverState.combatLog];
     
+    // CRITICAL: Sync combat completion state (victory/defeat)
+    // This was missing and caused "Victory" log but "Defeat" screen!
+    localState.isComplete = serverState.isComplete;
+    localState.playerVictory = serverState.playerVictory;
+    
     // Sync enemy states
     serverState.enemies.forEach((serverEnemy, index) => {
       if (localState.enemies[index]) {
