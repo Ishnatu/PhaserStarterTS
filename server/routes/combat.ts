@@ -889,6 +889,15 @@ export function registerCombatRoutes(app: Express) {
       // Check if combat ended
       const combatEnded = combatSystem.isCombatComplete(updatedState);
 
+      // DEBUG: Log what we're sending to client
+      console.log('[COMBAT] Response state:', {
+        combatEnded,
+        isComplete: updatedState.isComplete,
+        playerVictory: updatedState.playerVictory,
+        playerHealth: updatedState.player.health,
+        enemyHealths: updatedState.enemies.map((e: Enemy) => ({ name: e.name, health: e.health })),
+      });
+
       if (combatEnded) {
         // [SECURITY] Check if player won (all enemies defeated)
         const playerWon = updatedState.enemies.every((e: Enemy) => e.health <= 0);
