@@ -286,7 +286,10 @@ async function finalizeAbandonedCombat(session: CombatSession): Promise<boolean>
     }
     
     // Work with the full save data structure
-    const fullSaveData = gameSave.saveData as any;
+    // Handle case where saveData might be a JSON string or object
+    const fullSaveData = typeof gameSave.saveData === 'string' 
+      ? JSON.parse(gameSave.saveData as string) 
+      : gameSave.saveData as any;
     const savedPlayer = fullSaveData.player || fullSaveData as PlayerData;
     
     // Merge ONLY combat-relevant fields into the existing player data

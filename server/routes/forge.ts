@@ -70,7 +70,10 @@ export function registerForgeRoutes(app: Express) {
           throw new Error("NO_CURRENCY");
         }
 
-        const saveData = lockedSave.saveData as any;
+        // Handle case where saveData might be a JSON string or object
+        const saveData = typeof lockedSave.saveData === 'string' 
+          ? JSON.parse(lockedSave.saveData as string) 
+          : lockedSave.saveData as any;
         const player = saveData.player;
 
         let item: any = null;

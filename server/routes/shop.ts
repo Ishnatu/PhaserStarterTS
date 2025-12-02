@@ -60,7 +60,10 @@ export function registerShopRoutes(app: Express) {
         return res.status(404).json({ message: "No save found" });
       }
 
-      const saveData = gameSave.saveData as any;
+      // Handle case where saveData might be a JSON string or object
+      const saveData = typeof gameSave.saveData === 'string' 
+        ? JSON.parse(gameSave.saveData as string) 
+        : gameSave.saveData as any;
       const player = saveData.player;
 
       const totalInventory = player.inventory.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0);

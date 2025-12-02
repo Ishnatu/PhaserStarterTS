@@ -19,7 +19,10 @@ async function backfillCurrencies() {
     
     for (const save of saves) {
       try {
-        const saveData = save.saveData as any;
+        // Handle case where saveData might be a JSON string or object
+        const saveData = typeof save.saveData === 'string' 
+          ? JSON.parse(save.saveData as string) 
+          : save.saveData as any;
         
         // Check if currency record already exists
         const [existing] = await db

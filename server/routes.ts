@@ -71,11 +71,20 @@ function extractAllItems(gameSave: any): PreviousItemData {
     itemValuesList: new Map(),
   };
 
-  if (!gameSave?.saveData?.player) {
+  if (!gameSave?.saveData) {
     return result;
   }
 
-  const player = gameSave.saveData.player;
+  // Handle case where saveData might be a JSON string or object
+  const saveData = typeof gameSave.saveData === 'string' 
+    ? JSON.parse(gameSave.saveData) 
+    : gameSave.saveData;
+  
+  if (!saveData?.player) {
+    return result;
+  }
+
+  const player = saveData.player;
 
   const recordItemValues = (item: any) => {
     if (item?.itemId) {
@@ -319,7 +328,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "No save found" });
       }
       
-      const saveData = gameSave.saveData as any;
+      // Handle case where saveData might be a JSON string or object
+      const saveData = typeof gameSave.saveData === 'string' 
+        ? JSON.parse(gameSave.saveData as string) 
+        : gameSave.saveData as any;
       
       // Ensure server-authoritative state exists
       let serverState = await storage.getPlayerCurrency(userId);
@@ -379,7 +391,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // EXCEPTION: For brand new players (no previous save), we trust the client's first
       // save to set hasReceivedStarterKit=true since there's nothing to spoof yet.
       // The item minting validation will still enforce quantity limits.
-      const prevSaveData = previousSave?.saveData as any;
+      // Handle case where saveData might be a JSON string or object
+      const prevSaveData = previousSave?.saveData 
+        ? (typeof previousSave.saveData === 'string' 
+            ? JSON.parse(previousSave.saveData as string) 
+            : previousSave.saveData as any)
+        : null;
       const isFirstSaveEver = previousSave === null || previousSave === undefined;
       const serverAuthoritativeHasReceivedStarterKit = isFirstSaveEver
         ? (saveData?.player?.hasReceivedStarterKit === true)
