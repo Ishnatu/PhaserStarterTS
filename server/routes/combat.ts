@@ -592,7 +592,10 @@ export function registerCombatRoutes(app: Express) {
         return res.status(404).json({ message: "No save found for player" });
       }
 
-      const player = gameSave.saveData as PlayerData;
+      // Handle case where saveData might be a JSON string or object
+      const player = typeof gameSave.saveData === 'string' 
+        ? JSON.parse(gameSave.saveData as string) as PlayerData 
+        : gameSave.saveData as PlayerData;
       
       // Get player level for stats calculation
       const playerCurrencyState = await storage.getPlayerCurrency(userId);
@@ -738,9 +741,20 @@ export function registerCombatRoutes(app: Express) {
           // This prevents exploits where session state was tampered with earlier
           const gameSave = await storage.getGameSaveByUserId(userId);
           if (!gameSave || !gameSave.saveData) {
+            console.error('[COMBAT] Failed to load player save data for attack validation');
             return res.status(500).json({ message: "Failed to load player data" });
           }
-          const freshPlayer = gameSave.saveData as PlayerData;
+          // Handle case where saveData might be a JSON string or object
+          const freshPlayer = typeof gameSave.saveData === 'string' 
+            ? JSON.parse(gameSave.saveData as string) as PlayerData 
+            : gameSave.saveData as PlayerData;
+          
+          console.log('[COMBAT DEBUG] Attack validation:', {
+            attackName: action.attackName,
+            hasEquipment: !!freshPlayer.equipment,
+            mainHand: freshPlayer.equipment?.mainHand?.itemId,
+            offHand: freshPlayer.equipment?.offHand?.itemId,
+          });
 
           // [SERVER AUTHORITATIVE] Validate attack against fresh player equipment from storage
           // This prevents client from forging attacks with spoofed damage/costs
@@ -750,6 +764,10 @@ export function registerCombatRoutes(app: Express) {
           );
 
           if (!validatedAttack) {
+            console.error('[COMBAT] Attack validation failed:', {
+              attackName: action.attackName,
+              equipment: freshPlayer.equipment,
+            });
             return res.status(400).json({ 
               message: `Invalid attack: "${action.attackName}" not found in equipped weapons` 
             });
