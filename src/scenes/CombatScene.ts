@@ -509,8 +509,8 @@ export class CombatScene extends Phaser.Scene {
         enemyVisual = this.add.rectangle(x, y, 80, 80, 0xff4444);
       }
       
-      // HP bar positioned ~20px above the sprite (no title needed)
-      const hpBarY = y - 100;
+      // HP bar positioned above the sprite with clearance for head height
+      const hpBarY = y - 150;
       const hpBar = new PixelArtBar(
         this,
         x - 80,
