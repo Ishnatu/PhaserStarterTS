@@ -1573,7 +1573,19 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private async endCombat(): Promise<void> {
-    const state = this.combatSystem.getCombatState();
+    // CRITICAL FIX: In server-authoritative mode, read state from ServerCombatController
+    // The local CombatSystem may have stale/reset state after sync operations
+    // ServerCombatController.getCombatState() holds the authoritative server response
+    let state: CombatState | null;
+    
+    if (this.useServerCombat) {
+      state = this.serverCombat.getCombatState();
+      console.log('[endCombat] Using SERVER combat state (authoritative)');
+    } else {
+      state = this.combatSystem.getCombatState();
+      console.log('[endCombat] Using LOCAL combat state');
+    }
+    
     if (!state) {
       console.error('[endCombat] No combat state!');
       return;
