@@ -83,12 +83,17 @@ const DEFAULT_ZONE_BOUNDS: ZoneBounds = {
 
 /**
  * Movement validation constants
+ * 
+ * These values are tuned based on actual gameplay:
+ * - Client moves at 3px/frame, reports every ~500ms
+ * - With network latency, movements can batch to 200-600px per report
+ * - Setting limits too tight causes false positives during normal play
  */
 export const MOVEMENT_LIMITS = {
-  MAX_DISTANCE_PER_CALL: 150,      // Max pixels per movement call (reduced from 200)
-  MAX_VELOCITY_PER_SECOND: 400,   // Max pixels per second (running speed)
-  MIN_TIME_BETWEEN_MOVES_MS: 50,  // Minimum time between move calls (prevent spam)
-  TELEPORT_THRESHOLD: 300,        // Distance that triggers teleport detection
+  MAX_DISTANCE_PER_CALL: 600,      // Max pixels per movement call (allows for network batching)
+  MAX_VELOCITY_PER_SECOND: 800,    // Max pixels per second (generous for lag spikes)
+  MIN_TIME_BETWEEN_MOVES_MS: 50,   // Minimum time between move calls (prevent spam)
+  TELEPORT_THRESHOLD: 1200,        // Distance that triggers teleport detection (obvious cheating only)
 };
 
 export interface ValidationResult {
