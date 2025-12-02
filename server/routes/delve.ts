@@ -144,8 +144,11 @@ export function registerDelveRoutes(app: Express) {
         success: true,
         sessionId, // Return sessionId for completion verification
         delve: {
+          id: delve.id,
           rooms,
           entranceRoomId: delve.entranceRoomId,
+          currentRoomId: delve.currentRoomId, // CRITICAL: Required for DelveScene to render rooms
+          bossRoomId: delve.bossRoomId,
           tier: delve.tier,
         },
       });

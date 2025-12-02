@@ -701,8 +701,11 @@ export class ExploreScene extends Phaser.Scene {
       
       // Reconstruct delve from server response
       const delve = {
+        id: result.delve.id,
         rooms: new Map(result.delve.rooms.map((r: any) => [r.id, r])),
         entranceRoomId: result.delve.entranceRoomId,
+        currentRoomId: result.delve.currentRoomId || result.delve.entranceRoomId, // CRITICAL: Required for DelveScene
+        bossRoomId: result.delve.bossRoomId,
         tier: result.delve.tier,
         location: { x, y },
         sessionId: result.sessionId, // Store sessionId for completion
