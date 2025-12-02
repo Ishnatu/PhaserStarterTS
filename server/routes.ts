@@ -378,9 +378,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { saveData } = req.body;
       const userId = req.user.claims.sub;
       
+      console.log(`[SAVE] Attempting save for user: ${userId}`);
+      
       if (!saveData) {
+        console.log('[SAVE] No saveData in request body');
         return res.status(400).json({ message: "Save data required" });
       }
+      
+      console.log('[SAVE] saveData received, has player:', !!saveData.player);
       
       // SECURITY: Load previous save state for item reconciliation
       const previousSave = await storage.getGameSaveByUserId(userId);
@@ -410,11 +415,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         serverAuthoritativeHasReceivedStarterKit
       );
       if (!validation.valid) {
+        console.log('[SAVE] Validation failed:', validation.errors);
         return res.status(400).json({ 
           message: "Invalid save data",
           errors: validation.errors
         });
       }
+      
+      console.log('[SAVE] Validation passed');
       
       // Use sanitized data with forbidden fields stripped
       const sanitizedData = validation.sanitizedData;
@@ -449,17 +457,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Recalculate stats from equipment (always, even if empty)
       sanitizedData.player.stats = recalculatePlayerStats(sanitizedData.player.equipment || {}, serverState.level);
       
+      console.log('[SAVE] Calling storage.saveGame...');
       const result = await storage.saveGame({
         userId,
         saveData: sanitizedData,
       });
       
+      console.log('[SAVE] Save successful for user:', userId);
       res.json({
         success: true,
         lastSaved: result.lastSaved
       });
     } catch (error) {
-      console.error("Error saving game:", error);
+      console.error("[SAVE] Error saving game:", error);
       res.status(500).json({ message: "Failed to save game" });
     }
   });
