@@ -892,8 +892,6 @@ export class ExploreScene extends Phaser.Scene {
 
     if (encounterType.type === 'combat') {
       this.handleCombatEncounter(encounterType);
-    } else if (encounterType.type === 'treasure') {
-      this.handleTreasureEncounter(encounterType);
     } else if (encounterType.type === 'shrine') {
       this.handleShrineEncounter(encounterType);
     } else if (encounterType.type === 'corrupted_void_portal') {
@@ -920,8 +918,6 @@ export class ExploreScene extends Phaser.Scene {
 
     if (encounter.type === 'combat') {
       this.handleServerCombatEncounter(encounterData);
-    } else if (encounter.type === 'treasure') {
-      this.handleServerTreasureEncounter(encounterData);
     } else if (encounter.type === 'shrine') {
       this.handleServerShrineEncounter(encounterData);
     } else if (encounter.type === 'corrupted_void_portal') {
@@ -2329,36 +2325,44 @@ export class ExploreScene extends Phaser.Scene {
         description: `You've been ambushed by ${numEnemies} ${enemies[0].name}${numEnemies > 1 ? 's' : ''}!`,
         enemies,
       };
-    } else if (roll < 0.58) {
-      const aa = Math.floor(Math.random() * 41) + 40;
-      const ca = Math.floor(Math.random() * 4) + 3; // 3-6 CA (whole numbers)
-      
+    } else if (roll < 0.60) {
+      // Combat: 60% total (treasure removed, redistributed to combat)
+      const numEnemies = Math.floor(Math.random() * 2) + 1;
+      const enemies = [];
+      for (let i = 0; i < numEnemies; i++) {
+        enemies.push(EnemyFactory.createEnemy(1, false));
+      }
       return {
-        type: 'treasure',
-        description: 'You stumble upon a hidden cache of resources!',
-        loot: { aa, ca },
+        type: 'combat',
+        description: `You've been ambushed by ${numEnemies} ${enemies[0].name}${numEnemies > 1 ? 's' : ''}!`,
+        enemies,
       };
-    } else if (roll < 0.73) {
+    } else if (roll < 0.72) {
+      // Shrine: 12%
       return {
         type: 'shrine',
         description: 'You discover a shrine to the Faceless Old God...\nCorrupted whispers promise power for the faithful.',
       };
-    } else if (roll < 0.83) {
+    } else if (roll < 0.84) {
+      // Corrupted Void Portal: 12%
       return {
         type: 'corrupted_void_portal',
         description: 'A corrupted void portal tears through reality before you.\nDangerous... but potentially rewarding.',
       };
-    } else if (roll < 0.93) {
+    } else if (roll < 0.94) {
+      // Trapped Chest: 10%
       return {
         type: 'trapped_chest',
         description: 'You spot an ornate chest partially buried in the earth.',
       };
     } else if (roll < 0.98) {
+      // Tombstone: 4%
       return {
         type: 'tombstone',
         description: 'You discover the remains of a fallen adventurer...\nTheir equipment lies scattered around them.',
       };
     } else {
+      // Wandering Merchant: 2%
       return {
         type: 'wandering_merchant',
         description: 'A mysterious merchant appears from the shadows...\n"Care to peruse my wares, traveler?"',

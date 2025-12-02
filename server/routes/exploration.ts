@@ -10,8 +10,6 @@ function getEncounterDescription(type: EncounterType): string {
   switch (type) {
     case 'combat':
       return 'Something lurks in the shadows ahead...';
-    case 'treasure':
-      return 'You notice a glinting object half-buried in the dirt.';
     case 'shrine':
       return 'An ancient shrine emanates corrupted energy...';
     case 'corrupted_void_portal':

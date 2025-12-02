@@ -4,7 +4,6 @@ import { validateMovement, MOVEMENT_LIMITS } from '../security/zoneValidation';
 
 export type EncounterType = 
   | 'combat' 
-  | 'treasure' 
   | 'shrine' 
   | 'corrupted_void_portal' 
   | 'trapped_chest' 
@@ -84,19 +83,22 @@ class PendingEncounterManager {
   private generateEncounterType(rng: SeededRNG, zoneId: string): EncounterType {
     const roll = rng.next();
     
-    if (roll < 0.38) {
+    // Encounter distribution (treasure removed - redistributed to other types):
+    // Combat: 60% (0.00-0.60)
+    // Shrine: 12% (0.60-0.72)
+    // Corrupted Void Portal: 12% (0.72-0.84)
+    // Trapped Chest: 10% (0.84-0.94)
+    // Tombstone: 4% (0.94-0.98)
+    // Wandering Merchant: 2% (0.98-1.00)
+    if (roll < 0.60) {
       return 'combat';
-    } else if (roll < 0.58) {
-      return 'combat';
-    } else if (roll < 0.73) {
-      return 'treasure';
-    } else if (roll < 0.83) {
+    } else if (roll < 0.72) {
       return 'shrine';
-    } else if (roll < 0.93) {
+    } else if (roll < 0.84) {
       return 'corrupted_void_portal';
-    } else if (roll < 0.98) {
+    } else if (roll < 0.94) {
       return 'trapped_chest';
-    } else if (roll < 0.99) {
+    } else if (roll < 0.98) {
       return 'tombstone';
     } else {
       return 'wandering_merchant';
