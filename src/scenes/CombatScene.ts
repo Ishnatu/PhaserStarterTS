@@ -213,6 +213,11 @@ export class CombatScene extends Phaser.Scene {
     try {
       console.log('[SERVER COMBAT] Initiating combat via server with enemies:', enemyNames);
       
+      // CRITICAL: Ensure game is saved before combat so server has player data
+      // This fixes the "No save found" issue for new players
+      console.log('[SERVER COMBAT] Ensuring game save exists before combat...');
+      await this.gameState.saveToServer();
+      
       const result = await this.serverCombat.initiateCombat(enemyNames, this.isWildEncounter);
       
       if (!result.success) {
