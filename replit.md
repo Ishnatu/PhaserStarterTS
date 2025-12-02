@@ -11,6 +11,16 @@ This is a long-term solo project built collaboratively with an AI assistant. The
 4. User will provide final art assets
 5. Focus on strong architecture to support future features
 
+### Critical Development Principle: Security Preservation
+**All gameplay changes must maintain existing security standards.** When fixing bugs or adding features:
+- Never accidentally remove or bypass security checks (authentication, validation, rate limiting)
+- Verify that server-authoritative logic remains intact after changes
+- Review changes against the security architecture before committing
+- If a fix touches security-sensitive code, explicitly confirm security measures are preserved
+- Reference `GAME_DESIGN_EXPLOIT_AUDIT.md` and `INFRASTRUCTURE_SECURITY_AUDIT.md` when in doubt
+
+This principle exists because bug fixes and feature additions can inadvertently regress security protections if not carefully reviewed.
+
 ## System Architecture
 
 ### UI/UX Decisions
