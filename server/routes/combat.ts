@@ -922,8 +922,22 @@ export function registerCombatRoutes(app: Express) {
       const diceRoller = new DiceRoller(rng);
       const combatSystem = new CombatSystem(diceRoller);
 
-      // Process all enemy turns (enemyTurn processes all enemies and transitions back to player)
-      const updatedState = combatSystem.enemyTurn(session.combatState);
+      // CRITICAL FIX: Must call endPlayerTurn first to transition currentTurn from 'player' to 'enemy'
+      // Otherwise enemyTurn() checks currentTurn !== 'enemy' and returns without processing
+      let state = combatSystem.endPlayerTurn(session.combatState);
+      
+      // Process enemy turn phases in order:
+      // 1. enemyTurnStart - tick poison conditions on enemies
+      state = combatSystem.enemyTurnStart(state);
+      
+      // 2. enemyTurn - each enemy attacks the player (only runs if currentTurn === 'enemy')
+      state = combatSystem.enemyTurn(state);
+      
+      // 3. enemyTurnEnd - tick bleed conditions on enemies
+      state = combatSystem.enemyTurnEnd(state);
+      
+      // 4. Start new player turn
+      const updatedState = combatSystem.playerTurnStart(state);
 
       // Update session with new combat state and RNG call count
       session.combatState = updatedState;
