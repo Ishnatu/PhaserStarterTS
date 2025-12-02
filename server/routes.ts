@@ -484,6 +484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Heartbeat endpoint for multi-instance detection (Replit Auth only)
   // Security: playerId comes from authenticated session, not client request
+  // NEW BEHAVIOR: New instances supersede old ones (old instances get terminated)
   app.post("/api/game/heartbeat", isAuthenticated, async (req: any, res) => {
     try {
       const playerId = req.user.claims.sub;
@@ -504,25 +505,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get or create session list for this player
       let sessions = activeSessions.get(playerId) || [];
       
-      // Find existing session or add new one
+      // Filter out stale sessions first
+      sessions = sessions.filter(s => now - s.lastHeartbeat < SESSION_TIMEOUT);
+      
+      // Find existing session
       const existingSession = sessions.find(s => s.sessionId === instanceId);
+      
       if (existingSession) {
+        // This instance already exists - just update heartbeat
         existingSession.lastHeartbeat = now;
       } else {
+        // NEW INSTANCE: This is a new tab/window
+        // Mark it as the active one (newest instance wins)
         sessions.push({ playerId, sessionId: instanceId, lastHeartbeat: now });
+        console.log(`[SESSION] New instance ${instanceId.substring(0, 8)}... for player ${playerId.substring(0, 8)}... (${sessions.length} total)`);
       }
       
-      // Filter out stale sessions
-      sessions = sessions.filter(s => now - s.lastHeartbeat < SESSION_TIMEOUT);
       activeSessions.set(playerId, sessions);
       
-      // Check for duplicates (more than one active session)
-      const hasDuplicate = sessions.length > 1;
+      // Determine if THIS instance should be superseded (terminated)
+      // The NEWEST instance (most recent heartbeat among non-stale sessions) wins
+      // All other instances should terminate
+      const sortedByTime = [...sessions].sort((a, b) => b.lastHeartbeat - a.lastHeartbeat);
+      const newestInstanceId = sortedByTime[0]?.sessionId;
+      const isSuperseded = instanceId !== newestInstanceId && sessions.length > 1;
       
       res.json({ 
         success: true, 
-        hasDuplicate,
-        activeSessionCount: sessions.length 
+        isSuperseded, // TRUE = this instance should terminate (old instance)
+        activeSessionCount: sessions.length,
+        // Legacy field for backwards compatibility
+        hasDuplicate: isSuperseded
       });
     } catch (error) {
       console.error("Error processing heartbeat:", error);

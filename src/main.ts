@@ -27,7 +27,7 @@ declare global {
   }
 }
 
-// Function to show blocking modal for duplicate instances
+// Function to show blocking modal for superseded instances (old tab/window)
 function showDuplicateInstanceModal(): void {
   const overlay = document.createElement('div');
   overlay.id = 'duplicate-instance-modal';
@@ -49,14 +49,14 @@ function showDuplicateInstanceModal(): void {
   message.style.fontSize = '48px';
   message.style.textAlign = 'center';
   message.style.marginBottom = '40px';
-  message.textContent = 'Multiple Game Instances Detected';
+  message.textContent = 'Session Transferred';
   
   const subMessage = document.createElement('div');
   subMessage.style.fontSize = '24px';
   subMessage.style.textAlign = 'center';
   subMessage.style.marginBottom = '60px';
   subMessage.style.color = '#ffffff';
-  subMessage.textContent = 'Please close this window to prevent save conflicts';
+  subMessage.textContent = 'Game is now active in another window';
   
   const exitButton = document.createElement('button');
   exitButton.textContent = 'Exit Game';
