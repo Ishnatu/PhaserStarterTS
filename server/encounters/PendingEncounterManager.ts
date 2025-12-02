@@ -8,7 +8,8 @@ export type EncounterType =
   | 'corrupted_void_portal' 
   | 'trapped_chest' 
   | 'tombstone' 
-  | 'wandering_merchant';
+  | 'wandering_merchant'
+  | 'treasure';
 
 export interface PendingEncounter {
   token: string;
