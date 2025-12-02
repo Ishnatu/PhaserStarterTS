@@ -806,7 +806,32 @@ export function registerCombatRoutes(app: Express) {
             targetIndex,
             validatedAttack
           );
-          updatedState = state;
+          
+          // AUTO-END TURN: If player has no actions remaining, automatically process enemy turn
+          // This is the expected game flow - turns end when all actions are spent
+          if (state.actionsRemaining <= 0 && !state.isComplete) {
+            console.log('[COMBAT] Auto-ending turn - no actions remaining');
+            
+            // Transition to enemy turn
+            let enemyState = combatSystem.endPlayerTurn(state);
+            
+            // Process enemy turn phases
+            if (enemyState.currentTurn === 'enemy' && !enemyState.isComplete) {
+              enemyState = combatSystem.enemyTurnStart(enemyState);
+              enemyState = combatSystem.enemyTurn(enemyState);
+              enemyState = combatSystem.enemyTurnEnd(enemyState);
+              
+              // Start new player turn (if combat not over)
+              if (!enemyState.isComplete) {
+                enemyState = combatSystem.playerTurnStart(enemyState);
+              }
+            }
+            
+            updatedState = enemyState;
+          } else {
+            updatedState = state;
+          }
+          
           actionResult = result;
           break;
         }
