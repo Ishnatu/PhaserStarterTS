@@ -1230,10 +1230,13 @@ export class ExploreScene extends Phaser.Scene {
     this.currentMenuCloseFunction = destroyAll;
     this.menuState = 'encounter';
 
+    let isEntering = false;
     const enterBtnBg = this.add.rectangle(width / 2 - 70, height / 2 + 70, 140, 30, 0x444466)
       .setScrollFactor(0).setDepth(1002)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
+        if (isEntering) return;
+        isEntering = true;
         destroyAll();
         this.startVoidPortalDelve();
       });
