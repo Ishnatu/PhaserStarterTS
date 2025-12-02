@@ -1845,12 +1845,14 @@ export class ExploreScene extends Phaser.Scene {
     
     const wildEnemies = [];
     
-    for (let i = 0; i < enemyCount; i++) {
-      wildEnemies.push(EnemyFactory.createEnemy(tier, false));
-    }
-    
     if (hasBoss) {
+      // Boss encounters: exactly 1 boss, no additional enemies
       wildEnemies.push(EnemyFactory.createEnemy(tier, true));
+    } else {
+      // Regular encounters: 1-2 standard enemies
+      for (let i = 0; i < enemyCount; i++) {
+        wildEnemies.push(EnemyFactory.createEnemy(tier, false));
+      }
     }
     
     // Create a dummy delve/room structure for wild encounters
