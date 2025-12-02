@@ -65,11 +65,11 @@ app.use(helmet({
 
 // Rate limiting - protect against abuse
 // [SECURITY FIX] Tightened limits based on normal user behavior analysis
-// Normal gameplay: ~20-25 requests/minute during active play
-// Limits set to ~15% above baseline to accommodate legitimate bursts
+// Rate limits tuned to catch automated abuse (100s of requests), NOT legitimate spam-clicking
+// Human spam-clicking: ~30-50 clicks in a burst. Bots/scripts: 100s-1000s of requests
 const generalLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 30, // 30 requests per minute (was 100 - too permissive)
+  max: 120, // 120 requests per minute - allows burst clicking, catches automation
   message: { message: 'Too many requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -77,26 +77,26 @@ const generalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 login attempts per 15 minutes
+  max: 20, // 20 login attempts per 15 minutes
   message: { message: 'Too many login attempts, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Rate limiter for admin endpoints (very restrictive)
+// Rate limiter for admin endpoints (very restrictive - these are sensitive)
 const adminLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 10, // 10 requests per minute
+  max: 30, // 30 requests per minute
   standardHeaders: true,
   legacyHeaders: false,
   message: 'Too many admin requests',
 });
 
-// [SECURITY] Specific rate limiters for high-value endpoints
-// These are targets for exploitation and need stricter limits
+// [SECURITY] Specific rate limiters for game endpoints
+// Set high enough for spam-clicking, low enough to catch automated abuse
 const combatLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 20, // 20 combat actions per minute (covers fast but legitimate play)
+  max: 100, // 100 combat actions per minute - allows rapid legitimate play
   message: { message: 'Combat rate limit exceeded' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -104,7 +104,7 @@ const combatLimiter = rateLimit({
 
 const lootLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 5, // 5 loot claims per minute (kills don't happen that fast)
+  max: 30, // 30 loot claims per minute - covers multi-enemy fights + spam clicks
   message: { message: 'Loot claim rate limit exceeded' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -112,7 +112,7 @@ const lootLimiter = rateLimit({
 
 const delveLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 3, // 3 delve operations per minute (delves take time)
+  max: 30, // 30 delve operations per minute - allows spam clicking Enter
   message: { message: 'Delve rate limit exceeded' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -120,7 +120,7 @@ const delveLimiter = rateLimit({
 
 const saveLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 15, // 15 saves per minute (throttled saves + transitions)
+  max: 60, // 60 saves per minute - auto-saves + transitions + manual
   message: { message: 'Save rate limit exceeded' },
   standardHeaders: true,
   legacyHeaders: false,
