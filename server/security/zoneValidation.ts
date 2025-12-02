@@ -21,54 +21,63 @@ export interface ZoneBounds {
 /**
  * Zone boundary definitions
  * These should match the client-side map dimensions
+ * WORLD_SIZE in ExploreScene.ts = 6000 pixels
  * Format: { minX, maxX, minY, maxY, tileSize }
  */
 const ZONE_BOUNDS: Record<string, ZoneBounds> = {
   'roboka': {
     minX: 0,
-    maxX: 1600,  // 50 tiles * 32px
+    maxX: 6000,  // Matches WORLD_SIZE in ExploreScene.ts
     minY: 0,
-    maxY: 1600,
+    maxY: 6000,
+    tileSize: 32,
+  },
+  'wilderness': {
+    minX: 0,
+    maxX: 6000,  // Same world size
+    minY: 0,
+    maxY: 6000,
     tileSize: 32,
   },
   'fungal_hollows': {
     minX: 0,
-    maxX: 2048,  // 64 tiles * 32px
+    maxX: 6000,
     minY: 0,
-    maxY: 2048,
+    maxY: 6000,
     tileSize: 32,
   },
   'void_wastes': {
     minX: 0,
-    maxX: 2560,  // 80 tiles * 32px
+    maxX: 6000,
     minY: 0,
-    maxY: 2560,
+    maxY: 6000,
     tileSize: 32,
   },
   'crystal_caverns': {
     minX: 0,
-    maxX: 1920,  // 60 tiles * 32px
+    maxX: 6000,
     minY: 0,
-    maxY: 1920,
+    maxY: 6000,
     tileSize: 32,
   },
   'shadow_depths': {
     minX: 0,
-    maxX: 3200,  // 100 tiles * 32px
+    maxX: 6000,
     minY: 0,
-    maxY: 3200,
+    maxY: 6000,
     tileSize: 32,
   },
 };
 
 /**
- * Default bounds for unknown zones (generous but not unlimited)
+ * Default bounds for unknown zones (generous to avoid false positives)
+ * Using 6000 to match standard world size
  */
 const DEFAULT_ZONE_BOUNDS: ZoneBounds = {
   minX: 0,
-  maxX: 4096,
+  maxX: 6000,
   minY: 0,
-  maxY: 4096,
+  maxY: 6000,
   tileSize: 32,
 };
 
@@ -128,14 +137,23 @@ export function validatePosition(
   const clampedX = Math.max(bounds.minX, Math.min(bounds.maxX, position.x));
   const clampedY = Math.max(bounds.minY, Math.min(bounds.maxY, position.y));
   
-  // Log the violation
-  logSecurityEvent(userId, 'POSITION_OUT_OF_BOUNDS', 'MEDIUM', {
-    message: 'Position clamped to zone bounds',
-    zoneId,
-    originalPosition: position,
-    clampedPosition: { x: clampedX, y: clampedY },
-    bounds: { minX: bounds.minX, maxX: bounds.maxX, minY: bounds.minY, maxY: bounds.maxY },
-  });
+  // Calculate how far out of bounds (for severity determination)
+  const outOfBoundsDistance = Math.max(
+    Math.abs(position.x - clampedX),
+    Math.abs(position.y - clampedY)
+  );
+  
+  // Only log significant out-of-bounds attempts (>100px is suspicious, otherwise just boundary clipping)
+  if (outOfBoundsDistance > 100) {
+    logSecurityEvent(userId, 'POSITION_OUT_OF_BOUNDS', 'MEDIUM', {
+      message: 'Significant position clamping - possible exploit attempt',
+      zoneId,
+      originalPosition: position,
+      clampedPosition: { x: clampedX, y: clampedY },
+      outOfBoundsDistance,
+    });
+  }
+  // Minor boundary clipping is normal gameplay and doesn't need logging
   
   return {
     valid: true,
