@@ -1836,7 +1836,7 @@ export class ExploreScene extends Phaser.Scene {
     uiElements.push(leaveBtn);
   }
 
-  private startWildCombatWithToken(encounterToken: string, combatMetadata?: { tier: number; enemyCount: number; hasBoss: boolean }): void {
+  private async startWildCombatWithToken(encounterToken: string, combatMetadata?: { tier: number; enemyCount: number; hasBoss: boolean }): Promise<void> {
     const player = this.gameState.getPlayer();
     const zoneId = (player.discoveredZones ?? ['roboka'])[0] || 'roboka';
     const tier = combatMetadata?.tier || (zoneId === 'fungal_hollows' ? 2 : 1);
@@ -1855,9 +1855,36 @@ export class ExploreScene extends Phaser.Scene {
       }
     }
     
+    // [SECURITY] Register wilderness encounter with server BEFORE combat
+    // This creates a session with wild_ prefix that validates loot claims
+    let wildernessSessionId: string | undefined;
+    
+    try {
+      const response = await fetch('/api/combat/wilderness-encounter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          tier,
+          enemyCount: wildEnemies.length,
+          hasBoss,
+        }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        wildernessSessionId = result.sessionId;
+        console.log(`[SECURITY] Wilderness encounter session created: ${wildernessSessionId}`);
+      } else {
+        console.error('Failed to create wilderness encounter session:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error creating wilderness encounter session:', error);
+    }
+    
     // Create a dummy delve/room structure for wild encounters
-    // This prevents null reference errors in CombatScene
-    const dummyDelve = { tier, rooms: [], currentRoomIndex: 0 };
+    // Store sessionId on delve for loot claiming
+    const dummyDelve = { tier, rooms: [], currentRoomIndex: 0, sessionId: wildernessSessionId };
     const dummyRoom = { type: hasBoss ? 'boss' : 'combat', enemies: wildEnemies, visited: false };
     
     SceneManager.getInstance().transitionTo('combat', {
@@ -1866,7 +1893,6 @@ export class ExploreScene extends Phaser.Scene {
       wildEnemies,
       wildEncounter: true,
       returnToLocation: { x: this.player.x, y: this.player.y },
-      encounterToken,
     });
   }
 
