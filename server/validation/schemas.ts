@@ -36,7 +36,7 @@ export const ShopPurchaseSchema = z.object({
 
 export const WildernessEncounterSchema = z.object({
   tier: TierSchema,
-  enemyCount: z.number().int().min(1).max(5),
+  enemyCount: z.number().int().min(1).max(2), // Max 2 standard monsters or 1 boss
   hasBoss: z.boolean().optional(),
 });
 
@@ -46,7 +46,7 @@ export const TreasureSessionSchema = z.object({
 });
 
 export const CombatInitiateSchema = z.object({
-  enemyNames: z.array(z.string().min(1).max(100)).min(1).max(5),
+  enemyNames: z.array(z.string().min(1).max(100)).min(1).max(2), // Max 2 monsters
   isWildEncounter: z.boolean().optional(),
 });
 

@@ -40,8 +40,9 @@ function generateCombatMetadata(zoneId: string, encounterToken: string): { tier:
   const rng = new SeededRNG(seedNum);
   
   const tier = zoneId === 'fungal_hollows' ? 2 : 1;
-  const enemyCount = rng.nextInt(1, 3, 'enemy_count');
+  // Max 2 standard monsters OR 1 boss monster
   const hasBoss = rng.next('boss_check') < 0.05;
+  const enemyCount = hasBoss ? 1 : rng.nextInt(1, 2, 'enemy_count');
   
   return { tier, enemyCount, hasBoss };
 }

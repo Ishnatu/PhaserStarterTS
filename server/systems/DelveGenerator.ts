@@ -93,8 +93,8 @@ export class DelveGenerator {
       return [`boss_tier${tier}_${this.rng.nextInt(0, 2, 'boss variant')}`];
     }
     
-    // [SERVER RNG] Regular combat - 1-3 enemies
-    const enemyCount = this.rng.nextInt(1, 3, 'enemy count');
+    // [SERVER RNG] Regular combat - 1-2 enemies (max 2 standard monsters)
+    const enemyCount = this.rng.nextInt(1, 2, 'enemy count');
     const enemies: string[] = [];
     
     for (let i = 0; i < enemyCount; i++) {
