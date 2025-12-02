@@ -1266,54 +1266,75 @@ export class ExploreScene extends Phaser.Scene {
     this.escKey.once('down', escHandler);
   }
   
-  private startVoidPortalDelve(): void {
-    // Create a mini 2-room delve with tier-appropriate enemies
-    const generator = new DelveGenerator();
-    const voidDelve = generator.generateDelve(1); // T1 zone
-    
-    // Clear existing rooms and create exactly 2 rooms
-    voidDelve.rooms.clear();
-    
-    // Room 1: Combat with tier-appropriate enemies (T1 or T2)
-    // enemyIds are just markers - CombatScene will generate actual enemies
-    const numEnemies = Math.floor(Math.random() * 2) + 1; // 1-2 enemies
-    const room1Enemies: string[] = [];
-    
-    for (let i = 0; i < numEnemies; i++) {
-      const tier = Math.random() < 0.5 ? 1 : 2; // Mix of T1 and T2
-      // Store tier info as enemy ID marker (will be parsed in CombatScene)
-      room1Enemies.push(`tier_${tier}_normal`);
+  private async startVoidPortalDelve(): Promise<void> {
+    try {
+      // [SECURITY] Generate delve server-side to get sessionId for loot validation
+      const response = await fetch('/api/delve/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ tier: 1, isVoidPortal: true }),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to generate void portal delve:', await response.text());
+        this.showMessage('Failed to enter void portal. Please try again.');
+        return;
+      }
+      
+      const result = await response.json();
+      
+      // Reconstruct delve from server response, but override rooms for void portal
+      const voidDelve = {
+        id: result.delve.id,
+        rooms: new Map<string, any>(),
+        entranceRoomId: 'void_room_1',
+        currentRoomId: 'void_room_1',
+        bossRoomId: 'void_room_2',
+        tier: result.delve.tier,
+        location: null,
+        sessionId: result.sessionId,
+      };
+      
+      // Room 1: Combat with tier-appropriate enemies (T1 or T2)
+      const numEnemies = Math.floor(Math.random() * 2) + 1;
+      const room1Enemies: string[] = [];
+      
+      for (let i = 0; i < numEnemies; i++) {
+        const tier = Math.random() < 0.5 ? 1 : 2;
+        room1Enemies.push(`tier_${tier}_normal`);
+      }
+      
+      const room1 = {
+        id: 'void_room_1',
+        type: 'combat' as const,
+        completed: false,
+        connections: ['void_room_2'],
+        enemyIds: room1Enemies,
+      };
+      
+      // Room 2: Boss battle with T1 boss
+      const room2 = {
+        id: 'void_room_2',
+        type: 'boss' as const,
+        completed: false,
+        connections: [],
+        enemyIds: ['tier_1_boss'],
+      };
+      
+      voidDelve.rooms.set('void_room_1', room1);
+      voidDelve.rooms.set('void_room_2', room2);
+      
+      SceneManager.getInstance().transitionTo('combat', {
+        delve: voidDelve,
+        room: room1,
+        wildEncounter: false,
+        returnToLocation: { x: this.player.x, y: this.player.y },
+      });
+    } catch (error) {
+      console.error('Error entering void portal delve:', error);
+      this.showMessage('Failed to enter void portal. Please try again.');
     }
-    
-    const room1 = {
-      id: 'void_room_1',
-      type: 'combat' as const,
-      completed: false,
-      connections: ['void_room_2'],
-      enemyIds: room1Enemies,
-    };
-    
-    // Room 2: Boss battle with T1 boss
-    const room2 = {
-      id: 'void_room_2',
-      type: 'boss' as const,
-      completed: false,
-      connections: [],
-      enemyIds: ['tier_1_boss'],
-    };
-    
-    voidDelve.rooms.set('void_room_1', room1);
-    voidDelve.rooms.set('void_room_2', room2);
-    voidDelve.currentRoomId = 'void_room_1';
-    voidDelve.entranceRoomId = 'void_room_1';
-    voidDelve.bossRoomId = 'void_room_2';
-    
-    SceneManager.getInstance().transitionTo('combat', {
-      delve: voidDelve,
-      room: room1,
-      wildEncounter: false,
-      returnToLocation: { x: this.player.x, y: this.player.y },
-    });
   }
 
   private handleTrappedChestEncounter(encounterType: any): void {
