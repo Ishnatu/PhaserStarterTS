@@ -7,7 +7,7 @@ import { EnemyFactory } from "../systems/EnemyFactory";
 import { WeaponValidator } from "../systems/WeaponValidator";
 import { SeededRNG } from "../utils/SeededRNG";
 import { storage } from "../storage";
-import { validateSavePayload, enforceServerAuthoritativeValues, recalculatePlayerStats, logSecurityEvent } from "../security";
+import { validateSavePayload, enforceServerAuthoritativeValues, recalculatePlayerStats, logSecurityEvent, calculateMaxHealth, calculateMaxStamina } from "../security";
 import { trackCurrencyGain } from "../securityMonitor";
 import type { CombatState, Enemy, PlayerData, WeaponAttack } from "../../shared/types";
 
@@ -596,13 +596,24 @@ export function registerCombatRoutes(app: Express) {
       }
 
       // Handle case where saveData might be a JSON string or object
-      const player = typeof gameSave.saveData === 'string' 
-        ? JSON.parse(gameSave.saveData as string) as PlayerData 
-        : gameSave.saveData as PlayerData;
+      const saveData = typeof gameSave.saveData === 'string' 
+        ? JSON.parse(gameSave.saveData as string) 
+        : gameSave.saveData as any;
+      
+      // SaveData structure is { player: PlayerData, ... } - extract the player
+      const player = saveData.player as PlayerData;
+      if (!player) {
+        console.error('[COMBAT] No player data found in save');
+        return res.status(404).json({ message: "No player data found" });
+      }
       
       // Get player level for stats calculation
       const playerCurrencyState = await storage.getPlayerCurrency(userId);
       const playerLevel = playerCurrencyState?.level || 1;
+      
+      // [SECURITY FIX] Ensure maxHealth/maxStamina are set from server-authoritative level
+      player.maxHealth = calculateMaxHealth(playerLevel);
+      player.maxStamina = calculateMaxStamina(playerLevel);
       
       // [SECURITY FIX] Recalculate stats from equipment before combat
       // This ensures calculatedEvasion and other stats are correct from armor
@@ -748,9 +759,16 @@ export function registerCombatRoutes(app: Express) {
             return res.status(500).json({ message: "Failed to load player data" });
           }
           // Handle case where saveData might be a JSON string or object
-          const freshPlayer = typeof gameSave.saveData === 'string' 
-            ? JSON.parse(gameSave.saveData as string) as PlayerData 
-            : gameSave.saveData as PlayerData;
+          const freshSaveData = typeof gameSave.saveData === 'string' 
+            ? JSON.parse(gameSave.saveData as string) 
+            : gameSave.saveData as any;
+          
+          // SaveData structure is { player: PlayerData, ... } - extract the player
+          const freshPlayer = freshSaveData.player as PlayerData;
+          if (!freshPlayer) {
+            console.error('[COMBAT] No player data found in save for attack validation');
+            return res.status(500).json({ message: "No player data found" });
+          }
           
           console.log('[COMBAT DEBUG] Attack validation:', {
             attackName: action.attackName,
