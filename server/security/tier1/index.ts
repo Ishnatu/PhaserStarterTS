@@ -4,6 +4,9 @@ import type { RequestContext, PolicyDecision } from '../events/types';
 import { securityEventBus } from '../events/eventBus';
 import type { InventoryItem, EquippedItem } from '../../../shared/types';
 
+const MAX_ITEM_DURABILITY = 200;
+const MAX_ENHANCEMENT_LEVEL = 9;
+
 const tempBans = new Map<string, number>();
 
 export function performInlineChecks(context: RequestContext): PolicyDecision {
@@ -61,13 +64,13 @@ export function reconstructCanonicalInventoryItem(item: any): InventoryItem | nu
     itemId: String(item.itemId),
     quantity: Math.max(1, Number(item.quantity) || 1),
     enhancementLevel: typeof item.enhancementLevel === 'number' 
-      ? Math.max(0, Math.min(9, item.enhancementLevel)) 
+      ? Math.max(0, Math.min(MAX_ENHANCEMENT_LEVEL, item.enhancementLevel)) 
       : undefined,
     durability: typeof item.durability === 'number' 
-      ? Math.max(0, Math.min(100, item.durability)) 
+      ? Math.max(0, Math.min(MAX_ITEM_DURABILITY, item.durability)) 
       : undefined,
     maxDurability: typeof item.maxDurability === 'number' 
-      ? Math.max(0, Math.min(100, item.maxDurability)) 
+      ? Math.max(0, Math.min(MAX_ITEM_DURABILITY, item.maxDurability)) 
       : undefined,
     isShiny: item.isShiny === true ? true : undefined,
   };
@@ -83,13 +86,13 @@ export function reconstructCanonicalEquipmentItem(item: any): EquippedItem | nul
   return {
     itemId: String(item.itemId),
     enhancementLevel: typeof item.enhancementLevel === 'number' 
-      ? Math.max(0, Math.min(9, item.enhancementLevel)) 
+      ? Math.max(0, Math.min(MAX_ENHANCEMENT_LEVEL, item.enhancementLevel)) 
       : undefined,
     durability: typeof item.durability === 'number' 
-      ? Math.max(0, Math.min(100, item.durability)) 
+      ? Math.max(0, Math.min(MAX_ITEM_DURABILITY, item.durability)) 
       : undefined,
     maxDurability: typeof item.maxDurability === 'number' 
-      ? Math.max(0, Math.min(100, item.maxDurability)) 
+      ? Math.max(0, Math.min(MAX_ITEM_DURABILITY, item.maxDurability)) 
       : undefined,
     isShiny: item.isShiny === true ? true : undefined,
   };
