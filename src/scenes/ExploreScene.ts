@@ -146,7 +146,7 @@ export class ExploreScene extends Phaser.Scene {
       this.player = this.add.sprite(this.WORLD_SIZE / 2, this.WORLD_SIZE / 2, 'hero-front');
     }
     this.player.setDepth(5);
-    this.player.setScale(0.5);
+    this.player.setScale(0.05);
     this.playerDirection = 'down';
 
     this.cameras.main.setBounds(0, 0, this.WORLD_SIZE, this.WORLD_SIZE);
