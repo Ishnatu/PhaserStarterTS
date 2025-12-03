@@ -400,6 +400,11 @@ export class TownScene extends Phaser.Scene {
   }
 
   private interactWithNPC(name: string, description: string): void {
+    // Don't allow opening a new menu if one is already open
+    if (this.menuState !== 'none') {
+      return;
+    }
+
     if (name === 'Merchant') {
       this.openShop();
       return;
