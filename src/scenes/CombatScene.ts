@@ -357,6 +357,9 @@ export class CombatScene extends Phaser.Scene {
     }
     
     this.refreshAttackButtons();
+    
+    // Update status indicators for enemies (bleed, poison, etc)
+    this.updateStatusIndicators();
   }
 
   private generateEnemies(): Enemy[] {
