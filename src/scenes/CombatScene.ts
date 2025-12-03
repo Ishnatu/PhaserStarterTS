@@ -224,11 +224,16 @@ export class CombatScene extends Phaser.Scene {
         throw new Error('Server combat initiation failed');
       }
 
-      console.log('[SERVER COMBAT] Combat initiated successfully, sessionId:', result.sessionId);
+      console.log('[SERVER COMBAT] Combat initiated successfully, combat sessionId:', result.sessionId);
       
       // Store sessionId on delve for loot claiming
-      if (this.currentDelve) {
+      // IMPORTANT: Only set if not already set - wilderness/delve sessions are created BEFORE combat
+      // and have proper prefixes (wild_, delve_) that the loot API requires for validation
+      if (this.currentDelve && !(this.currentDelve as any).sessionId) {
+        console.log('[SERVER COMBAT] Setting sessionId from combat result (no prior session)');
         (this.currentDelve as any).sessionId = result.sessionId;
+      } else if (this.currentDelve) {
+        console.log('[SERVER COMBAT] Preserving existing sessionId:', (this.currentDelve as any).sessionId);
       }
 
       // Get enemies from server combat state
