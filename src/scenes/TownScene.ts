@@ -2366,9 +2366,13 @@ export class TownScene extends Phaser.Scene {
     let itemIndex: number | undefined;
     let slotName: string | undefined;
 
+    console.log('[FORGE CLIENT] itemData:', itemData);
+    console.log('[FORGE CLIENT] equippedSlot:', itemData.equippedSlot);
+
     if (itemData.equippedSlot) {
       itemLocation = 'equipment';
       slotName = itemData.equippedSlot;
+      console.log('[FORGE CLIENT] Using equipment location, slotName:', slotName);
     } else if (itemData.inventoryIndex !== undefined) {
       itemLocation = 'inventory';
       itemIndex = itemData.inventoryIndex;
@@ -2383,15 +2387,18 @@ export class TownScene extends Phaser.Scene {
     }
 
     try {
+      const requestBody = {
+        itemLocation,
+        itemIndex,
+        slotName,
+      };
+      console.log('[FORGE CLIENT] Sending request:', requestBody);
+      
       const response = await fetch('/api/forge/attempt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          itemLocation,
-          itemIndex,
-          slotName,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
