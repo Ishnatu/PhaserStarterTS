@@ -9,6 +9,7 @@ import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 import { trackAccountCreation, trackAccountLogin, logSecurityEvent } from "./securityMonitor";
 import { sanitizeUsername } from "./security";
+import { registerPlayerSession } from "./security/index";
 
 const getOidcConfig = memoize(
   async () => {
@@ -172,6 +173,11 @@ export async function setupAuth(app: Express) {
         // Track for Sybil detection after successful login
         if (user.claims?.sub) {
           trackAuthEvent(user.claims.sub, authIp, user.isNewAccount || false);
+          
+          // Register session with tiered security system for session validation
+          if (req.sessionID) {
+            registerPlayerSession(user.claims.sub, req.sessionID);
+          }
         }
         
         // Redirect to home (or returnTo if set in session)

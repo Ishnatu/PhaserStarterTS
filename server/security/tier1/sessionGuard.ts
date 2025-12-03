@@ -3,7 +3,7 @@ import type { SessionValidation } from '../events/types';
 const validSessions = new Map<string, { playerId: string; lastSeen: number }>();
 const SESSION_TTL = 30 * 60 * 1000;
 
-export function validateSession(sessionId: string | undefined): SessionValidation {
+export function validateSession(playerId: string, sessionId: string | undefined): SessionValidation {
   if (!sessionId) {
     return { valid: false, error: 'No session provided' };
   }
@@ -11,6 +11,10 @@ export function validateSession(sessionId: string | undefined): SessionValidatio
   const session = validSessions.get(sessionId);
   if (!session) {
     return { valid: false, error: 'Session not found' };
+  }
+
+  if (session.playerId !== playerId) {
+    return { valid: false, error: 'Session player mismatch' };
   }
 
   const now = Date.now();
@@ -21,6 +25,10 @@ export function validateSession(sessionId: string | undefined): SessionValidatio
 
   session.lastSeen = now;
   return { valid: true, playerId: session.playerId };
+}
+
+export function isSessionValid(playerId: string, sessionId: string | undefined): boolean {
+  return validateSession(playerId, sessionId).valid;
 }
 
 export function registerSession(sessionId: string, playerId: string): void {

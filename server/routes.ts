@@ -37,34 +37,10 @@ import {
 } from "./securityMonitor";
 import { 
   initializeSecuritySystem, 
-  checkRequest, 
+  lightweightSecurityMiddleware,
   emitSecurityEvent,
   getSecuritySystemStats 
 } from "./security/index";
-
-const lightweightSecurityMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const playerId = (req as any).user?.claims?.sub || 'anonymous';
-  const endpoint = req.path;
-  const ip = req.ip || 'unknown';
-
-  const result = checkRequest({
-    playerId,
-    endpoint,
-    ip,
-    userAgent: req.headers['user-agent'],
-    timestamp: Date.now(),
-  });
-
-  if (!result.allowed) {
-    emitSecurityEvent(playerId, 'REQUEST_BLOCKED', 'MEDIUM', { 
-      reason: result.reason,
-      endpoint 
-    }, ip, endpoint);
-    return res.status(429).json({ message: result.reason || 'Request blocked' });
-  }
-
-  next();
-};
 
 // Session tracking for multi-instance detection
 interface SessionInfo {
