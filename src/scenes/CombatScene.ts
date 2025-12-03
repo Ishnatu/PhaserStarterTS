@@ -229,11 +229,16 @@ export class CombatScene extends Phaser.Scene {
       // Store sessionId on delve for loot claiming
       // IMPORTANT: Only set if not already set - wilderness/delve sessions are created BEFORE combat
       // and have proper prefixes (wild_, delve_) that the loot API requires for validation
+      // WARNING: Do NOT use the combat sessionId as a fallback - it lacks the required prefix
+      // and will cause loot API to reject the claim!
       if (this.currentDelve && !(this.currentDelve as any).sessionId) {
-        console.log('[SERVER COMBAT] Setting sessionId from combat result (no prior session)');
-        (this.currentDelve as any).sessionId = result.sessionId;
+        // WARNING: Missing sessionId indicates a bug in session creation flow
+        // Combat sessionId (result.sessionId) lacks wild_/delve_ prefix required by loot API
+        console.error('[SERVER COMBAT] WARNING: No loot session ID found! Loot claims may fail. Combat sessionId:', result.sessionId);
+        // Do NOT set: (this.currentDelve as any).sessionId = result.sessionId;
+        // The loot API requires wild_ or delve_ prefix, combat sessions don't have these
       } else if (this.currentDelve) {
-        console.log('[SERVER COMBAT] Preserving existing sessionId:', (this.currentDelve as any).sessionId);
+        console.log('[SERVER COMBAT] Using existing loot sessionId:', (this.currentDelve as any).sessionId);
       }
 
       // Get enemies from server combat state
@@ -1671,6 +1676,9 @@ export class CombatScene extends Phaser.Scene {
               const sessionId = this.currentDelve 
                 ? (this.currentDelve as any).sessionId 
                 : undefined;
+              
+              // DEBUG: Trace sessionId for loot claim issues
+              console.log(`[endCombat] Loot request - sessionId: ${sessionId}, hasDelve: ${!!this.currentDelve}, delve:`, this.currentDelve);
               
               response = await fetch('/api/loot/roll', {
                 method: 'POST',

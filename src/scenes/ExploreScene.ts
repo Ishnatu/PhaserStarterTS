@@ -1857,6 +1857,7 @@ export class ExploreScene extends Phaser.Scene {
     
     // [SECURITY] Register wilderness encounter with server BEFORE combat
     // This creates a session with wild_ prefix that validates loot claims
+    // CRITICAL: Combat MUST NOT proceed if session creation fails - loot would be impossible
     let wildernessSessionId: string | undefined;
     
     try {
@@ -1877,9 +1878,20 @@ export class ExploreScene extends Phaser.Scene {
         console.log(`[SECURITY] Wilderness encounter session created: ${wildernessSessionId}`);
       } else {
         console.error('Failed to create wilderness encounter session:', await response.text());
+        this.showMessage('Failed to start encounter. Please try again.');
+        return;
       }
     } catch (error) {
       console.error('Error creating wilderness encounter session:', error);
+      this.showMessage('Network error starting encounter. Please try again.');
+      return;
+    }
+    
+    // Double-check sessionId was created (defensive programming)
+    if (!wildernessSessionId) {
+      console.error('[SECURITY] Wilderness session ID missing after successful response!');
+      this.showMessage('Failed to start encounter. Please try again.');
+      return;
     }
     
     // Create a dummy delve/room structure for wild encounters
@@ -2428,6 +2440,7 @@ export class ExploreScene extends Phaser.Scene {
   private async startWildCombat(enemies: any[]): Promise<void> {
     // [SECURITY] Register wilderness encounter with server before combat
     // This creates a session that validates loot claims
+    // CRITICAL: Combat MUST NOT proceed if session creation fails - loot would be impossible
     const tier = Math.max(...enemies.map((e: any) => e.tier || 1));
     const hasBoss = enemies.some((e: any) => e.isBoss === true);
     
@@ -2451,9 +2464,20 @@ export class ExploreScene extends Phaser.Scene {
         console.log(`[SECURITY] Wilderness encounter session created: ${wildernessSessionId}`);
       } else {
         console.error('Failed to create wilderness encounter session:', await response.text());
+        this.showMessage('Failed to start encounter. Please try again.');
+        return;
       }
     } catch (error) {
       console.error('Error creating wilderness encounter session:', error);
+      this.showMessage('Network error starting encounter. Please try again.');
+      return;
+    }
+    
+    // Double-check sessionId was created (defensive programming)
+    if (!wildernessSessionId) {
+      console.error('[SECURITY] Wilderness session ID missing after successful response!');
+      this.showMessage('Failed to start encounter. Please try again.');
+      return;
     }
     
     const generator = new DelveGenerator();
