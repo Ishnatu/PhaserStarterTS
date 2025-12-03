@@ -80,10 +80,23 @@ export function registerForgeRoutes(app: Express) {
         let itemContext: string = '';
 
         if (itemLocation === 'equipment') {
-          if (!slotName || !player.equipment || !player.equipment[slotName]) {
+          console.log('[FORGE] Equipment forge request - slotName:', slotName);
+          console.log('[FORGE] Player equipment keys:', player.equipment ? Object.keys(player.equipment) : 'no equipment');
+          console.log('[FORGE] Equipment slot value:', player.equipment?.[slotName as keyof typeof player.equipment]);
+          
+          if (!slotName) {
+            console.log('[FORGE] Error: slotName is missing');
             throw new Error("INVALID_SLOT");
           }
-          item = player.equipment[slotName];
+          if (!player.equipment) {
+            console.log('[FORGE] Error: player.equipment is missing');
+            throw new Error("INVALID_SLOT");
+          }
+          if (!player.equipment[slotName as keyof typeof player.equipment]) {
+            console.log('[FORGE] Error: no item in slot', slotName);
+            throw new Error("INVALID_SLOT");
+          }
+          item = player.equipment[slotName as keyof typeof player.equipment];
           itemContext = `equipment.${slotName}`;
         } else if (itemLocation === 'inventory') {
           if (!Array.isArray(player.inventory) || itemIndex < 0 || itemIndex >= player.inventory.length) {
