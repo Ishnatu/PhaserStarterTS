@@ -547,6 +547,9 @@ export class ExploreScene extends Phaser.Scene {
   }
 
   private checkDelveProximity(): void {
+    // Don't check if already entering a delve or overlay is active
+    if (this.isOverlayActive) return;
+    
     for (let i = this.delveMarkers.length - 1; i >= 0; i--) {
       const marker = this.delveMarkers[i];
       const distance = Phaser.Math.Distance.Between(
@@ -563,7 +566,10 @@ export class ExploreScene extends Phaser.Scene {
           this.delveMarkers.splice(i, 1);
           return;
         }
+        // Set overlay active to prevent multiple entry attempts
+        this.isOverlayActive = true;
         this.enterDelve(marker.getData('tier'), marker.x, marker.y);
+        return; // Exit after triggering one delve entry
       }
     }
   }
@@ -682,6 +688,8 @@ export class ExploreScene extends Phaser.Scene {
     // Safety fallback: default to tier 1 if undefined
     const safeTier = tier ?? 1;
     
+    console.log(`[DELVE] Attempting to enter delve at (${x}, ${y}) tier ${safeTier}`);
+    
     try {
       // [SECURITY] Generate delve server-side to get sessionId for completion validation
       const response = await fetch('/api/delve/generate', {
@@ -692,12 +700,15 @@ export class ExploreScene extends Phaser.Scene {
       });
       
       if (!response.ok) {
-        console.error('Failed to generate delve:', await response.text());
+        const errorText = await response.text();
+        console.error('Failed to generate delve:', errorText);
         this.showMessage('Failed to enter delve. Please try again.');
+        this.isOverlayActive = false; // Reset so player can try again
         return;
       }
       
       const result = await response.json();
+      console.log(`[DELVE] Server generated delve successfully, sessionId: ${result.sessionId}`);
       
       // Reconstruct delve from server response
       const delve = {
@@ -715,6 +726,7 @@ export class ExploreScene extends Phaser.Scene {
     } catch (error) {
       console.error('Error entering delve:', error);
       this.showMessage('Failed to enter delve. Please try again.');
+      this.isOverlayActive = false; // Reset so player can try again
     }
   }
 
