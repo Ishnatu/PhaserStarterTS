@@ -37,7 +37,8 @@ export class ExploreScene extends Phaser.Scene {
   }
 
   private gameState!: GameStateManager;
-  private player!: Phaser.GameObjects.Rectangle;
+  private player!: Phaser.GameObjects.Sprite;
+  private currentDirection: string = 'down'; // Track current facing direction
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private delveMarkers: Phaser.GameObjects.Container[] = [];
   private tombstoneMarkers: Map<number, Phaser.GameObjects.Container> = new Map();
@@ -92,6 +93,16 @@ export class ExploreScene extends Phaser.Scene {
     this.load.image('foot-icon', '/assets/ui/foot-icon.png');
     this.load.image('shield-icon', '/assets/ui/shield-icon.png');
     this.load.audio('wilderness-music', '/assets/audio/wilderness-music.mp3');
+    
+    // Hero directional sprites (8 directions)
+    this.load.image('hero-down', '/assets/player/hero-down.png');
+    this.load.image('hero-down-right', '/assets/player/hero-down-right.png');
+    this.load.image('hero-right', '/assets/player/hero-right.png');
+    this.load.image('hero-up-right', '/assets/player/hero-up-right.png');
+    this.load.image('hero-up', '/assets/player/hero-up.png');
+    this.load.image('hero-up-left', '/assets/player/hero-up-left.png');
+    this.load.image('hero-left', '/assets/player/hero-left.png');
+    this.load.image('hero-down-left', '/assets/player/hero-down-left.png');
   }
 
   init(data?: { returnToLocation?: { x: number; y: number } }) {
@@ -133,13 +144,18 @@ export class ExploreScene extends Phaser.Scene {
     const returnLocation = this.registry.get('returnToLocation') as { x: number; y: number } | undefined;
     const playerData = this.gameState.getPlayer();
     
-    if (returnLocation) {
-      this.player = this.add.rectangle(returnLocation.x, returnLocation.y, 32, 32, 0x4488ff);
-      this.registry.remove('returnToLocation');
-    } else {
-      this.player = this.add.rectangle(this.WORLD_SIZE / 2, this.WORLD_SIZE / 2, 32, 32, 0x4488ff);
-    }
+    // Create hero sprite with 8-directional support
+    const startX = returnLocation ? returnLocation.x : this.WORLD_SIZE / 2;
+    const startY = returnLocation ? returnLocation.y : this.WORLD_SIZE / 2;
+    
+    this.player = this.add.sprite(startX, startY, 'hero-down');
+    this.player.setScale(0.5); // Scale down from 756px original to appropriate size
     this.player.setDepth(5);
+    this.currentDirection = 'down';
+    
+    if (returnLocation) {
+      this.registry.remove('returnToLocation');
+    }
 
     this.cameras.main.setBounds(0, 0, this.WORLD_SIZE, this.WORLD_SIZE);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
@@ -223,21 +239,31 @@ export class ExploreScene extends Phaser.Scene {
     const canMove = playerData.stamina > 0 && !this.isOverlayActive;
 
     if (canMove) {
-      if (this.cursors.left.isDown) {
+      const left = this.cursors.left.isDown;
+      const right = this.cursors.right.isDown;
+      const up = this.cursors.up.isDown;
+      const down = this.cursors.down.isDown;
+      
+      if (left) {
         this.player.x -= speed;
         pixelsMoved += speed;
       }
-      if (this.cursors.right.isDown) {
+      if (right) {
         this.player.x += speed;
         pixelsMoved += speed;
       }
-      if (this.cursors.up.isDown) {
+      if (up) {
         this.player.y -= speed;
         pixelsMoved += speed;
       }
-      if (this.cursors.down.isDown) {
+      if (down) {
         this.player.y += speed;
         pixelsMoved += speed;
+      }
+
+      // Update hero facing direction based on movement
+      if (pixelsMoved > 0) {
+        this.updateHeroDirection(left, right, up, down);
       }
 
       if (pixelsMoved > 0) {
@@ -267,6 +293,39 @@ export class ExploreScene extends Phaser.Scene {
     this.markNearbyTilesExplored();
     this.updateFogOfWar();
     this.updateInfo();
+  }
+
+  /**
+   * Update hero sprite to face the direction of movement
+   * Supports 8 directions: cardinal (up, down, left, right) and diagonal
+   */
+  private updateHeroDirection(left: boolean, right: boolean, up: boolean, down: boolean): void {
+    let newDirection = this.currentDirection;
+    
+    // Determine direction based on key combinations
+    if (up && left) {
+      newDirection = 'up-left';
+    } else if (up && right) {
+      newDirection = 'up-right';
+    } else if (down && left) {
+      newDirection = 'down-left';
+    } else if (down && right) {
+      newDirection = 'down-right';
+    } else if (up) {
+      newDirection = 'up';
+    } else if (down) {
+      newDirection = 'down';
+    } else if (left) {
+      newDirection = 'left';
+    } else if (right) {
+      newDirection = 'right';
+    }
+    
+    // Only update texture if direction changed
+    if (newDirection !== this.currentDirection) {
+      this.currentDirection = newDirection;
+      this.player.setTexture(`hero-${newDirection}`);
+    }
   }
 
   private async generateInitialWorld(): Promise<void> {
