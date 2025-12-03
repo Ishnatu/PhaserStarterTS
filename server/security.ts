@@ -179,6 +179,7 @@ function reconstructCanonicalEquipmentItem(
   }
 
   const soulbound = clientItem.soulbound === true;
+  const isShiny = clientItem.isShiny === true;
 
   const canonicalItem: any = {
     itemId,
@@ -187,6 +188,7 @@ function reconstructCanonicalEquipmentItem(
     durability,
     maxDurability,
     soulbound,
+    isShiny,
     rarity: baseItem.data.rarity,
     description: baseItem.data.description,
   };
@@ -289,6 +291,7 @@ function reconstructCanonicalInventoryItem(
     canonicalItem.maxDurability = maxDurability;
 
     canonicalItem.soulbound = clientItem.soulbound === true;
+    canonicalItem.isShiny = clientItem.isShiny === true;
 
     if (baseItem.type === 'weapon') {
       canonicalItem.damage = { ...baseItem.data.damage };
