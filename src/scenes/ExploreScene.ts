@@ -37,7 +37,8 @@ export class ExploreScene extends Phaser.Scene {
   }
 
   private gameState!: GameStateManager;
-  private player!: Phaser.GameObjects.Rectangle;
+  private player!: Phaser.GameObjects.Sprite;
+  private playerDirection: 'down' | 'up' | 'left' | 'right' = 'down';
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private delveMarkers: Phaser.GameObjects.Container[] = [];
   private tombstoneMarkers: Map<number, Phaser.GameObjects.Container> = new Map();
@@ -92,6 +93,11 @@ export class ExploreScene extends Phaser.Scene {
     this.load.image('foot-icon', '/assets/ui/foot-icon.png');
     this.load.image('shield-icon', '/assets/ui/shield-icon.png');
     this.load.audio('wilderness-music', '/assets/audio/wilderness-music.mp3');
+    
+    this.load.image('hero-front', '/assets/player/hero-front.png');
+    this.load.image('hero-back', '/assets/player/hero-back.png');
+    this.load.image('hero-left', '/assets/player/hero-left.png');
+    this.load.image('hero-right', '/assets/player/hero-right.png');
   }
 
   init(data?: { returnToLocation?: { x: number; y: number } }) {
@@ -134,12 +140,14 @@ export class ExploreScene extends Phaser.Scene {
     const playerData = this.gameState.getPlayer();
     
     if (returnLocation) {
-      this.player = this.add.rectangle(returnLocation.x, returnLocation.y, 32, 32, 0x4488ff);
+      this.player = this.add.sprite(returnLocation.x, returnLocation.y, 'hero-front');
       this.registry.remove('returnToLocation');
     } else {
-      this.player = this.add.rectangle(this.WORLD_SIZE / 2, this.WORLD_SIZE / 2, 32, 32, 0x4488ff);
+      this.player = this.add.sprite(this.WORLD_SIZE / 2, this.WORLD_SIZE / 2, 'hero-front');
     }
     this.player.setDepth(5);
+    this.player.setScale(0.5);
+    this.playerDirection = 'down';
 
     this.cameras.main.setBounds(0, 0, this.WORLD_SIZE, this.WORLD_SIZE);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
@@ -223,21 +231,38 @@ export class ExploreScene extends Phaser.Scene {
     const canMove = playerData.stamina > 0 && !this.isOverlayActive;
 
     if (canMove) {
+      let newDirection: 'down' | 'up' | 'left' | 'right' | null = null;
+      
       if (this.cursors.left.isDown) {
         this.player.x -= speed;
         pixelsMoved += speed;
+        newDirection = 'left';
       }
       if (this.cursors.right.isDown) {
         this.player.x += speed;
         pixelsMoved += speed;
+        newDirection = 'right';
       }
       if (this.cursors.up.isDown) {
         this.player.y -= speed;
         pixelsMoved += speed;
+        newDirection = 'up';
       }
       if (this.cursors.down.isDown) {
         this.player.y += speed;
         pixelsMoved += speed;
+        newDirection = 'down';
+      }
+      
+      if (newDirection && newDirection !== this.playerDirection) {
+        this.playerDirection = newDirection;
+        const textureMap = {
+          'down': 'hero-front',
+          'up': 'hero-back',
+          'left': 'hero-left',
+          'right': 'hero-right'
+        };
+        this.player.setTexture(textureMap[newDirection]);
       }
 
       if (pixelsMoved > 0) {
