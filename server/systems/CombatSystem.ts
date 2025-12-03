@@ -253,6 +253,14 @@ export class CombatSystem {
       return this.executeVipersFangs(state, targetIndex, attack);
     }
 
+    if (attack.name === 'Serpents Cross') {
+      return this.executeSerpentsCross(state, targetIndex, attack);
+    }
+
+    if (attack.name === 'Hydras Strike') {
+      return this.executeHydrasStrike(state, targetIndex, attack);
+    }
+
     // AOE attacks
     if (attack.name === 'Arcing Blade') {
       return this.executeArcingBlade(state, attack);
@@ -598,6 +606,98 @@ export class CombatSystem {
     this.checkAndEndPlayerTurn(newState);
     
     return { state: newState, result: firstStrike };
+  }
+
+  /**
+   * Serpent's Cross - Strikes twice from different angles with +2 hit bonus
+   * [SERVER RNG] 2 separate attack rolls and damage rolls
+   */
+  private executeSerpentsCross(state: CombatState, targetIndex: number, attack: WeaponAttack): { state: CombatState; result: AttackResult } {
+    const newState = DeepClone.combatState(state);
+    const target = newState.enemies[targetIndex];
+    
+    newState.combatLog.push(`Serpent's Cross - striking twice from different angles!`);
+    
+    let totalDamage = 0;
+    let anyHit = false;
+    let anyCrit = false;
+    let attackRoll = 0;
+
+    for (let i = 0; i < 2; i++) {
+      if (target.health <= 0) break;
+
+      const { result } = this.executeSingleStrike(newState, target, attack, `Serpent's Cross strike ${i + 1}`);
+      anyHit = anyHit || result.hit;
+      anyCrit = anyCrit || result.critical;
+      attackRoll = Math.max(attackRoll, result.attackRoll);
+      totalDamage += result.damage;
+    }
+
+    if (target.health <= 0) {
+      newState.combatLog.push(`${target.name} has been defeated!`);
+    }
+
+    this.deductActions(newState, attack.actionCost);
+    this.checkCombatEnd(newState);
+    this.checkAndEndPlayerTurn(newState);
+
+    return {
+      state: newState,
+      result: {
+        hit: anyHit,
+        critical: anyCrit,
+        attackRoll,
+        damage: totalDamage,
+        message: `Serpent's Cross complete! ${anyHit ? `Total: ${totalDamage} damage` : 'Both strikes missed!'}`,
+      }
+    };
+  }
+
+  /**
+   * Hydra's Strike - Strikes 4 times, poison intensifies on already poisoned targets
+   * [SERVER RNG] 4 separate attack rolls and damage rolls
+   */
+  private executeHydrasStrike(state: CombatState, targetIndex: number, attack: WeaponAttack): { state: CombatState; result: AttackResult } {
+    const newState = DeepClone.combatState(state);
+    const target = newState.enemies[targetIndex];
+    
+    newState.combatLog.push(`Hydra's Strike - 4 venomous attacks!`);
+    
+    let totalDamage = 0;
+    let anyHit = false;
+    let anyCrit = false;
+    let attackRoll = 0;
+    let hitCount = 0;
+
+    for (let i = 0; i < 4; i++) {
+      if (target.health <= 0) break;
+
+      const { result } = this.executeSingleStrike(newState, target, attack, `Hydra's Strike hit ${i + 1}`);
+      anyHit = anyHit || result.hit;
+      anyCrit = anyCrit || result.critical;
+      attackRoll = Math.max(attackRoll, result.attackRoll);
+      totalDamage += result.damage;
+      if (result.hit) hitCount++;
+    }
+
+    if (target.health <= 0) {
+      newState.combatLog.push(`${target.name} has been defeated!`);
+    }
+
+    this.deductActions(newState, attack.actionCost);
+    this.checkCombatEnd(newState);
+    this.checkAndEndPlayerTurn(newState);
+
+    return {
+      state: newState,
+      result: {
+        hit: anyHit,
+        critical: anyCrit,
+        attackRoll,
+        damage: totalDamage,
+        message: `Hydra's Strike complete! ${hitCount}/4 hits for ${totalDamage} total damage`,
+      }
+    };
   }
 
   /**
