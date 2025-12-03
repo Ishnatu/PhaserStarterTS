@@ -11,6 +11,7 @@ import {
 import { eq, desc, sql, gte, and, count, sum } from "drizzle-orm";
 import { getIPTrackingStats, getSecurityStats } from "../securityMonitor";
 import { getQueryStats, resetQueryStats, getSlowQueryThreshold, getCriticalQueryThreshold } from "../db/queryMonitor";
+import { getSecuritySystemStats } from "../security/index";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
@@ -136,6 +137,42 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error getting admin dashboard:", error);
       res.status(500).json({ message: "Failed to get dashboard data" });
+    }
+  });
+
+  /**
+   * GET /api/admin/security/system
+   * Tiered anti-cheat system stats (Tier 1/2/3 health)
+   */
+  app.get("/api/admin/security/system", async (req, res) => {
+    if (!validateAdminAccess(req, res)) return;
+    
+    try {
+      const stats = getSecuritySystemStats();
+      
+      res.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        tier1: {
+          activeSessions: stats.sessions,
+          description: 'Sync guards (rate limiting, session validation)',
+        },
+        tier2: {
+          patternPlayers: stats.patternPlayers,
+          anomalyPlayers: stats.anomalyPlayers,
+          eventQueueSize: stats.eventQueue,
+          droppedEvents: stats.droppedEvents,
+          description: 'Async processors (pattern detection, anomaly analysis)',
+        },
+        tier3: {
+          aggregatedLogs: stats.aggregatedLogs,
+          lastCompaction: stats.lastCompaction,
+          description: 'Background jobs (log aggregation, memory compaction)',
+        },
+      });
+    } catch (error) {
+      console.error("Error getting security system stats:", error);
+      res.status(500).json({ message: "Failed to get security system stats" });
     }
   });
 

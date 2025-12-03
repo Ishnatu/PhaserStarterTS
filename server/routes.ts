@@ -1,5 +1,5 @@
 // API routes for game save/load and authentication
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -26,7 +26,6 @@ import {
   getRecentSecurityEvents,
   logSecurityEvent as monitorLogEvent,
   validateAdminAccess,
-  securityMiddleware,
   getAntiBotStats,
   getIPTrackingStats,
   getCurrencyTrackingStats,
@@ -36,6 +35,36 @@ import {
   getPendingChallengeData,
   detectCrossAccountPatterns
 } from "./securityMonitor";
+import { 
+  initializeSecuritySystem, 
+  checkRequest, 
+  emitSecurityEvent,
+  getSecuritySystemStats 
+} from "./security/index";
+
+const lightweightSecurityMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  const playerId = (req as any).user?.claims?.sub || 'anonymous';
+  const endpoint = req.path;
+  const ip = req.ip || 'unknown';
+
+  const result = checkRequest({
+    playerId,
+    endpoint,
+    ip,
+    userAgent: req.headers['user-agent'],
+    timestamp: Date.now(),
+  });
+
+  if (!result.allowed) {
+    emitSecurityEvent(playerId, 'REQUEST_BLOCKED', 'MEDIUM', { 
+      reason: result.reason,
+      endpoint 
+    }, ip, endpoint);
+    return res.status(429).json({ message: result.reason || 'Request blocked' });
+  }
+
+  next();
+};
 
 // Session tracking for multi-instance detection
 interface SessionInfo {
@@ -242,8 +271,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication middleware
   await setupAuth(app);
   
-  // Security monitoring middleware - runs AFTER auth so req.user is available
-  app.use('/api/', securityMiddleware);
+  // Initialize tiered anti-cheat system (Tier 1: sync, Tier 2: async, Tier 3: background)
+  initializeSecuritySystem();
+  
+  // Lightweight security middleware - fast inline checks only
+  // Heavy pattern detection and anomaly analysis run async in Tier 2
+  app.use('/api/', lightweightSecurityMiddleware);
 
   // Register combat routes (server-authoritative combat system)
   registerCombatRoutes(app);
