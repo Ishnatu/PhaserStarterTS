@@ -53,42 +53,45 @@ export function validatePlayerSession(playerId: string, sessionId: string | unde
 export function reconstructCanonicalInventoryItem(item: any): InventoryItem | null {
   if (!item || typeof item !== 'object') return null;
   
-  const validSlots = ['weapon', 'offhand', 'armor', 'helmet', 'boots', 'gloves', 'accessory1', 'accessory2', 'consumable'];
-  if (!item.id || !item.name || !validSlots.includes(item.slot)) {
+  if (!item.itemId) {
     return null;
   }
 
   return {
-    id: String(item.id),
-    name: String(item.name),
-    slot: item.slot,
-    tier: Math.max(1, Math.min(10, Number(item.tier) || 1)),
-    enhancement: Math.max(0, Math.min(9, Number(item.enhancement) || 0)),
-    rarity: ['common', 'uncommon', 'rare', 'epic', 'legendary'].includes(item.rarity) ? item.rarity : 'common',
-    stats: item.stats && typeof item.stats === 'object' ? { ...item.stats } : {},
-    isShiny: Boolean(item.isShiny),
+    itemId: String(item.itemId),
+    quantity: Math.max(1, Number(item.quantity) || 1),
+    enhancementLevel: typeof item.enhancementLevel === 'number' 
+      ? Math.max(0, Math.min(9, item.enhancementLevel)) 
+      : undefined,
+    durability: typeof item.durability === 'number' 
+      ? Math.max(0, Math.min(100, item.durability)) 
+      : undefined,
+    maxDurability: typeof item.maxDurability === 'number' 
+      ? Math.max(0, Math.min(100, item.maxDurability)) 
+      : undefined,
+    isShiny: item.isShiny === true ? true : undefined,
   };
 }
 
 export function reconstructCanonicalEquipmentItem(item: any): EquippedItem | null {
   if (!item || typeof item !== 'object') return null;
   
-  const validSlots = ['weapon', 'offhand', 'armor', 'helmet', 'boots', 'gloves', 'accessory1', 'accessory2'];
-  if (!item.id || !item.name || !validSlots.includes(item.slot)) {
+  if (!item.itemId) {
     return null;
   }
 
   return {
-    id: String(item.id),
-    name: String(item.name),
-    slot: item.slot,
-    tier: Math.max(1, Math.min(10, Number(item.tier) || 1)),
-    enhancement: Math.max(0, Math.min(9, Number(item.enhancement) || 0)),
-    rarity: ['common', 'uncommon', 'rare', 'epic', 'legendary'].includes(item.rarity) ? item.rarity : 'common',
-    stats: item.stats && typeof item.stats === 'object' ? { ...item.stats } : {},
-    isShiny: Boolean(item.isShiny),
-    isSoulbound: Boolean(item.isSoulbound),
-    durability: typeof item.durability === 'number' ? Math.max(0, Math.min(100, item.durability)) : 100,
+    itemId: String(item.itemId),
+    enhancementLevel: typeof item.enhancementLevel === 'number' 
+      ? Math.max(0, Math.min(9, item.enhancementLevel)) 
+      : undefined,
+    durability: typeof item.durability === 'number' 
+      ? Math.max(0, Math.min(100, item.durability)) 
+      : undefined,
+    maxDurability: typeof item.maxDurability === 'number' 
+      ? Math.max(0, Math.min(100, item.maxDurability)) 
+      : undefined,
+    isShiny: item.isShiny === true ? true : undefined,
   };
 }
 
