@@ -22,6 +22,8 @@ export function registerZoneRoutes(app: Express) {
         return res.status(404).json({ message: "Player not found" });
       }
 
+      console.log(`[ZONES] Progress for ${userId}:`, JSON.stringify(progress));
+
       res.json({
         success: true,
         delvesCompletedByTier: {

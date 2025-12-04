@@ -188,7 +188,7 @@ export function registerDelveRoutes(app: Express) {
 
       // [SECURITY] Use server-stored tier, NOT client input
       const tier = validatedTier;
-      console.log(`[SECURITY] Delve completion verified for ${userId}: tier=${tier}`);
+      console.log(`[DELVE] Completion verified for ${userId}: tier=${tier}`);
 
       // Get XP reward for this tier
       const xpReward = DELVE_COMPLETION_XP[tier];
@@ -201,9 +201,11 @@ export function registerDelveRoutes(app: Express) {
 
       // Grant XP server-side (persisted to database)
       const xpResult = await storage.grantExperience(userId, xpReward);
+      console.log(`[DELVE] XP granted: ${xpReward}, new experience: ${xpResult.newExperience}`);
 
       // Increment delve count for this tier (server-authoritative)
       const delveProgress = await storage.incrementDelveCount(userId, tier);
+      console.log(`[DELVE] Delve progress after increment:`, JSON.stringify(delveProgress));
 
       // Calculate new max stats if leveled up
       const newMaxHealth = xpResult.leveledUp ? calculateMaxHealth(xpResult.newLevel) : null;
