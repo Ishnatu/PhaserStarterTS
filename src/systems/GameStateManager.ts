@@ -265,54 +265,184 @@ export class GameStateManager {
     return true;
   }
 
+  /**
+   * Remove an item from inventory by index (for precise removal of enhanced items)
+   * Enhanced items should NEVER be grouped, so we need index-based removal
+   */
+  removeItemFromInventoryByIndex(index: number): InventoryItem | null {
+    if (index < 0 || index >= this.gameState.player.inventory.length) {
+      return null;
+    }
+    const [removed] = this.gameState.player.inventory.splice(index, 1);
+    return removed;
+  }
+
+  /**
+   * Remove an item from inventory by itemId
+   * For potions: decrements quantity
+   * For weapons/armor: removes the FIRST matching item (use removeItemFromInventoryByIndex for specific items)
+   */
   removeItemFromInventory(itemId: string, quantity: number = 1): boolean {
-    const existing = this.gameState.player.inventory.find(item => item.itemId === itemId);
-    if (!existing || existing.quantity < quantity) {
+    const existingIndex = this.gameState.player.inventory.findIndex(item => item.itemId === itemId);
+    if (existingIndex === -1) {
       return false;
     }
-
-    existing.quantity -= quantity;
-    if (existing.quantity === 0) {
-      this.gameState.player.inventory = this.gameState.player.inventory.filter(item => item.itemId !== itemId);
+    
+    const existing = this.gameState.player.inventory[existingIndex];
+    
+    // For potions (stackable items), decrement quantity
+    const potion = ItemDatabase.getPotion(itemId);
+    if (potion) {
+      if (existing.quantity < quantity) {
+        return false;
+      }
+      existing.quantity -= quantity;
+      if (existing.quantity === 0) {
+        this.gameState.player.inventory.splice(existingIndex, 1);
+      }
+      return true;
     }
+    
+    // For weapons/armor (non-stackable), remove the entire item
+    this.gameState.player.inventory.splice(existingIndex, 1);
     return true;
   }
 
-  moveToFootlocker(itemId: string, quantity: number = 1): boolean {
-    if (!this.removeItemFromInventory(itemId, quantity)) {
+  /**
+   * Move a specific item from inventory to footlocker by index
+   * This preserves ALL item metadata (enhancement, durability, shiny status)
+   * Enhanced items are NEVER grouped together - each is a unique slot
+   */
+  moveToFootlockerByIndex(inventoryIndex: number): boolean {
+    if (inventoryIndex < 0 || inventoryIndex >= this.gameState.player.inventory.length) {
       return false;
     }
 
-    const totalItems = this.gameState.player.footlocker.reduce((sum, item) => sum + item.quantity, 0);
-    if (totalItems + quantity > this.gameState.player.footlockerSlots) {
-      this.addItemToInventory(itemId, quantity);
+    const item = this.gameState.player.inventory[inventoryIndex];
+    if (!item) {
       return false;
     }
 
-    const existing = this.gameState.player.footlocker.find(item => item.itemId === itemId);
-    if (existing) {
-      existing.quantity += quantity;
+    const totalFootlockerItems = this.gameState.player.footlocker.reduce((sum, i) => sum + i.quantity, 0);
+    if (totalFootlockerItems + 1 > this.gameState.player.footlockerSlots) {
+      return false;
+    }
+
+    // For potions (stackable), we can stack them
+    const potion = ItemDatabase.getPotion(item.itemId);
+    if (potion) {
+      const existingPotion = this.gameState.player.footlocker.find(i => i.itemId === item.itemId);
+      if (existingPotion) {
+        existingPotion.quantity += 1;
+      } else {
+        this.gameState.player.footlocker.push({ itemId: item.itemId, quantity: 1 });
+      }
+      
+      // Decrement from inventory
+      item.quantity -= 1;
+      if (item.quantity <= 0) {
+        this.gameState.player.inventory.splice(inventoryIndex, 1);
+      }
+      return true;
+    }
+
+    // For weapons/armor, find an EXACT match or create new slot
+    // Exact match = same itemId, enhancementLevel, maxDurability, and isShiny
+    const exactMatch = this.gameState.player.footlocker.find(i => 
+      i.itemId === item.itemId &&
+      (i.enhancementLevel ?? 0) === (item.enhancementLevel ?? 0) &&
+      (i.maxDurability ?? 100) === (item.maxDurability ?? 100) &&
+      (i.isShiny ?? false) === (item.isShiny ?? false) &&
+      (i.enhancementLevel ?? 0) === 0 // Only stack +0 unenhanced items
+    );
+
+    if (exactMatch && (item.enhancementLevel ?? 0) === 0) {
+      // Can stack unenhanced base items
+      exactMatch.quantity += 1;
     } else {
-      this.gameState.player.footlocker.push({ itemId, quantity });
+      // Enhanced/unique items get their own slot - preserve ALL metadata
+      this.gameState.player.footlocker.push({
+        itemId: item.itemId,
+        quantity: 1,
+        enhancementLevel: item.enhancementLevel,
+        durability: item.durability,
+        maxDurability: item.maxDurability,
+        isShiny: item.isShiny
+      });
     }
+
+    // Remove from inventory
+    this.gameState.player.inventory.splice(inventoryIndex, 1);
     return true;
   }
 
+  /**
+   * @deprecated Use moveToFootlockerByIndex for proper enhanced item handling
+   * Legacy function - only use for potions
+   */
+  moveToFootlocker(itemId: string, quantity: number = 1): boolean {
+    const index = this.gameState.player.inventory.findIndex(item => item.itemId === itemId);
+    if (index === -1) {
+      return false;
+    }
+
+    // For potions, use the old stacking logic
+    const potion = ItemDatabase.getPotion(itemId);
+    if (potion) {
+      if (!this.removeItemFromInventory(itemId, quantity)) {
+        return false;
+      }
+
+      const totalItems = this.gameState.player.footlocker.reduce((sum, item) => sum + item.quantity, 0);
+      if (totalItems + quantity > this.gameState.player.footlockerSlots) {
+        this.addItemToInventory(itemId, quantity);
+        return false;
+      }
+
+      const existing = this.gameState.player.footlocker.find(item => item.itemId === itemId);
+      if (existing) {
+        existing.quantity += quantity;
+      } else {
+        this.gameState.player.footlocker.push({ itemId, quantity });
+      }
+      return true;
+    }
+
+    // For weapons/armor, use the index-based method
+    return this.moveToFootlockerByIndex(index);
+  }
+
+  /**
+   * @deprecated Use moveFromFootlockerByIndex for proper enhanced item handling
+   * Legacy function - redirects to index-based method for weapons/armor
+   */
   moveFromFootlocker(itemId: string, quantity: number = 1): boolean {
-    const existing = this.gameState.player.footlocker.find(item => item.itemId === itemId);
-    if (!existing || existing.quantity < quantity) {
+    const index = this.gameState.player.footlocker.findIndex(item => item.itemId === itemId);
+    if (index === -1) {
+      return false;
+    }
+    
+    const item = this.gameState.player.footlocker[index];
+    if (!item || item.quantity < quantity) {
       return false;
     }
 
-    if (!this.addItemToInventory(itemId, quantity)) {
-      return false;
+    // For potions (stackable), use the old stacking logic
+    const potion = ItemDatabase.getPotion(itemId);
+    if (potion) {
+      if (!this.addItemToInventory(itemId, quantity)) {
+        return false;
+      }
+
+      item.quantity -= quantity;
+      if (item.quantity === 0) {
+        this.gameState.player.footlocker.splice(index, 1);
+      }
+      return true;
     }
 
-    existing.quantity -= quantity;
-    if (existing.quantity === 0) {
-      this.gameState.player.footlocker = this.gameState.player.footlocker.filter(item => item.itemId !== itemId);
-    }
-    return true;
+    // For weapons/armor, use the index-based method that preserves all metadata
+    return this.moveFromFootlockerByIndex(index);
   }
 
   moveFromFootlockerByIndex(index: number): boolean {
