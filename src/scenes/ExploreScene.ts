@@ -149,7 +149,8 @@ export class ExploreScene extends Phaser.Scene {
     const startY = returnLocation ? returnLocation.y : this.WORLD_SIZE / 2;
     
     this.player = this.add.sprite(startX, startY, 'hero-down');
-    this.player.setScale(0.5); // Scale down from 756px original to appropriate size
+    // Scale from 756px originals to ~32px (matching tile size): 32/756 ≈ 0.042
+    this.player.setScale(0.042);
     this.player.setDepth(5);
     this.currentDirection = 'down';
     
