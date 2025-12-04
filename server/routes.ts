@@ -61,7 +61,8 @@ interface ItemValueRecord {
 }
 
 interface PreviousItemData {
-  equipmentItemIds: Set<string>;
+  // Changed from Set to array to properly count duplicates (e.g., dual-wielding same weapon type)
+  equipmentItemIds: string[];
   inventoryItemIds: string[];
   footlockerItemIds: string[];
   // Map itemId -> array of all instances with their values (supports duplicates)
@@ -70,7 +71,7 @@ interface PreviousItemData {
 
 function extractAllItems(gameSave: any): PreviousItemData {
   const result: PreviousItemData = {
-    equipmentItemIds: new Set<string>(),
+    equipmentItemIds: [],
     inventoryItemIds: [],
     footlockerItemIds: [],
     itemValuesList: new Map(),
@@ -111,7 +112,7 @@ function extractAllItems(gameSave: any): PreviousItemData {
     for (const slot of Object.keys(player.equipment)) {
       const item = player.equipment[slot];
       if (item?.itemId) {
-        result.equipmentItemIds.add(item.itemId);
+        result.equipmentItemIds.push(item.itemId);
         recordItemValues(item);
       }
     }

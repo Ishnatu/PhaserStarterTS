@@ -439,7 +439,8 @@ function reconstructCanonicalInventory(clientInventory: any, playerId: string, c
 function validateItemReconciliation(
   player: any,
   previousItems: { 
-    equipmentItemIds: Set<string>;
+    // Changed from Set to array to properly count duplicates (e.g., dual-wielding same weapon type)
+    equipmentItemIds: string[];
     inventoryItemIds: string[];
     footlockerItemIds: string[];
   },
@@ -540,7 +541,8 @@ function validateItemReconciliation(
 }
 
 export interface PreviousItemData {
-  equipmentItemIds: Set<string>;
+  // Changed from Set to array to properly count duplicates (e.g., dual-wielding same weapon type)
+  equipmentItemIds: string[];
   inventoryItemIds: string[];
   footlockerItemIds: string[];
 }
