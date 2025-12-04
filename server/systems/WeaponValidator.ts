@@ -23,25 +23,34 @@ export class WeaponValidator {
   static validateAttack(attackName: string, player: PlayerData): WeaponAttack | null {
     const equipment = player.equipment;
     
+    console.log(`[WeaponValidator] Validating attack: "${attackName}"`);
+    console.log(`[WeaponValidator] mainHand:`, equipment.mainHand?.itemId || 'empty');
+    console.log(`[WeaponValidator] offHand:`, equipment.offHand?.itemId || 'empty');
+    
     // Check if main hand has a two-handed weapon
     let mainHandIsTwoHanded = false;
     if (equipment.mainHand) {
       const mainWeapon = ItemDatabase.getWeapon(equipment.mainHand.itemId);
       mainHandIsTwoHanded = mainWeapon?.twoHanded ?? false;
+      console.log(`[WeaponValidator] mainHand weapon type: ${mainWeapon?.type}, twoHanded: ${mainHandIsTwoHanded}`);
     }
     
     // Check mainhand weapon
     if (equipment.mainHand) {
+      console.log(`[WeaponValidator] Checking mainHand for attack...`);
       const mainHandAttack = this.getWeaponAttack(equipment.mainHand, attackName, 'mainHand');
       if (mainHandAttack) {
+        console.log(`[WeaponValidator] Found attack in mainHand!`);
         return mainHandAttack;
       }
     }
     
     // Check offhand weapon (not available if main hand has 2H weapon)
     if (equipment.offHand && !mainHandIsTwoHanded) {
+      console.log(`[WeaponValidator] Checking offHand for attack...`);
       const offHandAttack = this.getWeaponAttack(equipment.offHand, attackName, 'offHand');
       if (offHandAttack) {
+        console.log(`[WeaponValidator] Found attack in offHand!`);
         return offHandAttack;
       }
     }
@@ -85,15 +94,18 @@ export class WeaponValidator {
     // Load weapon data from authoritative ItemDatabase
     const weaponData = ItemDatabase.getWeapon(equippedItem.itemId);
     if (!weaponData) {
+      console.log(`[WeaponValidator] No weapon data found for itemId: ${equippedItem.itemId}`);
       return null;
     }
 
     // Get all attacks for this weapon type from WeaponAttackDatabase
     const attacks = WeaponAttackDatabase.getAttacksForWeapon(weaponData.type);
+    console.log(`[WeaponValidator] Weapon type: ${weaponData.type}, Available attacks:`, attacks.map((a: WeaponAttack) => a.name));
 
     // Find the specific attack by name
     const attack = attacks.find((a: WeaponAttack) => a.name === attackName);
     if (!attack) {
+      console.log(`[WeaponValidator] Attack "${attackName}" not found for weapon type ${weaponData.type}`);
       return null;
     }
 
