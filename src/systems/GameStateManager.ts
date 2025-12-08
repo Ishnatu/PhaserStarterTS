@@ -1,4 +1,4 @@
-import { GameState, PlayerData, GameScene } from '../types/GameTypes';
+import { GameState, PlayerData, GameScene, InventoryItem } from '../types/GameTypes';
 import { GameConfig } from '../config/GameConfig';
 import { EquipmentManager } from './EquipmentManager';
 import { ApiClient } from '../utils/ApiClient';
