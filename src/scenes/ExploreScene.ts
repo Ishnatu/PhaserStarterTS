@@ -160,6 +160,7 @@ export class ExploreScene extends Phaser.Scene {
 
     this.cameras.main.setBounds(0, 0, this.WORLD_SIZE, this.WORLD_SIZE);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.setZoom(2.0);
 
     this.generateInitialWorld();
 
@@ -226,7 +227,7 @@ export class ExploreScene extends Phaser.Scene {
 
   update() {
     const playerData = this.gameState.getPlayer();
-    const speed = 3;
+    const speed = 1.5;
     let pixelsMoved = 0;
 
     // Store player location for potential death/tombstone creation
