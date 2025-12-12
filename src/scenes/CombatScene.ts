@@ -2329,7 +2329,7 @@ export class CombatScene extends Phaser.Scene {
     }
   }
 
-  private renderStatusIndicators(enemy: Enemy, enemyIndex: number, enemyX: number, enemyY: number): void {
+  private renderStatusIndicators(enemy: Enemy, enemyIndex: number, enemyX: number, statusY: number): void {
     const existingIndicators = this.statusIndicators.get(enemyIndex);
     if (existingIndicators) {
       existingIndicators.forEach(ind => ind.destroy());
@@ -2339,7 +2339,7 @@ export class CombatScene extends Phaser.Scene {
     const iconSize = 24;
     const spacing = 5;
     let currentX = enemyX - (enemy.statusConditions.length * (iconSize + spacing)) / 2;
-    const indicatorY = enemyY + 80;
+    const indicatorY = statusY; // Use the Y position passed in (just below health bar)
     
     enemy.statusConditions.forEach((condition) => {
       let indicator: Phaser.GameObjects.Sprite | Phaser.GameObjects.Rectangle;
@@ -2377,16 +2377,49 @@ export class CombatScene extends Phaser.Scene {
     const state = this.combatSystem.getCombatState();
     if (!state) return;
     
-    const { width } = this.cameras.main;
-    const spacing = 200;
-    const totalWidth = (state.enemies.length - 1) * spacing;
-    const startX = width - 300 - totalWidth / 2;
-    const startY = 200;
+    const { height } = this.cameras.main;
+    
+    // Use same positioning logic as renderEnemies for consistency
+    const DELVE_LEFT_X = 650;
+    const DELVE_RIGHT_X = 830;
+    const DELVE_CENTER_X = 740;
+    const DELVE_Y = 240;
+    const SPACING = 180;
+    
+    let platformCenterX: number;
+    let platformY: number;
+    
+    if (this.isWildEncounter) {
+      platformCenterX = DELVE_CENTER_X;
+      platformY = height - 420;
+    } else {
+      platformCenterX = DELVE_CENTER_X;
+      platformY = DELVE_Y;
+    }
+    
+    // Calculate enemy positions matching renderEnemies logic
+    let enemyPositions: { x: number, y: number }[];
+    if (state.enemies.length === 1) {
+      enemyPositions = [{ x: platformCenterX, y: platformY }];
+    } else if (state.enemies.length === 2) {
+      enemyPositions = [
+        { x: DELVE_LEFT_X, y: platformY },
+        { x: DELVE_RIGHT_X, y: platformY }
+      ];
+    } else {
+      const totalWidth = (state.enemies.length - 1) * SPACING;
+      const startX = platformCenterX - totalWidth / 2;
+      enemyPositions = state.enemies.map((_, index) => ({
+        x: startX + (index * SPACING),
+        y: platformY
+      }));
+    }
     
     state.enemies.forEach((enemy, index) => {
-      const x = startX + (index * spacing);
-      const y = startY;
-      this.renderStatusIndicators(enemy, index, x, y);
+      const pos = enemyPositions[index];
+      // Status indicators go just below the health bar (HP bar is at y - 150, height 20)
+      const statusY = pos.y - 150 + 30;
+      this.renderStatusIndicators(enemy, index, pos.x, statusY);
     });
   }
 
