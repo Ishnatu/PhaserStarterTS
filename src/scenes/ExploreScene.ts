@@ -1426,20 +1426,20 @@ export class ExploreScene extends Phaser.Scene {
     
     // Main panel (matching town NPC dimensions)
     const panel = this.add.rectangle(width / 2, height / 2, 700, 400, 0x2a1a0a)
-      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000).setScale(this.UI_SCALE);
 
     uiElements.push(overlay, panel);
 
     // Header layout with proper vertical spacing (matching town NPC style)
-    const headerBaseY = height / 2 - 140;
-    const verticalGap = 55;
+    const headerBaseY = height / 2 - 140 * this.UI_SCALE;
+    const verticalGap = 55 * this.UI_SCALE;
 
     // Row 1: Title
     const titleText = this.add.text(width / 2, headerBaseY, 'Trapped Chest', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#ff8844',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
 
     // Row 2: Description (flavor text)
     const descText = this.add.text(width / 2, headerBaseY + verticalGap, 
@@ -1449,7 +1449,7 @@ export class ExploreScene extends Phaser.Scene {
       color: '#aaaaaa',
       align: 'center',
       wordWrap: { width: 600 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
 
     // Row 3: Prompt
     const promptText = this.add.text(width / 2, headerBaseY + verticalGap * 2, 
@@ -1457,7 +1457,7 @@ export class ExploreScene extends Phaser.Scene {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
 
     uiElements.push(titleText, descText, promptText);
 
@@ -1473,7 +1473,7 @@ export class ExploreScene extends Phaser.Scene {
     this.menuState = 'encounter';
 
     // Button row at bottom (matching town NPC style)
-    const buttonY = height / 2 + 130;
+    const buttonY = height / 2 + 130 * this.UI_SCALE;
 
     // Attempt button
     const attemptBtn = this.createButton(width / 2 - 100, buttonY, 'Attempt', async () => {
@@ -1579,19 +1579,19 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
 
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x000000, 0.9)
-      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    const titleText = this.add.text(width / 2, height / 2 - 100, 'Random Encounter!', {
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000).setScale(this.UI_SCALE);
+    const titleText = this.add.text(width / 2, height / 2 - 100 * this.UI_SCALE, 'Random Encounter!', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#ff8844',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const descText = this.add.text(width / 2, height / 2 - 30, encounterData.description, {
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
+    const descText = this.add.text(width / 2, height / 2 - 30 * this.UI_SCALE, encounterData.description, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
       align: 'center',
       wordWrap: { width: 400 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
 
     uiElements.push(overlay, titleText, descText);
 
@@ -1607,19 +1607,19 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
 
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x000000, 0.9)
-      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    const titleText = this.add.text(width / 2, height / 2 - 100, 'Treasure Found!', {
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000).setScale(this.UI_SCALE);
+    const titleText = this.add.text(width / 2, height / 2 - 100 * this.UI_SCALE, 'Treasure Found!', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#ffcc00',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const descText = this.add.text(width / 2, height / 2 - 30, encounterData.description, {
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
+    const descText = this.add.text(width / 2, height / 2 - 30 * this.UI_SCALE, encounterData.description, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
       align: 'center',
       wordWrap: { width: 400 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
 
     uiElements.push(overlay, titleText, descText);
 
@@ -1638,13 +1638,13 @@ export class ExploreScene extends Phaser.Scene {
         player.crystallineAnimus = result.crystallineAnimus;
         this.gameState.updatePlayer(player);
         
-        const rewardText = this.add.text(width / 2, height / 2 + 40, 
+        const rewardText = this.add.text(width / 2, height / 2 + 40 * this.UI_SCALE, 
           `+${result.arcaneAshReward} Arcane Ash\n+${result.crystallineAnimusReward} Crystalline Animus`, {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.small,
           color: '#44ff44',
           align: 'center',
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
         uiElements.push(rewardText);
         
         console.log(`[TREASURE] Server reward claimed: AA=${result.arcaneAshReward}, CA=${result.crystallineAnimusReward}`);
@@ -1668,24 +1668,24 @@ export class ExploreScene extends Phaser.Scene {
     const player = this.gameState.getPlayer();
 
     const overlay = this.add.rectangle(width / 2, height / 2, 520, 280, 0x2a0a2a, 0.95)
-      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    const titleText = this.add.text(width / 2, height / 2 - 110, 'Shrine to the Faceless Old God', {
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000).setScale(this.UI_SCALE);
+    const titleText = this.add.text(width / 2, height / 2 - 110 * this.UI_SCALE, 'Shrine to the Faceless Old God', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.medium,
       color: '#aa44ff',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const descText = this.add.text(width / 2, height / 2 - 50, 'Corrupted whispers promise\npower for the faithful.', {
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
+    const descText = this.add.text(width / 2, height / 2 - 50 * this.UI_SCALE, 'Corrupted whispers promise\npower for the faithful.', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
       align: 'center',
       lineSpacing: 6,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const choiceText = this.add.text(width / 2, height / 2 + 20, 'Offer 50 Arcane Ash?', {
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
+    const choiceText = this.add.text(width / 2, height / 2 + 20 * this.UI_SCALE, 'Offer 50 Arcane Ash?', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffcc88',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
 
     uiElements.push(overlay, titleText, descText, choiceText);
     
@@ -1700,8 +1700,8 @@ export class ExploreScene extends Phaser.Scene {
     this.currentMenuCloseFunction = destroyAll;
     this.menuState = 'encounter';
 
-    const yesBtnBg = this.add.rectangle(width / 2 - 90, height / 2 + 80, 130, 34, 0x444466)
-      .setScrollFactor(0).setDepth(1002)
+    const yesBtnBg = this.add.rectangle(width / 2 - 90 * this.UI_SCALE, height / 2 + 80 * this.UI_SCALE, 130, 34, 0x444466)
+      .setScrollFactor(0).setDepth(1002).setScale(this.UI_SCALE)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', async () => {
         if (player.arcaneAsh < 50) {
@@ -1743,14 +1743,14 @@ export class ExploreScene extends Phaser.Scene {
         this.time.delayedCall(3000, destroyAll);
       });
     
-    const yesBtnLabel = this.add.text(width / 2 - 90, height / 2 + 80, 'Offer', {
+    const yesBtnLabel = this.add.text(width / 2 - 90 * this.UI_SCALE, height / 2 + 80 * this.UI_SCALE, 'Offer', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003).setScale(this.UI_SCALE);
     
-    const noBtnBg = this.add.rectangle(width / 2 + 90, height / 2 + 80, 130, 34, 0x664444)
-      .setScrollFactor(0).setDepth(1002)
+    const noBtnBg = this.add.rectangle(width / 2 + 90 * this.UI_SCALE, height / 2 + 80 * this.UI_SCALE, 130, 34, 0x664444)
+      .setScrollFactor(0).setDepth(1002).setScale(this.UI_SCALE)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', async () => {
         try {
@@ -1766,11 +1766,11 @@ export class ExploreScene extends Phaser.Scene {
         destroyAll();
       });
     
-    const noBtnLabel = this.add.text(width / 2 + 90, height / 2 + 80, 'Leave', {
+    const noBtnLabel = this.add.text(width / 2 + 90 * this.UI_SCALE, height / 2 + 80 * this.UI_SCALE, 'Leave', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003).setScale(this.UI_SCALE);
     
     uiElements.push(yesBtnBg, yesBtnLabel, noBtnBg, noBtnLabel);
   }
@@ -1783,18 +1783,18 @@ export class ExploreScene extends Phaser.Scene {
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
       .setOrigin(0).setScrollFactor(0).setDepth(1000);
     const panel = this.add.rectangle(width / 2, height / 2, 700, 400, 0x2a1a0a)
-      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000).setScale(this.UI_SCALE);
 
     uiElements.push(overlay, panel);
 
-    const headerBaseY = height / 2 - 140;
-    const verticalGap = 55;
+    const headerBaseY = height / 2 - 140 * this.UI_SCALE;
+    const verticalGap = 55 * this.UI_SCALE;
 
     const titleText = this.add.text(width / 2, headerBaseY, 'Trapped Chest', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#ff8844',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
 
     const descText = this.add.text(width / 2, headerBaseY + verticalGap, 
       '"' + encounterData.description + '"', {
@@ -1803,14 +1803,14 @@ export class ExploreScene extends Phaser.Scene {
       color: '#aaaaaa',
       align: 'center',
       wordWrap: { width: 600 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
 
     const promptText = this.add.text(width / 2, headerBaseY + verticalGap * 2, 
       'Do you want to attempt to pick the lock?', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
 
     uiElements.push(titleText, descText, promptText);
 
@@ -1825,7 +1825,7 @@ export class ExploreScene extends Phaser.Scene {
     this.currentMenuCloseFunction = closeEncounter;
     this.menuState = 'encounter';
 
-    const buttonY = height / 2 + 130;
+    const buttonY = height / 2 + 130 * this.UI_SCALE;
 
     const attemptBtn = this.createButton(width / 2 - 100, buttonY, 'Attempt', async () => {
       attemptBtn.destroy();
