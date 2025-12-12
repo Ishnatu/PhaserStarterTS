@@ -180,18 +180,18 @@ export class ExploreScene extends Phaser.Scene {
       }
     });
 
-    // Create stats panel
-    this.statsPanel = new StatsPanel(this, 20, 40);
+    // Create stats panel (scaled for camera zoom)
+    this.statsPanel = new StatsPanel(this, 10, 20);
     this.statsPanel.setDepth(100);
-    this.statsPanel.getContainer().setScrollFactor(0);
+    this.statsPanel.getContainer().setScrollFactor(0).setScale(this.UI_SCALE);
     this.statsPanel.update(playerData);
 
-    this.add.text(20, height - 40, 'Arrow keys to move • Approach markers to interact • M to open menu', {
+    this.add.text(10, height - 20, 'Arrow keys to move • Approach markers to interact • M to open menu', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.xsmall,
       color: '#cccccc',
       resolution: 2,
-    }).setScrollFactor(0).setDepth(100);
+    }).setScrollFactor(0).setDepth(100).setScale(this.UI_SCALE);
 
     // Play wilderness music
     const audioManager = AudioManager.getInstance();
