@@ -1014,19 +1014,19 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
 
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x000000, 0.9)
-      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    const titleText = this.add.text(width / 2, height / 2 - 100, 'Random Encounter!', {
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000).setScale(this.UI_SCALE);
+    const titleText = this.add.text(width / 2, height / 2 - 100 * this.UI_SCALE, 'Random Encounter!', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#ff8844',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const descText = this.add.text(width / 2, height / 2 - 30, encounterType.description, {
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
+    const descText = this.add.text(width / 2, height / 2 - 30 * this.UI_SCALE, encounterType.description, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
       align: 'center',
       wordWrap: { width: 400 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
 
     uiElements.push(overlay, titleText, descText);
 
@@ -1042,19 +1042,19 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
 
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 300, 0x000000, 0.9)
-      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    const titleText = this.add.text(width / 2, height / 2 - 100, 'Treasure Found!', {
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000).setScale(this.UI_SCALE);
+    const titleText = this.add.text(width / 2, height / 2 - 100 * this.UI_SCALE, 'Treasure Found!', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#ffcc00',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const descText = this.add.text(width / 2, height / 2 - 30, encounterType.description, {
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
+    const descText = this.add.text(width / 2, height / 2 - 30 * this.UI_SCALE, encounterType.description, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
       align: 'center',
       wordWrap: { width: 400 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
 
     // [SECURITY] Step 1: Create treasure session on server
     let aaReward = 0;
@@ -1107,11 +1107,11 @@ export class ExploreScene extends Phaser.Scene {
       console.error('Error claiming treasure reward:', error);
     }
 
-    const lootText = this.add.text(width / 2, height / 2 + 40, `+${aaReward} AA, +${caReward} CA`, {
+    const lootText = this.add.text(width / 2, height / 2 + 40 * this.UI_SCALE, `+${aaReward} AA, +${caReward} CA`, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.medium,
       color: '#ffcc00',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
 
     uiElements.push(overlay, titleText, descText, lootText);
 
@@ -1128,24 +1128,24 @@ export class ExploreScene extends Phaser.Scene {
     const player = this.gameState.getPlayer();
 
     const overlay = this.add.rectangle(width / 2, height / 2, 520, 280, 0x2a0a2a, 0.95)
-      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    const titleText = this.add.text(width / 2, height / 2 - 110, 'Shrine to the Faceless Old God', {
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000).setScale(this.UI_SCALE);
+    const titleText = this.add.text(width / 2, height / 2 - 110 * this.UI_SCALE, 'Shrine to the Faceless Old God', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.medium,
       color: '#aa44ff',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const descText = this.add.text(width / 2, height / 2 - 50, 'Corrupted whispers promise\npower for the faithful.', {
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
+    const descText = this.add.text(width / 2, height / 2 - 50 * this.UI_SCALE, 'Corrupted whispers promise\npower for the faithful.', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
       align: 'center',
       lineSpacing: 6,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const choiceText = this.add.text(width / 2, height / 2 + 20, 'Offer 50 Arcane Ash?', {
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
+    const choiceText = this.add.text(width / 2, height / 2 + 20 * this.UI_SCALE, 'Offer 50 Arcane Ash?', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffcc88',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
 
     uiElements.push(overlay, titleText, descText, choiceText);
     
@@ -1172,8 +1172,8 @@ export class ExploreScene extends Phaser.Scene {
     this.currentMenuCloseFunction = destroyAll;
     this.menuState = 'encounter';
 
-    const yesBtnBg = this.add.rectangle(width / 2 - 90, height / 2 + 80, 130, 34, 0x444466)
-      .setScrollFactor(0).setDepth(1002)
+    const yesBtnBg = this.add.rectangle(width / 2 - 90 * this.UI_SCALE, height / 2 + 80 * this.UI_SCALE, 130, 34, 0x444466)
+      .setScrollFactor(0).setDepth(1002).setScale(this.UI_SCALE)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
       if (player.arcaneAsh < 50) {
@@ -1235,24 +1235,24 @@ export class ExploreScene extends Phaser.Scene {
       }
     });
 
-    const yesBtnLabel = this.add.text(width / 2 - 90, height / 2 + 80, 'Offer 50AA', {
+    const yesBtnLabel = this.add.text(width / 2 - 90 * this.UI_SCALE, height / 2 + 80 * this.UI_SCALE, 'Offer 50AA', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003).setScale(this.UI_SCALE);
 
-    const noBtnBg = this.add.rectangle(width / 2 + 90, height / 2 + 80, 130, 34, 0x444466)
-      .setScrollFactor(0).setDepth(1002)
+    const noBtnBg = this.add.rectangle(width / 2 + 90 * this.UI_SCALE, height / 2 + 80 * this.UI_SCALE, 130, 34, 0x444466)
+      .setScrollFactor(0).setDepth(1002).setScale(this.UI_SCALE)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         destroyAll();
       });
 
-    const noBtnLabel = this.add.text(width / 2 + 90, height / 2 + 80, 'Decline', {
+    const noBtnLabel = this.add.text(width / 2 + 90 * this.UI_SCALE, height / 2 + 80 * this.UI_SCALE, 'Decline', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003).setScale(this.UI_SCALE);
   }
 
   private handleCorruptedVoidPortalEncounter(encounterType: any): void {
