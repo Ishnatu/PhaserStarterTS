@@ -1683,6 +1683,9 @@ export class CombatSystem {
 
   private checkCombatEnd(): void {
     if (!this.combatState) return;
+    
+    // Prevent duplicate victory/defeat messages if combat already ended
+    if (this.combatState.isComplete) return;
 
     const allEnemiesDead = this.combatState.enemies.every(e => e.health <= 0);
     const playerDead = this.combatState.player.health <= 0;
