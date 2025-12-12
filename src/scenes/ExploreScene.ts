@@ -56,8 +56,8 @@ export class ExploreScene extends Phaser.Scene {
   private readonly TILE_SIZE: number = 32;
   private readonly WORLD_SIZE: number = 6000;
   private readonly CHUNK_SIZE: number = 800;
-  private readonly CAMERA_ZOOM: number = 2.0;
-  private readonly UI_SCALE: number = 0.5; // 1 / CAMERA_ZOOM - counteracts zoom for UI elements
+  private readonly CAMERA_ZOOM: number = 1.0;
+  private readonly UI_SCALE: number = 1.0; // No scaling needed at 1x zoom
   private menuState: 'none' | 'main' | 'inventory' | 'equipment' | 'quit' | 'encounter' = 'none';
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
@@ -151,8 +151,8 @@ export class ExploreScene extends Phaser.Scene {
     const startY = returnLocation ? returnLocation.y : this.WORLD_SIZE / 2;
     
     this.player = this.add.sprite(startX, startY, 'hero-down');
-    // Scale from 756px originals to ~32px (matching tile size): 32/756 ≈ 0.042
-    this.player.setScale(0.042);
+    // Scale from 756px originals to ~64px (2x tile size for better visibility): 64/756 ≈ 0.084
+    this.player.setScale(0.084);
     this.player.setDepth(5);
     this.currentDirection = 'down';
     
@@ -419,7 +419,7 @@ export class ExploreScene extends Phaser.Scene {
     const y = this.WORLD_SIZE / 2;
 
     const citySprite = this.add.sprite(0, 0, 'roboka-city');
-    citySprite.setScale(0.25);
+    citySprite.setScale(0.5); // Doubled for 1x zoom
     citySprite.setOrigin(0.5, 0.65);
     
     const label = this.add.text(0, -140, 'Roboka', {
@@ -541,7 +541,7 @@ export class ExploreScene extends Phaser.Scene {
     const safeTier = tier ?? 1;
     
     const entrance = this.add.sprite(0, 0, 'delve-entrance');
-    entrance.setScale(0.15);
+    entrance.setScale(0.3); // Doubled for 1x zoom
     entrance.setOrigin(0.5, 0.75);
     
     const glow = this.add.circle(0, 0, 32, 0x8844ff, 0.2);
@@ -583,7 +583,7 @@ export class ExploreScene extends Phaser.Scene {
   private createTombstoneMarker(id: number, x: number, y: number): Phaser.GameObjects.Container {
     const tombstone = this.add.image(0, 0, 'tombstone');
     tombstone.setOrigin(0.5, 0.75);
-    tombstone.setScale(0.8);
+    tombstone.setScale(1.6); // Doubled for 1x zoom
     
     const glow = this.add.circle(0, 0, 32, 0xff4444, 0.2);
     const label = this.add.text(0, -60, 'Your Corpse', {
@@ -919,7 +919,7 @@ export class ExploreScene extends Phaser.Scene {
       // Add tree sprite separately (not to container) so it can have independent depth
       const treeVariation = this.getTreeVariation(x, y);
       const tree = this.add.sprite(x + 16, y + 16, `tree${treeVariation}`);
-      tree.setScale(0.12);
+      tree.setScale(0.24); // Doubled for 1x zoom
       tree.setOrigin(0.5, 0.75);
       // Y-sort trees: higher Y = render in front (depth 8.000x to 8.999x range)
       // This prevents trunks from appearing in front of other trees' canopies
@@ -935,7 +935,7 @@ export class ExploreScene extends Phaser.Scene {
       
       // Add bush sprite
       const bush = this.add.sprite(x + 16, y + 16, 'bush');
-      bush.setScale(0.08);
+      bush.setScale(0.16); // Doubled for 1x zoom
       bush.setOrigin(0.5, 0.7);
       bush.setDepth(3 + y / 10000);
       
@@ -950,7 +950,7 @@ export class ExploreScene extends Phaser.Scene {
       // Add grass tuft sprite (grass1-4)
       const tuftVariation = TerrainGenerator.getGrassTuftVariant(x, y);
       const tuft = this.add.sprite(x + 16, y + 16, `grass${tuftVariation}`);
-      tuft.setScale(0.26);
+      tuft.setScale(0.52); // Doubled for 1x zoom
       tuft.setOrigin(0.5, 0.7);
       tuft.setDepth(2 + y / 10000);
       
@@ -2876,64 +2876,79 @@ export class ExploreScene extends Phaser.Scene {
     this.currentMenuCloseFunction = destroyAll;
     this.menuState = 'main';
 
-    // Simple text buttons (scaled for camera zoom, spacing accounts for scale)
-    const buttonSpacing = 15; // Visual spacing between scaled buttons
+    // Simple text buttons with standard spacing
+    const buttonSpacing = 25;
     
-    // Helper to create scaled menu button with proper hit area
-    const createMenuButton = (y: number, text: string, hoverColor: string, onClick: () => void) => {
-      const btn = this.add.text(centerX, y, text, {
-        fontFamily: FONTS.primary,
-        fontSize: FONTS.size.medium,
-        color: '#ffffff',
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(10000).setScale(UI_SCALE);
-      
-      // Set interactive with hit area matching scaled display size
-      const hitArea = new Phaser.Geom.Rectangle(
-        -btn.displayWidth / 2,
-        -btn.displayHeight / 2,
-        btn.displayWidth,
-        btn.displayHeight
-      );
-      btn.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
-      btn.input!.cursor = 'pointer';
-      
-      btn.on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor(hoverColor); });
-      btn.on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#ffffff'); });
-      btn.on('pointerdown', onClick);
-      
-      return btn;
-    };
-    
-    const inventoryBtn = createMenuButton(centerY - buttonSpacing * 2, '[ Inventory ]', '#ffff00', () => {
-      destroyAll();
-      this.openInventory();
-    });
+    const inventoryBtn = this.add.text(centerX, centerY - buttonSpacing * 2, '[ Inventory ]', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10000)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#ffff00'); })
+      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#ffffff'); })
+      .on('pointerdown', () => {
+        destroyAll();
+        this.openInventory();
+      });
     uiElements.push(inventoryBtn);
 
-    const equipmentBtn = createMenuButton(centerY - buttonSpacing, '[ Equipment ]', '#ffff00', () => {
-      destroyAll();
-      this.openEquipment();
-    });
+    const equipmentBtn = this.add.text(centerX, centerY - buttonSpacing, '[ Equipment ]', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10000)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#ffff00'); })
+      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#ffffff'); })
+      .on('pointerdown', () => {
+        destroyAll();
+        this.openEquipment();
+      });
     uiElements.push(equipmentBtn);
 
     const player = this.gameState.getPlayer();
     const maxRests = GameConfig.STAMINA.MAX_WILDERNESS_RESTS;
     const restsText = `[ Short Rest ] (${player.wildernessRestsRemaining}/${maxRests} remaining)`;
-    const shortRestBtn = createMenuButton(centerY, restsText, '#88ff88', () => {
-      destroyAll();
-      this.attemptShortRest();
-    });
+    const shortRestBtn = this.add.text(centerX, centerY, restsText, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10000)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#88ff88'); })
+      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#ffffff'); })
+      .on('pointerdown', () => {
+        destroyAll();
+        this.attemptShortRest();
+      });
     uiElements.push(shortRestBtn);
 
-    const exitBtn = createMenuButton(centerY + buttonSpacing, '[ Exit Game ]', '#ff6666', () => {
-      destroyAll();
-      this.scene.start('MainMenuScene');
-    });
+    const exitBtn = this.add.text(centerX, centerY + buttonSpacing, '[ Exit Game ]', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10000)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#ff6666'); })
+      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#ffffff'); })
+      .on('pointerdown', () => {
+        destroyAll();
+        this.scene.start('MainMenuScene');
+      });
     uiElements.push(exitBtn);
 
-    const closeBtn = createMenuButton(centerY + buttonSpacing * 2, '[ Close Menu ]', '#00ff00', () => {
-      destroyAll();
-    });
+    const closeBtn = this.add.text(centerX, centerY + buttonSpacing * 2, '[ Close Menu ]', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.medium,
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10000)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', function(this: Phaser.GameObjects.Text) { this.setColor('#00ff00'); })
+      .on('pointerout', function(this: Phaser.GameObjects.Text) { this.setColor('#ffffff'); })
+      .on('pointerdown', () => {
+        destroyAll();
+      });
     uiElements.push(closeBtn);
 
     this.isOverlayActive = true;
