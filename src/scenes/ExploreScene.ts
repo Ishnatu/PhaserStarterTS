@@ -56,6 +56,8 @@ export class ExploreScene extends Phaser.Scene {
   private readonly TILE_SIZE: number = 32;
   private readonly WORLD_SIZE: number = 6000;
   private readonly CHUNK_SIZE: number = 800;
+  private readonly CAMERA_ZOOM: number = 2.0;
+  private readonly UI_SCALE: number = 0.5; // 1 / CAMERA_ZOOM - counteracts zoom for UI elements
   private menuState: 'none' | 'main' | 'inventory' | 'equipment' | 'quit' | 'encounter' = 'none';
   private currentMenuCloseFunction: (() => void) | null = null;
   private escKey!: Phaser.Input.Keyboard.Key;
@@ -160,7 +162,7 @@ export class ExploreScene extends Phaser.Scene {
 
     this.cameras.main.setBounds(0, 0, this.WORLD_SIZE, this.WORLD_SIZE);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setZoom(2.0);
+    this.cameras.main.setZoom(this.CAMERA_ZOOM);
 
     this.generateInitialWorld();
 
@@ -1258,25 +1260,25 @@ export class ExploreScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
 
     const overlay = this.add.rectangle(width / 2, height / 2, 500, 350, 0x1a0a2a, 0.95)
-      .setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-    const titleText = this.add.text(width / 2, height / 2 - 130, 'Corrupted Void Portal', {
+      .setOrigin(0.5).setScrollFactor(0).setDepth(1000).setScale(this.UI_SCALE);
+    const titleText = this.add.text(width / 2, height / 2 - 130 * this.UI_SCALE, 'Corrupted Void Portal', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#8844ff',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-    const descText = this.add.text(width / 2, height / 2 - 70, encounterType.description, {
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
+    const descText = this.add.text(width / 2, height / 2 - 70 * this.UI_SCALE, encounterType.description, {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
       align: 'center',
       wordWrap: { width: 450 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
     const choiceText = this.add.text(width / 2, height / 2, 'Enter the void?\n2 stages: enemies + boss battle!', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffcc88',
       align: 'center',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setScale(this.UI_SCALE);
 
     uiElements.push(overlay, titleText, descText, choiceText);
     
@@ -1304,8 +1306,8 @@ export class ExploreScene extends Phaser.Scene {
     this.menuState = 'encounter';
 
     let isEntering = false;
-    const enterBtnBg = this.add.rectangle(width / 2 - 70, height / 2 + 70, 140, 30, 0x444466)
-      .setScrollFactor(0).setDepth(1002)
+    const enterBtnBg = this.add.rectangle(width / 2 - 70 * this.UI_SCALE, height / 2 + 70 * this.UI_SCALE, 140, 30, 0x444466)
+      .setScrollFactor(0).setDepth(1002).setScale(this.UI_SCALE)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         if (isEntering) return;
@@ -1314,24 +1316,24 @@ export class ExploreScene extends Phaser.Scene {
         this.startVoidPortalDelve();
       });
 
-    const enterBtnLabel = this.add.text(width / 2 - 70, height / 2 + 70, 'Enter', {
+    const enterBtnLabel = this.add.text(width / 2 - 70 * this.UI_SCALE, height / 2 + 70 * this.UI_SCALE, 'Enter', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003).setScale(this.UI_SCALE);
 
-    const fleeBtnBg = this.add.rectangle(width / 2 + 70, height / 2 + 70, 140, 30, 0x444466)
-      .setScrollFactor(0).setDepth(1002)
+    const fleeBtnBg = this.add.rectangle(width / 2 + 70 * this.UI_SCALE, height / 2 + 70 * this.UI_SCALE, 140, 30, 0x444466)
+      .setScrollFactor(0).setDepth(1002).setScale(this.UI_SCALE)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         destroyAll();
       });
 
-    const fleeBtnLabel = this.add.text(width / 2 + 70, height / 2 + 70, 'Flee', {
+    const fleeBtnLabel = this.add.text(width / 2 + 70 * this.UI_SCALE, height / 2 + 70 * this.UI_SCALE, 'Flee', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.small,
       color: '#ffffff',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003).setScale(this.UI_SCALE);
     
     // ESC key support
     const escHandler = () => {
