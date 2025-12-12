@@ -2339,7 +2339,7 @@ export class CombatScene extends Phaser.Scene {
     const iconSize = 24;
     const spacing = 5;
     let currentX = enemyX - (enemy.statusConditions.length * (iconSize + spacing)) / 2;
-    const indicatorY = enemyY - 110;
+    const indicatorY = enemyY + 80;
     
     enemy.statusConditions.forEach((condition) => {
       let indicator: Phaser.GameObjects.Sprite | Phaser.GameObjects.Rectangle;

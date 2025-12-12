@@ -1693,11 +1693,17 @@ export class CombatSystem {
     if (allEnemiesDead) {
       this.combatState.isComplete = true;
       this.combatState.playerVictory = true;
-      this.combatState.combatLog.push('Victory! All enemies defeated!');
+      // Only add victory message if not already present
+      if (!this.combatState.combatLog.includes('Victory! All enemies defeated!')) {
+        this.combatState.combatLog.push('Victory! All enemies defeated!');
+      }
     } else if (playerDead) {
       this.combatState.isComplete = true;
       this.combatState.playerVictory = false;
-      this.combatState.combatLog.push('You have been defeated...');
+      // Only add defeat message if not already present
+      if (!this.combatState.combatLog.includes('You have been defeated...')) {
+        this.combatState.combatLog.push('You have been defeated...');
+      }
     }
   }
 
