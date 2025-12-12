@@ -486,27 +486,37 @@ export class CombatScene extends Phaser.Scene {
   }
 
   private renderEnemies(enemies: Enemy[]): void {
-    const { height } = this.cameras.main;
+    const { width, height } = this.cameras.main;
     
-    // Fixed positioning based on user's visual markers - uniform for all enemy types
-    // Delve: Left X at 650, Right X at 830, Center at 740, Y at 240
-    // Wilderness: Same X positions, Y adjusted for ground level
-    const DELVE_LEFT_X = 650;
-    const DELVE_RIGHT_X = 830;
-    const DELVE_CENTER_X = 740;  // Midpoint between left and right
+    // Enemy positioning - right side of screen in the grassy clearing
+    // Screen is 1920px wide, enemies should be in the right third (~1200-1500 range)
+    // Wilderness: enemies in right clearing area
+    // Delve: enemies on the dungeon platform
+    const WILDERNESS_LEFT_X = 750;
+    const WILDERNESS_RIGHT_X = 950;
+    const WILDERNESS_CENTER_X = 850;
+    const DELVE_LEFT_X = 750;
+    const DELVE_RIGHT_X = 950;
+    const DELVE_CENTER_X = 850;
     const DELVE_Y = 240;
-    const SPACING = 180;  // Distance between two enemies
+    const SPACING = 200;  // Distance between two enemies
     
     let platformCenterX: number;
     let platformY: number;
+    let leftX: number;
+    let rightX: number;
     
     if (this.isWildEncounter) {
-      // Wilderness: same horizontal positions, adjusted vertical for ground
-      platformCenterX = DELVE_CENTER_X;
+      // Wilderness: position in the right grassy clearing
+      platformCenterX = WILDERNESS_CENTER_X;
+      leftX = WILDERNESS_LEFT_X;
+      rightX = WILDERNESS_RIGHT_X;
       platformY = height - 420;
     } else {
-      // Delve: use the exact coordinates from user's markers
+      // Delve: use the dungeon platform coordinates
       platformCenterX = DELVE_CENTER_X;
+      leftX = DELVE_LEFT_X;
+      rightX = DELVE_RIGHT_X;
       platformY = DELVE_Y;
     }
     
@@ -516,9 +526,7 @@ export class CombatScene extends Phaser.Scene {
       // Single enemy: exactly at center point
       enemyPositions = [{ x: platformCenterX, y: platformY }];
     } else if (enemies.length === 2) {
-      // Two enemies: use exact left and right marker positions
-      const leftX = this.isWildEncounter ? DELVE_LEFT_X : DELVE_LEFT_X;
-      const rightX = this.isWildEncounter ? DELVE_RIGHT_X : DELVE_RIGHT_X;
+      // Two enemies: use left and right positions
       enemyPositions = [
         { x: leftX, y: platformY },
         { x: rightX, y: platformY }
@@ -2380,20 +2388,29 @@ export class CombatScene extends Phaser.Scene {
     const { height } = this.cameras.main;
     
     // Use same positioning logic as renderEnemies for consistency
-    const DELVE_LEFT_X = 650;
-    const DELVE_RIGHT_X = 830;
-    const DELVE_CENTER_X = 740;
+    const WILDERNESS_LEFT_X = 750;
+    const WILDERNESS_RIGHT_X = 950;
+    const WILDERNESS_CENTER_X = 850;
+    const DELVE_LEFT_X = 750;
+    const DELVE_RIGHT_X = 950;
+    const DELVE_CENTER_X = 850;
     const DELVE_Y = 240;
-    const SPACING = 180;
+    const SPACING = 200;
     
     let platformCenterX: number;
     let platformY: number;
+    let leftX: number;
+    let rightX: number;
     
     if (this.isWildEncounter) {
-      platformCenterX = DELVE_CENTER_X;
+      platformCenterX = WILDERNESS_CENTER_X;
+      leftX = WILDERNESS_LEFT_X;
+      rightX = WILDERNESS_RIGHT_X;
       platformY = height - 420;
     } else {
       platformCenterX = DELVE_CENTER_X;
+      leftX = DELVE_LEFT_X;
+      rightX = DELVE_RIGHT_X;
       platformY = DELVE_Y;
     }
     
@@ -2403,8 +2420,8 @@ export class CombatScene extends Phaser.Scene {
       enemyPositions = [{ x: platformCenterX, y: platformY }];
     } else if (state.enemies.length === 2) {
       enemyPositions = [
-        { x: DELVE_LEFT_X, y: platformY },
-        { x: DELVE_RIGHT_X, y: platformY }
+        { x: leftX, y: platformY },
+        { x: rightX, y: platformY }
       ];
     } else {
       const totalWidth = (state.enemies.length - 1) * SPACING;
