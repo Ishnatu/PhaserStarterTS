@@ -519,7 +519,7 @@ export class TownScene extends Phaser.Scene {
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0);
-    const panel = this.add.rectangle(width / 2, height / 2, 700, 500, 0x2a2a3e).setOrigin(0.5);
+    const panel = this.add.rectangle(width / 2, height / 2, 900, 500, 0x2a2a3e).setOrigin(0.5);
     uiElements.push(overlay, panel);
 
     const title = this.add.text(width / 2, height / 2 - 220, `Inventory (${player.inventory.reduce((sum, item) => sum + item.quantity, 0)}/${player.inventorySlots})`, {
@@ -565,7 +565,7 @@ export class TownScene extends Phaser.Scene {
       const armor = ItemDatabase.getArmor(invItem.itemId);
       
       const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
-      const itemLabel = this.add.text(width / 2 - 320, y, displayName, {
+      const itemLabel = this.add.text(width / 2 - 420, y, displayName, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.xsmall,
         color: itemColor,
@@ -599,7 +599,7 @@ export class TownScene extends Phaser.Scene {
         else if (durabilityPercent <= 25) durabilityColor = '#ffaa00';
         else if (durabilityPercent <= 50) durabilityColor = '#ffff00';
         
-        const durabilityLabel = this.add.text(width / 2 - 80, y, `[${Math.floor(currentDurability)}/${maxDurability}]`, {
+        const durabilityLabel = this.add.text(width / 2 - 130, y, `[${Math.floor(currentDurability)}/${maxDurability}]`, {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.xsmall,
           color: durabilityColor,
@@ -612,7 +612,7 @@ export class TownScene extends Phaser.Scene {
 
       if (weapon) {
         if (weapon.twoHanded) {
-          const equipBtn = this.add.text(width / 2 + 120, y, '[Equip]', {
+          const equipBtn = this.add.text(width / 2 + 150, y, '[Equip]', {
             fontFamily: FONTS.primary,
             fontSize: FONTS.size.xsmall,
             color: '#88ff88',
@@ -625,7 +625,7 @@ export class TownScene extends Phaser.Scene {
             });
           uiElements.push(equipBtn);
         } else {
-          const equipMHBtn = this.add.text(width / 2 + 80, y, '[Equip MH]', {
+          const equipMHBtn = this.add.text(width / 2 + 150, y, '[Equip MH]', {
             fontFamily: FONTS.primary,
             fontSize: FONTS.size.xsmall,
             color: '#88ff88',
@@ -638,7 +638,7 @@ export class TownScene extends Phaser.Scene {
             });
           uiElements.push(equipMHBtn);
 
-          const equipOHBtn = this.add.text(width / 2 + 170, y, '[Equip OH]', {
+          const equipOHBtn = this.add.text(width / 2 + 260, y, '[Equip OH]', {
             fontFamily: FONTS.primary,
             fontSize: FONTS.size.xsmall,
             color: '#88ff88',
@@ -652,7 +652,7 @@ export class TownScene extends Phaser.Scene {
           uiElements.push(equipOHBtn);
         }
       } else if (armor) {
-        const equipBtn = this.add.text(width / 2 + 120, y, '[Equip]', {
+        const equipBtn = this.add.text(width / 2 + 150, y, '[Equip]', {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.xsmall,
           color: '#88ff88',
@@ -667,7 +667,7 @@ export class TownScene extends Phaser.Scene {
       }
 
       if (isPotion) {
-        const useBtn = this.add.text(width / 2 + 140, y, '[Use]', {
+        const useBtn = this.add.text(width / 2 + 150, y, '[Use]', {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.xsmall,
           color: '#8888ff',
@@ -681,7 +681,7 @@ export class TownScene extends Phaser.Scene {
         uiElements.push(useBtn);
       }
 
-      const storeBtn = this.add.text(width / 2 + 230, y, '[Store]', {
+      const storeBtn = this.add.text(width / 2 + 360, y, '[Store]', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.xsmall,
         color: '#ffaa88',

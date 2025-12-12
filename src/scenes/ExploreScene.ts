@@ -2993,7 +2993,7 @@ export class ExploreScene extends Phaser.Scene {
     const uiElements: Phaser.GameObjects.GameObject[] = [];
 
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setScrollFactor(0).setDepth(999);
-    const panel = this.add.rectangle(width / 2, height / 2, 700, 500, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+    const panel = this.add.rectangle(width / 2, height / 2, 850, 500, 0x2a2a3e).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
     uiElements.push(overlay, panel);
 
     const title = this.add.text(width / 2, height / 2 - 220, `Inventory (${player.inventory.reduce((sum, item) => sum + item.quantity, 0)}/${player.inventorySlots})`, {
@@ -3026,7 +3026,7 @@ export class ExploreScene extends Phaser.Scene {
 
       const y = itemsStartY + displayedItems * itemHeight;
       
-      const itemLabel = this.add.text(width / 2 - 320, y, `${item.name} x${invItem.quantity}`, {
+      const itemLabel = this.add.text(width / 2 - 400, y, `${item.name} x${invItem.quantity}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.small,
         color: '#ffffff',
@@ -3039,7 +3039,7 @@ export class ExploreScene extends Phaser.Scene {
 
       if (weapon) {
         if (weapon.twoHanded) {
-          const equipBtn = this.add.text(width / 2 + 70, y, '[Equip]', {
+          const equipBtn = this.add.text(width / 2 + 150, y, '[Equip]', {
             fontFamily: FONTS.primary,
             fontSize: FONTS.size.small,
             color: '#88ff88',
@@ -3051,7 +3051,7 @@ export class ExploreScene extends Phaser.Scene {
             }).setScrollFactor(0).setDepth(1002);
           uiElements.push(equipBtn);
         } else {
-          const equipMHBtn = this.add.text(width / 2 + 40, y, '[Equip MH]', {
+          const equipMHBtn = this.add.text(width / 2 + 120, y, '[Equip MH]', {
             fontFamily: FONTS.primary,
             fontSize: FONTS.size.small,
             color: '#88ff88',
@@ -3063,7 +3063,7 @@ export class ExploreScene extends Phaser.Scene {
             }).setScrollFactor(0).setDepth(1002);
           uiElements.push(equipMHBtn);
 
-          const equipOHBtn = this.add.text(width / 2 + 115, y, '[Equip OH]', {
+          const equipOHBtn = this.add.text(width / 2 + 230, y, '[Equip OH]', {
             fontFamily: FONTS.primary,
             fontSize: FONTS.size.small,
             color: '#88ff88',
@@ -3076,7 +3076,7 @@ export class ExploreScene extends Phaser.Scene {
           uiElements.push(equipOHBtn);
         }
       } else if (armor) {
-        const equipBtn = this.add.text(width / 2 + 70, y, '[Equip]', {
+        const equipBtn = this.add.text(width / 2 + 150, y, '[Equip]', {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.small,
           color: '#88ff88',
@@ -3090,7 +3090,7 @@ export class ExploreScene extends Phaser.Scene {
       }
 
       if (isPotion) {
-        const useBtn = this.add.text(width / 2 + 140, y, '[Use]', {
+        const useBtn = this.add.text(width / 2 + 150, y, '[Use]', {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.small,
           color: '#8888ff',
