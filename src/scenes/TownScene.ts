@@ -2242,26 +2242,26 @@ export class TownScene extends Phaser.Scene {
     }
 
     const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.9).setOrigin(0);
-    const panel = this.add.rectangle(width / 2, height / 2, 500, 300, 0x2a2a3e).setOrigin(0.5);
+    const panel = this.add.rectangle(width / 2, height / 2, 460, 240, 0x2a2a3e).setOrigin(0.5);
     uiElements.push(overlay, panel);
 
-    const title = this.add.text(width / 2, height / 2 - 100, 'Repair All Items', {
+    const title = this.add.text(width / 2, height / 2 - 90, 'Repair All Items', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.large,
+      fontSize: FONTS.size.medium,
       color: '#f0a020',
     }).setOrigin(0.5);
     uiElements.push(title);
 
     const itemCountText = this.add.text(width / 2, height / 2 - 50, `${repairableItems.length} items need repair`, {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.medium,
+      fontSize: FONTS.size.small,
       color: '#ffffff',
     }).setOrigin(0.5);
     uiElements.push(itemCountText);
 
-    const costText = this.add.text(width / 2, height / 2, `Total Cost:\n${totalAA} AA  OR  ${totalCA.toFixed(2)} CA`, {
+    const costText = this.add.text(width / 2, height / 2 - 10, `Total Cost:\n${totalAA} AA  OR  ${totalCA.toFixed(2)} CA`, {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.medium,
+      fontSize: FONTS.size.small,
       color: '#ffff88',
       align: 'center',
     }).setOrigin(0.5);
@@ -2271,22 +2271,50 @@ export class TownScene extends Phaser.Scene {
       uiElements.forEach(el => el.destroy());
     };
 
-    const repairAllAA = this.createButton(width / 2 - 180, height / 2 + 80, `Pay ${totalAA} AA`, () => {
-      this.executeRepairAll(repairableItems, 'AA');
-      destroyAll();
-    });
-    uiElements.push(repairAllAA);
+    const btnWidth = 160;
+    const btnHeight = 36;
 
-    const repairAllCA = this.createButton(width / 2 + 180, height / 2 + 80, `Pay ${totalCA.toFixed(2)} CA`, () => {
-      this.executeRepairAll(repairableItems, 'CA');
-      destroyAll();
-    });
-    uiElements.push(repairAllCA);
+    const aaBtn = this.add.rectangle(width / 2 - 90, height / 2 + 50, btnWidth, btnHeight, 0x444466)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => aaBtn.setFillStyle(0x555577))
+      .on('pointerout', () => aaBtn.setFillStyle(0x444466))
+      .on('pointerdown', () => {
+        this.executeRepairAll(repairableItems, 'AA');
+        destroyAll();
+      });
+    const aaLabel = this.add.text(width / 2 - 90, height / 2 + 50, `Pay ${totalAA} AA`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.xsmall,
+      color: '#ffffff',
+    }).setOrigin(0.5);
+    uiElements.push(aaBtn, aaLabel);
 
-    const cancelBtn = this.createButton(width / 2, height / 2 + 130, 'Cancel', () => {
-      destroyAll();
-    });
-    uiElements.push(cancelBtn);
+    const caBtn = this.add.rectangle(width / 2 + 90, height / 2 + 50, btnWidth, btnHeight, 0x444466)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => caBtn.setFillStyle(0x555577))
+      .on('pointerout', () => caBtn.setFillStyle(0x444466))
+      .on('pointerdown', () => {
+        this.executeRepairAll(repairableItems, 'CA');
+        destroyAll();
+      });
+    const caLabel = this.add.text(width / 2 + 90, height / 2 + 50, `Pay ${totalCA.toFixed(2)} CA`, {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.xsmall,
+      color: '#ffffff',
+    }).setOrigin(0.5);
+    uiElements.push(caBtn, caLabel);
+
+    const cancelBtn = this.add.rectangle(width / 2, height / 2 + 95, btnWidth, btnHeight, 0x444466)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => cancelBtn.setFillStyle(0x555577))
+      .on('pointerout', () => cancelBtn.setFillStyle(0x444466))
+      .on('pointerdown', () => destroyAll());
+    const cancelLabel = this.add.text(width / 2, height / 2 + 95, 'Cancel', {
+      fontFamily: FONTS.primary,
+      fontSize: FONTS.size.xsmall,
+      color: '#ffffff',
+    }).setOrigin(0.5);
+    uiElements.push(cancelBtn, cancelLabel);
   }
 
   private async executeRepairAll(repairableItems: Array<{ item: InventoryItem; equippedSlot: keyof PlayerEquipment | null; inventoryIndex?: number }>, currency: 'AA' | 'CA'): Promise<void> {
