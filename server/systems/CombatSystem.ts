@@ -351,7 +351,7 @@ export class CombatSystem {
     const attackBonus = newState.player.stats.attackBonus;
 
     if (!hit) {
-      const missMessage = `You swing with ${attack.name} rolling ${attackResult.d20}+${attackBonus}=${attackResult.total} vs ${targetEvasion} - miss! (-${attack.staminaCost} stamina)`;
+      const missMessage = `${attack.name}: (Rolled ${attackResult.d20}+${attackBonus}=${attackResult.total} vs ${target.name} Evasion ${targetEvasion}) Miss!`;
       newState.combatLog.push(missMessage);
       this.deductActions(newState, attack.actionCost);
       this.checkAndEndPlayerTurn(newState);
@@ -373,10 +373,10 @@ export class CombatSystem {
     target.health = Math.max(0, target.health - damage);
     this.trackDamageToEnemy(newState, target, damage);
     
-    // Two-line combat log: attack roll result, then damage dealt
+    // Two-line combat log: attack roll result, then damage dealt with roll breakdown
     const critText = attackResult.critical ? ' CRITICAL!' : '';
-    const hitMessage = `You swing with ${attack.name} rolling ${attackResult.d20}+${attackBonus}=${attackResult.total} vs ${targetEvasion} - hit!${critText} (-${attack.staminaCost} stamina)`;
-    const damageMessage = `You deal ${damage} damage to ${target.name}`;
+    const hitMessage = `${attack.name}: (Rolled ${attackResult.d20}+${attackBonus}=${attackResult.total} vs ${target.name} Evasion ${targetEvasion}) Hit!${critText}`;
+    const damageMessage = `${attack.name} strikes ${target.name} for ${damageRollInfo} = ${damage} damage`;
     newState.combatLog.push(hitMessage);
     newState.combatLog.push(damageMessage);
     let logMessage = `${hitMessage}\n${damageMessage}`;
@@ -442,7 +442,7 @@ export class CombatSystem {
     const attackBonus = newState.player.stats.attackBonus;
 
     if (!hit) {
-      const missMessage = `You swing with ${attack.name} rolling ${attackResult.d20}+${attackBonus}=${attackResult.total} vs ${targetEvasion} - miss! (-${attack.staminaCost} stamina)`;
+      const missMessage = `${attack.name}: (Rolled ${attackResult.d20}+${attackBonus}=${attackResult.total} vs ${target.name} Evasion ${targetEvasion}) Miss!`;
       newState.combatLog.push(missMessage);
       this.deductActions(newState, attack.actionCost);
       this.checkAndEndPlayerTurn(newState);
@@ -464,10 +464,10 @@ export class CombatSystem {
     target.health = Math.max(0, target.health - damage);
     this.trackDamageToEnemy(newState, target, damage);
     
-    // Two-line combat log: attack roll result, then damage dealt
+    // Two-line combat log: attack roll result, then damage dealt with roll breakdown
     const critText = attackResult.critical ? ' CRITICAL!' : '';
-    const hitMessage = `You swing with ${attack.name} rolling ${attackResult.d20}+${attackBonus}=${attackResult.total} vs ${targetEvasion} - hit!${critText} (-${attack.staminaCost} stamina)`;
-    const damageMessage = `You deal ${damage} damage to ${target.name}`;
+    const hitMessage = `${attack.name}: (Rolled ${attackResult.d20}+${attackBonus}=${attackResult.total} vs ${target.name} Evasion ${targetEvasion}) Hit!${critText}`;
+    const damageMessage = `${attack.name} strikes ${target.name} for ${damageRollInfo} = ${damage} damage`;
     newState.combatLog.push(hitMessage);
     newState.combatLog.push(damageMessage);
     let logMessage = `${hitMessage}\n${damageMessage}`;
@@ -1296,17 +1296,18 @@ export class CombatSystem {
     
     const targetEvasion = target.evasion + ConditionManager.getEvasionBonus(target);
     const hit = attackResult.total >= targetEvasion;
+    const attackBonus = attackResult.total - attackResult.d20;
 
     if (!hit) {
-      const missMessage = `${logPrefix}: Miss`;
-      state.combatLog.push(missMessage);
+      const attackRollMsg = `${logPrefix}: (Rolled ${attackResult.d20}+${attackBonus}=${attackResult.total} vs ${target.name} Evasion ${targetEvasion}) Miss!`;
+      state.combatLog.push(attackRollMsg);
       return {
         result: {
           hit: false,
           critical: false,
           attackRoll: attackResult.d20,
           damage: 0,
-          message: missMessage,
+          message: attackRollMsg,
         }
       };
     }
@@ -1323,8 +1324,11 @@ export class CombatSystem {
     target.health = Math.max(0, target.health - damage);
     this.trackDamageToEnemy(state, target, damage);
 
-    const logMessage = `${logPrefix}: Hit for ${damage} damage`;
-    state.combatLog.push(logMessage);
+    const critText = attackResult.critical ? ' CRITICAL!' : '';
+    const attackRollMsg = `${logPrefix}: (Rolled ${attackResult.d20}+${attackBonus}=${attackResult.total} vs ${target.name} Evasion ${targetEvasion}) Hit!${critText}`;
+    state.combatLog.push(attackRollMsg);
+    const damageMsg = `${logPrefix} strikes ${target.name} for ${damageRollInfo} = ${damage} damage`;
+    state.combatLog.push(damageMsg);
 
     // [SERVER RNG] Condition application
     this.applyConditionFromAttack(state, target, attack);
@@ -1335,7 +1339,7 @@ export class CombatSystem {
         critical: attackResult.critical,
         attackRoll: attackResult.d20,
         damage,
-        message: logMessage,
+        message: damageMsg,
       }
     };
   }
