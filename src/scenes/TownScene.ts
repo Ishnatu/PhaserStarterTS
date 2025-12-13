@@ -2629,54 +2629,60 @@ export class TownScene extends Phaser.Scene {
     this.menuState = 'soulbinding' as any;
 
     // Define equipment slots (must match PlayerEquipment interface)
-    const slots = [
-      { key: 'mainHand' as keyof PlayerEquipment, label: 'Main Hand' },
-      { key: 'offHand' as keyof PlayerEquipment, label: 'Off Hand' },
-      { key: 'helmet' as keyof PlayerEquipment, label: 'Helmet' },
-      { key: 'chest' as keyof PlayerEquipment, label: 'Chest' },
-      { key: 'legs' as keyof PlayerEquipment, label: 'Legs' },
-      { key: 'boots' as keyof PlayerEquipment, label: 'Boots' },
-      { key: 'shoulders' as keyof PlayerEquipment, label: 'Shoulders' },
-      { key: 'cape' as keyof PlayerEquipment, label: 'Cloak' },
+    const slots: Array<{ key: keyof PlayerEquipment }> = [
+      { key: 'mainHand' },
+      { key: 'offHand' },
+      { key: 'helmet' },
+      { key: 'chest' },
+      { key: 'legs' },
+      { key: 'boots' },
+      { key: 'shoulders' },
+      { key: 'cape' },
     ];
 
-    // Content area starts 40px below header
-    let startY = headerBaseY + (verticalGap * 2) + 40;
+    // Content area - centered 2-column grid with proper spacing
+    const startY = headerBaseY + (verticalGap * 2) + 50;
+    const rowSpacing = 45;
+    const colSpacing = 320;
     const slotCheckboxes: Map<string, Phaser.GameObjects.Container> = new Map();
 
     slots.forEach((slot, index) => {
-      const slotKey = slot.key as keyof PlayerEquipment;
-      const x = width / 2 - 200;
-      const y = startY + (index % 4) * 40;
+      const slotKey = slot.key;
+      const row = index % 4;
       const col = Math.floor(index / 4);
-      const posX = x + col * 350;
+      const posX = width / 2 - colSpacing / 2 + col * colSpacing;
+      const y = startY + row * rowSpacing;
 
       const item = player.equipment[slotKey];
       const isEquipped = !!item;
       const isBound = selectedSlots.has(slotKey);
 
       // Checkbox
-      const checkbox = this.add.rectangle(posX, y, 20, 20, isBound ? 0x44ff44 : 0x444444)
+      const checkbox = this.add.rectangle(posX - 120, y, 20, 20, isBound ? 0x44ff44 : 0x444444)
         .setStrokeStyle(2, 0xffffff);
 
       let displayName = '[Empty]';
+      let itemColor = '#666666';
+      
       if (isEquipped && item) {
         const itemData = ItemDatabase.getItem(item.itemId);
-        displayName = itemData ? itemData.name : item.itemId;
+        const baseName = itemData ? itemData.name : item.itemId;
+        const enhancement = item.enhancementLevel || 0;
+        displayName = enhancement > 0 ? `${baseName} +${enhancement}` : baseName;
+        itemColor = ItemColorUtil.getItemColor(enhancement, item.isShiny);
       }
 
-      const slotText = this.add.text(posX + 15, y, 
-        `${slot.label}: ${displayName}`, {
+      const slotText = this.add.text(posX - 95, y, displayName, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.xsmall,
-        color: isEquipped ? '#ffffff' : '#666666',
+        color: itemColor,
       }).setOrigin(0, 0.5);
 
       const container = this.add.container(0, 0, [checkbox, slotText]);
       
       if (isEquipped) {
         container.setInteractive(
-          new Phaser.Geom.Rectangle(posX - 10, y - 10, 280, 30),
+          new Phaser.Geom.Rectangle(posX - 130, y - 15, 260, 35),
           Phaser.Geom.Rectangle.Contains
         );
         container.on('pointerdown', () => {
