@@ -804,7 +804,7 @@ export class TownScene extends Phaser.Scene {
     const headerBaseY = height / 2 - 240;
     const verticalGap = 65;
 
-    const title = this.add.text(width / 2, headerBaseY, 'Vault Keeper - Storage Footlocker', {
+    const title = this.add.text(width / 2, headerBaseY, 'Vault Keeper', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#88ddff',
@@ -881,7 +881,7 @@ export class TownScene extends Phaser.Scene {
       footlockerContainer.add(itemLabel);
 
       const capturedIndex = index;
-      const retrieveBtn = this.add.text(width / 2 - 80, y, '[Retrieve]', {
+      const retrieveBtn = this.add.text(width / 2 - 50, y, '->', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.xsmall,
         color: '#88ff88',
@@ -923,7 +923,7 @@ export class TownScene extends Phaser.Scene {
       });
       inventoryContainer.add(itemLabel);
 
-      const storeBtn = this.add.text(width / 2 + 380, y, '[Store]', {
+      const storeBtn = this.add.text(width / 2 + 20, y, '<-', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.xsmall,
         color: '#ffaa44',
