@@ -2493,7 +2493,7 @@ export class TownScene extends Phaser.Scene {
     const verticalGap = 65;
 
     // Row 1: Title
-    const title = this.add.text(width / 2, headerBaseY, 'The Weary Traveler Inn', {
+    const title = this.add.text(width / 2, headerBaseY, 'The Weary Traveler', {
       fontFamily: FONTS.primary,
       fontSize: FONTS.size.large,
       color: '#6699ff',
@@ -2550,13 +2550,13 @@ export class TownScene extends Phaser.Scene {
     const isFullyRested = player.health >= player.maxHealth && player.stamina >= player.maxStamina;
 
     if (isFullyRested) {
-      const restBtn = this.createButton(width / 2, height / 2 + 140, 'Rest and Restore (FREE)', () => {});
+      const restBtn = this.createButton(width / 2, height / 2 + 140, 'Rest and Restore', () => {});
       const btnBg = restBtn.getAt(0) as Phaser.GameObjects.Rectangle;
       btnBg.setFillStyle(0x666666);
       btnBg.disableInteractive();
       uiElements.push(restBtn);
     } else {
-      const restBtn = this.createButton(width / 2, height / 2 + 140, 'Rest and Restore (FREE)', () => {
+      const restBtn = this.createButton(width / 2, height / 2 + 140, 'Rest and Restore', () => {
         player.health = player.maxHealth;
         player.stamina = player.maxStamina;
         this.gameState.updatePlayer(player);
