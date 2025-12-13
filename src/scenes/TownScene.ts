@@ -2751,7 +2751,7 @@ export class TownScene extends Phaser.Scene {
     // Title
     const title = this.add.text(width / 2, height / 2 - 270, 'Halls of Virtue', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.xlarge,
+      fontSize: FONTS.size.medium,
       color: '#ffd700',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(1002);
@@ -2763,9 +2763,9 @@ export class TownScene extends Phaser.Scene {
     uiElements.push(divider);
 
     // Left Panel - Returned Items
-    const leftTitle = this.add.text(width / 2 - 300, height / 2 - 200, 'Returned Items', {
+    const leftTitle = this.add.text(width / 2 - 225, height / 2 - 200, 'Returned Items', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.medium,
+      fontSize: FONTS.size.small,
       color: '#44ff44',
     }).setOrigin(0.5).setDepth(1002);
     uiElements.push(leftTitle);
@@ -2774,9 +2774,9 @@ export class TownScene extends Phaser.Scene {
     const returnedItems = await ApiClient.getPendingReturns();
     
     if (returnedItems.length === 0) {
-      const noItems = this.add.text(width / 2 - 300, height / 2, 'No items to claim', {
+      const noItems = this.add.text(width / 2 - 225, height / 2, 'No items to claim', {
         fontFamily: FONTS.primary,
-        fontSize: FONTS.size.small,
+        fontSize: FONTS.size.xsmall,
         color: '#888888',
       }).setOrigin(0.5).setDepth(1002);
       uiElements.push(noItems);
@@ -2807,9 +2807,9 @@ export class TownScene extends Phaser.Scene {
     }
 
     // Right Panel - Karma Leaderboard
-    const rightTitle = this.add.text(width / 2 + 300, height / 2 - 200, 'Karma Leaderboard', {
+    const rightTitle = this.add.text(width / 2 + 225, height / 2 - 200, 'Karma Leaderboard', {
       fontFamily: FONTS.primary,
-      fontSize: FONTS.size.medium,
+      fontSize: FONTS.size.small,
       color: '#ffd700',
     }).setOrigin(0.5).setDepth(1002);
     uiElements.push(rightTitle);
