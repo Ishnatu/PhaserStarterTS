@@ -2757,8 +2757,8 @@ export class TownScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(1002);
     uiElements.push(title);
 
-    // Divider
-    const divider = this.add.line(width / 2, height / 2, 0, -200, 0, 200, 0x444444, 1)
+    // Divider (starts below column headers, ends above close button)
+    const divider = this.add.line(width / 2, height / 2, 0, -160, 0, 200, 0x444444, 1)
       .setOrigin(0.5).setDepth(1002);
     uiElements.push(divider);
 
