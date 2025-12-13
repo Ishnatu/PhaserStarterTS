@@ -1923,16 +1923,19 @@ export class TownScene extends Phaser.Scene {
     });
 
     if (selectedItem) {
-      const detailY = height / 2 + 95;
+      const detailY = height / 2 + 105;
       const currentLevel = selectedItem.item.enhancementLevel || 0;
       const targetLevel = currentLevel + 1;
       const cost = ForgingSystem.getForgingCost(targetLevel);
 
       if (cost) {
-        const detailPanel = this.add.rectangle(width / 2, detailY, 800, 170, 0x1a1a2e).setOrigin(0.5);
+        const dimOverlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.2).setOrigin(0.5);
+        uiElements.push(dimOverlay);
+        
+        const detailPanel = this.add.rectangle(width / 2, detailY, 800, 195, 0x1a1a2e).setOrigin(0.5);
         uiElements.push(detailPanel);
 
-        const detailTitle = this.add.text(width / 2, detailY - 70, `Enhance to +${targetLevel}`, {
+        const detailTitle = this.add.text(width / 2, detailY - 80, `Enhance to +${targetLevel}`, {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.small,
           color: '#f0a020',
@@ -1952,7 +1955,7 @@ export class TownScene extends Phaser.Scene {
           { success: '10%', fail: 'Downgrade', destroy: '50%' },
         ][targetLevel - 1];
 
-        const detailsText = this.add.text(width / 2, detailY - 40, 
+        const detailsText = this.add.text(width / 2, detailY - 50, 
           `Success: ${tierData.success}  |  Fail: ${tierData.fail}  |  Destroy: ${tierData.destroy}`, {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.xsmall,
@@ -1962,7 +1965,7 @@ export class TownScene extends Phaser.Scene {
         }).setOrigin(0.5);
         uiElements.push(detailsText);
         
-        const costText = this.add.text(width / 2, detailY - 18, 
+        const costText = this.add.text(width / 2, detailY - 25, 
           `Cost: ${cost.aa} AA + ${cost.ca} CA`, {
           fontFamily: FONTS.primary,
           fontSize: FONTS.size.xsmall,
@@ -1974,22 +1977,37 @@ export class TownScene extends Phaser.Scene {
         
         const benefitText = this.itemTooltip?.getEnhancementBenefitText(selectedItem.item) || '';
         if (benefitText) {
-          const benefitLabel = this.add.text(width / 2, detailY + 8, 
-            `On Success: ${benefitText}`, {
+          const benefitHeaderLabel = this.add.text(width / 2, detailY + 5, 
+            'Success benefits', {
             fontFamily: FONTS.primary,
             fontSize: FONTS.size.xsmall,
             color: '#88ff88',
             align: 'center',
             resolution: 2,
           }).setOrigin(0.5);
-          uiElements.push(benefitLabel);
+          uiElements.push(benefitHeaderLabel);
+          
+          const benefitDetailLabel = this.add.text(width / 2, detailY + 25, 
+            benefitText, {
+            fontFamily: FONTS.primary,
+            fontSize: FONTS.size.xsmall,
+            color: '#88ff88',
+            align: 'center',
+            resolution: 2,
+          }).setOrigin(0.5);
+          uiElements.push(benefitDetailLabel);
         }
 
-        const forgeBtn = this.createButton(width / 2, detailY + 55, 'Forge Item', () => {
+        const forgeBtn = this.createButton(width / 2 - 160, detailY + 70, 'Forge Item', () => {
           this.attemptForging(selectedItem!);
           onSelect(null);
         });
         uiElements.push(forgeBtn);
+        
+        const backBtn = this.createButton(width / 2 + 160, detailY + 70, 'Back', () => {
+          onSelect(null);
+        });
+        uiElements.push(backBtn);
       }
     }
   }

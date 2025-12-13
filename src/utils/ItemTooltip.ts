@@ -121,9 +121,7 @@ export class ItemTooltip {
       
       return `${this.formatDamage(currentDamage)} -> ${this.formatDamage(nextDamage)} (${benefits.join(', ')})`;
     } else if (armor) {
-      const currentDR = Math.round(currentLevel * 1);
-      const nextDR = Math.round(nextLevel * 1);
-      return `${currentDR}% -> ${nextDR}% DR (+1% damage reduction, +10 max durability)`;
+      return '+1% Damage Reduct +10 max durability';
     }
     return '';
   }
