@@ -881,7 +881,7 @@ export class TownScene extends Phaser.Scene {
       footlockerContainer.add(itemLabel);
 
       const capturedIndex = index;
-      const retrieveBtn = this.add.text(width / 2 - 50, y, '->', {
+      const retrieveBtn = this.add.text(width / 2 - 80, y, '->', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.xsmall,
         color: '#88ff88',
@@ -916,14 +916,14 @@ export class TownScene extends Phaser.Scene {
       const y = scrollAreaTop + index * itemHeight;
       const itemColor = ItemColorUtil.getItemColor(invItem.enhancementLevel, invItem.isShiny);
       
-      const itemLabel = this.add.text(width / 2 + 40, y, `${item.name} x${invItem.quantity}`, {
+      const itemLabel = this.add.text(width / 2 + 70, y, `${item.name} x${invItem.quantity}`, {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.xsmall,
         color: itemColor,
       });
       inventoryContainer.add(itemLabel);
 
-      const storeBtn = this.add.text(width / 2 + 20, y, '<-', {
+      const storeBtn = this.add.text(width / 2 + 30, y, '<-', {
         fontFamily: FONTS.primary,
         fontSize: FONTS.size.xsmall,
         color: '#ffaa44',
