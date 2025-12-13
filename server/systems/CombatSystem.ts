@@ -1785,26 +1785,28 @@ export class CombatSystem {
   }
 
   /**
-   * Greater Void Spawn - Chronostep: Time reversal healing
-   * [SERVER RNG] D4 roll for lookback rounds
+   * Greater Void Spawn - Chronostep: Heals based on recent damage taken
+   * Only affects enemy HP - does NOT revert any player state
+   * [SERVER RNG] D4 roll for lookback entries
    */
   private useChronostep(state: CombatState, enemy: Enemy): void {
     if (!enemy.chronostepUsesRemaining || enemy.chronostepUsesRemaining <= 0) return;
     
-    // [SERVER RNG] D4 lookback rounds
-    const lookbackRounds = this.diceRoller.rollD4();
+    // [SERVER RNG] D4 lookback entries (how many damage entries to sum)
+    const lookbackEntries = this.diceRoller.rollD4();
     
     let totalHealing = 0;
     if (enemy.damageReceivedHistory) {
       // Take the last N damage entries based on lookback
-      const recentDamage = enemy.damageReceivedHistory.slice(-lookbackRounds);
+      const recentDamage = enemy.damageReceivedHistory.slice(-lookbackEntries);
       totalHealing = recentDamage.reduce((sum, dmg) => sum + dmg, 0);
     }
     
+    // Only heal the enemy - do NOT modify any player state
     enemy.health = Math.min(enemy.maxHealth, enemy.health + totalHealing);
     enemy.chronostepUsesRemaining--;
     
-    const message = `${enemy.name} uses Chronostep! Time reverses ${lookbackRounds} rounds, healing ${totalHealing} HP! (${enemy.chronostepUsesRemaining} uses remaining)`;
+    const message = `${enemy.name} uses Chronostep! Void energy heals it for ${totalHealing} HP! (${enemy.chronostepUsesRemaining} uses remaining)`;
     state.combatLog.push(message);
   }
 
